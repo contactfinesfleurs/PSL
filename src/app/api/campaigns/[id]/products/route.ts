@@ -5,19 +5,20 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const body = await req.json();
 
   const cp = await prisma.campaignProduct.upsert({
     where: {
       campaignId_productId: {
-        campaignId: params.id,
+        campaignId: id,
         productId: body.productId,
       },
     },
     create: {
-      campaignId: params.id,
+      campaignId: id,
       productId: body.productId,
       notes: body.notes ?? null,
     },
@@ -31,13 +32,14 @@ export async function POST(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const { productId } = await req.json();
 
   await prisma.campaignProduct.delete({
     where: {
-      campaignId_productId: { campaignId: params.id, productId },
+      campaignId_productId: { campaignId: id, productId },
     },
   });
 
