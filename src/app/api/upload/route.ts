@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { put } from "@vercel/blob";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 
@@ -11,10 +12,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Aucun fichier fourni" }, { status: 400 });
   }
 
+  // Use Vercel Blob in production, local filesystem in development
+  if (process.env.BLOB_READ_WRITE_TOKEN) {
+    const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+    const timestamp = Date.now();
+    const filename = `${folder}/${timestamp}_${safeName}`;
+
+    const blob = await put(filename, file, { access: "public" });
+
+    return NextResponse.json({ path: blob.url, filename: blob.pathname });
+  }
+
+  // Local development fallback
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
 
-  // Sanitize filename
   const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
   const timestamp = Date.now();
   const filename = `${timestamp}_${safeName}`;
