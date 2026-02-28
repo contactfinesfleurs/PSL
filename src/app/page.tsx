@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+
+export const dynamic = 'force-dynamic';
 import { formatDate } from "@/lib/utils";
 import { Package, Calendar, Tag, CheckCircle, Clock } from "lucide-react";
 

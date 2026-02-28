@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+
+export const dynamic = 'force-dynamic';
 import { CAMPAIGN_TYPES, formatDate } from "@/lib/utils";
 import { Plus, Megaphone } from "lucide-react";
 
