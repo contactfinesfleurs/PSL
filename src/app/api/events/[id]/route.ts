@@ -3,10 +3,11 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const event = await prisma.event.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       campaigns: { include: { products: { include: { product: true } } } },
       products: { include: { product: true } },
@@ -22,12 +23,13 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const body = await req.json();
 
   const event = await prisma.event.update({
-    where: { id: params.id },
+    where: { id },
     data: {
       ...(body.name !== undefined && { name: body.name }),
       ...(body.description !== undefined && { description: body.description }),
@@ -47,8 +49,9 @@ export async function PATCH(
 
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  await prisma.event.delete({ where: { id: params.id } });
+  const { id } = await params;
+  await prisma.event.delete({ where: { id } });
   return NextResponse.json({ success: true });
 }
