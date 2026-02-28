@@ -5,18 +5,20 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const sample = await prisma.sample.findFirst({
-    where: { productId: params.id },
+    where: { productId: id },
   });
   return NextResponse.json(sample ?? null);
 }
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const body = await req.json();
 
   const sample = await prisma.sample.upsert({
@@ -25,7 +27,7 @@ export async function PUT(
       id: body.sampleId ?? "new",
     },
     create: {
-      productId: params.id,
+      productId: id,
       samplePhotoPaths: body.samplePhotoPaths
         ? JSON.stringify(body.samplePhotoPaths)
         : null,
@@ -75,13 +77,14 @@ export async function PUT(
 // Dedicated POST for creating a new sample if none exists
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const body = await req.json();
 
   // Check if sample already exists
   const existing = await prisma.sample.findFirst({
-    where: { productId: params.id },
+    where: { productId: id },
   });
 
   if (existing) {
@@ -115,7 +118,7 @@ export async function POST(
 
   const sample = await prisma.sample.create({
     data: {
-      productId: params.id,
+      productId: id,
       samplePhotoPaths: body.samplePhotoPaths
         ? JSON.stringify(body.samplePhotoPaths)
         : null,
