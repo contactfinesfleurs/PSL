@@ -1,0 +1,151 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── PRODUCT ─────────────────────────────────────────────────────────────────
+
+model Product {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Identity
+  name      String
+  sku       String   @unique
+  reference String?
+
+  // Classification
+  family    String   // accessories | pret-a-porter | shoes | leather-goods | small-leather-goods | other
+  season    String   // FALL-WINTER | PRE-FALL | SPRING-SUMMER | CRUISE
+  year      Int
+
+  // Sizing
+  sizeRange String   // S-XL | 30-44 | 35-46 | ONE-SIZE | etc.
+  sizes     String   // JSON array stored as string
+
+  // Tech Pack
+  measurements  String?  // JSON
+  materials     String?  // JSON array
+  colors        String?  // JSON array
+  sketchPaths   String?  // JSON array of file paths
+  techPackPath  String?  // path to tech pack file
+
+  // Descriptions (filled after validation)
+  description   String?
+  metaTags      String?  // JSON array
+
+  // Status: PENDING | VALIDATED | NOT_VALIDATED
+  sampleStatus    String   @default("PENDING")
+  plannedLaunchAt DateTime?
+
+  // Relations
+  samples   Sample[]
+  campaigns CampaignProduct[]
+  events    EventProduct[]
+}
+
+// ─── SAMPLE ──────────────────────────────────────────────────────────────────
+
+model Sample {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // Photos
+  samplePhotoPaths    String?  // JSON array - main sample photos
+  detailPhotoPaths    String?  // JSON array - important detail photos
+  reviewPhotoPaths    String?  // JSON array - details "to review"
+
+  // Review notes
+  reviewNotes String?
+
+  // Final product (unlocked after validation)
+  packshotPaths       String?  // JSON array - official packshots
+  definitiveColors    String?  // JSON array
+  definitiveMaterials String?  // JSON array
+}
+
+// ─── EVENT ───────────────────────────────────────────────────────────────────
+
+model Event {
+  id          String    @id @default(cuid())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  name        String
+  description String?
+  type        String    // SHOW | PRESENTATION | LAUNCH | PRESS | TRADE-SHOW | OTHER
+  // Status: DRAFT | CONFIRMED | COMPLETED | CANCELLED
+  status      String    @default("DRAFT")
+
+  startAt     DateTime
+  endAt       DateTime?
+  location    String?
+  venue       String?
+
+  // Relations
+  campaigns   Campaign[]
+  products    EventProduct[]
+}
+
+// ─── CAMPAIGN ────────────────────────────────────────────────────────────────
+
+model Campaign {
+  id          String    @id @default(cuid())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  name        String
+  description String?
+  type        String    // DIGITAL | PRINT | OOH | SOCIAL | INFLUENCER | OTHER
+  // Status: DRAFT | ACTIVE | PAUSED | COMPLETED | CANCELLED
+  status      String    @default("DRAFT")
+
+  startAt     DateTime?
+  endAt       DateTime?
+  budget      Float?
+  currency    String?   @default("EUR")
+
+  eventId     String?
+  event       Event?    @relation(fields: [eventId], references: [id])
+
+  // Relations
+  products    CampaignProduct[]
+}
+
+// ─── JUNCTION TABLES ─────────────────────────────────────────────────────────
+
+model CampaignProduct {
+  id         String   @id @default(cuid())
+  campaignId String
+  productId  String
+  addedAt    DateTime @default(now())
+  notes      String?
+
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, productId])
+}
+
+model EventProduct {
+  id        String   @id @default(cuid())
+  eventId   String
+  productId String
+  addedAt   DateTime @default(now())
+  notes     String?
+  look      Int?     // look number for fashion shows
+
+  event     Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, productId])
+}
