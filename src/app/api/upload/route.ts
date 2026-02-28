@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
+
+export const dynamic = 'force-dynamic';
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 
