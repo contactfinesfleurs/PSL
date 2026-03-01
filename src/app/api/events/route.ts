@@ -45,10 +45,10 @@ export async function POST(req: NextRequest) {
   if (body.name.trim().length > MAX_NAME_LENGTH) {
     return NextResponse.json({ error: `Nom trop long (max ${MAX_NAME_LENGTH} car.)` }, { status: 422 });
   }
-  if (!body.type || !VALID_TYPES.has(body.type as string)) {
+  if (!body.type || typeof body.type !== "string" || !VALID_TYPES.has(body.type)) {
     return NextResponse.json({ error: "Type invalide" }, { status: 422 });
   }
-  if (body.status !== undefined && !VALID_STATUSES.has(body.status as string)) {
+  if (body.status !== undefined && (typeof body.status !== "string" || !VALID_STATUSES.has(body.status))) {
     return NextResponse.json({ error: "Statut invalide" }, { status: 422 });
   }
   if (body.description !== undefined && body.description !== null) {

@@ -64,16 +64,16 @@ export async function PATCH(
       return NextResponse.json({ error: `Nom trop long (max ${MAX_NAME_LENGTH} car.)` }, { status: 422 });
     }
   }
-  if (body.family !== undefined && !VALID_FAMILIES.has(body.family as string)) {
+  if (body.family !== undefined && (typeof body.family !== "string" || !VALID_FAMILIES.has(body.family))) {
     return NextResponse.json({ error: "Famille invalide" }, { status: 422 });
   }
-  if (body.season !== undefined && !VALID_SEASONS.has(body.season as string)) {
+  if (body.season !== undefined && (typeof body.season !== "string" || !VALID_SEASONS.has(body.season))) {
     return NextResponse.json({ error: "Saison invalide" }, { status: 422 });
   }
-  if (body.sizeRange !== undefined && !VALID_SIZE_RANGES.has(body.sizeRange as string)) {
+  if (body.sizeRange !== undefined && (typeof body.sizeRange !== "string" || !VALID_SIZE_RANGES.has(body.sizeRange))) {
     return NextResponse.json({ error: "Gamme de tailles invalide" }, { status: 422 });
   }
-  if (body.sampleStatus !== undefined && !VALID_SAMPLE_STATUSES.has(body.sampleStatus as string)) {
+  if (body.sampleStatus !== undefined && (typeof body.sampleStatus !== "string" || !VALID_SAMPLE_STATUSES.has(body.sampleStatus))) {
     return NextResponse.json({ error: "Statut invalide" }, { status: 422 });
   }
   if (body.year !== undefined) {

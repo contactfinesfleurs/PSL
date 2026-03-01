@@ -101,16 +101,7 @@ export async function PUT(
 
     const sample = await prisma.sample.upsert({
       where: { id: typeof body.sampleId === "string" ? body.sampleId : "new" },
-      create: {
-        productId: id,
-        samplePhotoPaths: body.samplePhotoPaths ? JSON.stringify(body.samplePhotoPaths) : null,
-        detailPhotoPaths: body.detailPhotoPaths ? JSON.stringify(body.detailPhotoPaths) : null,
-        reviewPhotoPaths: body.reviewPhotoPaths ? JSON.stringify(body.reviewPhotoPaths) : null,
-        reviewNotes: typeof body.reviewNotes === "string" ? body.reviewNotes : null,
-        packshotPaths: body.packshotPaths ? JSON.stringify(body.packshotPaths) : null,
-        definitiveColors: body.definitiveColors ? JSON.stringify(body.definitiveColors) : null,
-        definitiveMaterials: body.definitiveMaterials ? JSON.stringify(body.definitiveMaterials) : null,
-      },
+      create: { productId: id, ...buildSampleUpdate(body) },
       update: buildSampleUpdate(body),
     });
 

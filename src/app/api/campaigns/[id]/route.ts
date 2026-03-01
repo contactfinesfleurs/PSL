@@ -64,10 +64,10 @@ export async function PATCH(
       return NextResponse.json({ error: `Description trop longue (max ${MAX_TEXT_LENGTH} car.)` }, { status: 422 });
     }
   }
-  if (body.type !== undefined && !VALID_TYPES.has(body.type as string)) {
+  if (body.type !== undefined && (typeof body.type !== "string" || !VALID_TYPES.has(body.type))) {
     return NextResponse.json({ error: "Type invalide" }, { status: 422 });
   }
-  if (body.status !== undefined && !VALID_STATUSES.has(body.status as string)) {
+  if (body.status !== undefined && (typeof body.status !== "string" || !VALID_STATUSES.has(body.status))) {
     return NextResponse.json({ error: "Statut invalide" }, { status: 422 });
   }
   if (body.budget !== undefined && body.budget !== null && !isValidBudget(body.budget)) {
