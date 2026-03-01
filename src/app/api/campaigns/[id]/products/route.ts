@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+import { MAX_NOTES_LENGTH, isPrismaNotFound, isPrismaFKViolation } from "@/lib/validation";
 
 export const dynamic = 'force-dynamic';
-
-const MAX_NOTES_LENGTH = 2000;
 
 export async function POST(
   req: NextRequest,
@@ -30,12 +28,7 @@ export async function POST(
 
   try {
     const cp = await prisma.campaignProduct.upsert({
-      where: {
-        campaignId_productId: {
-          campaignId: id,
-          productId: body.productId,
-        },
-      },
+      where: { campaignId_productId: { campaignId: id, productId: body.productId } },
       create: {
         campaignId: id,
         productId: body.productId,
@@ -47,8 +40,7 @@ export async function POST(
     });
     return NextResponse.json(cp, { status: 201 });
   } catch (err) {
-    // Foreign key violation → campaign or product does not exist
-    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2003") {
+    if (isPrismaFKViolation(err)) {
       return NextResponse.json({ error: "Campagne ou produit introuvable" }, { status: 404 });
     }
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
@@ -74,13 +66,11 @@ export async function DELETE(
 
   try {
     await prisma.campaignProduct.delete({
-      where: {
-        campaignId_productId: { campaignId: id, productId: body.productId },
-      },
+      where: { campaignId_productId: { campaignId: id, productId: body.productId } },
     });
     return NextResponse.json({ success: true });
   } catch (err) {
-    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
+    if (isPrismaNotFound(err)) {
       return NextResponse.json({ error: "Association introuvable" }, { status: 404 });
     }
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });

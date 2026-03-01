@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+import { MAX_NOTES_LENGTH, isPrismaNotFound, isPrismaFKViolation } from "@/lib/validation";
 
 export const dynamic = 'force-dynamic';
-
-const MAX_NOTES_LENGTH = 2000;
 
 export async function POST(
   req: NextRequest,
@@ -35,12 +33,7 @@ export async function POST(
 
   try {
     const eventProduct = await prisma.eventProduct.upsert({
-      where: {
-        eventId_productId: {
-          eventId: id,
-          productId: body.productId,
-        },
-      },
+      where: { eventId_productId: { eventId: id, productId: body.productId } },
       create: {
         eventId: id,
         productId: body.productId,
@@ -54,7 +47,7 @@ export async function POST(
     });
     return NextResponse.json(eventProduct, { status: 201 });
   } catch (err) {
-    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2003") {
+    if (isPrismaFKViolation(err)) {
       return NextResponse.json({ error: "Événement ou produit introuvable" }, { status: 404 });
     }
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
@@ -80,13 +73,11 @@ export async function DELETE(
 
   try {
     await prisma.eventProduct.delete({
-      where: {
-        eventId_productId: { eventId: id, productId: body.productId },
-      },
+      where: { eventId_productId: { eventId: id, productId: body.productId } },
     });
     return NextResponse.json({ success: true });
   } catch (err) {
-    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
+    if (isPrismaNotFound(err)) {
       return NextResponse.json({ error: "Association introuvable" }, { status: 404 });
     }
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });

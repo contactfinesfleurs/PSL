@@ -1,19 +1,60 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import {
+  MAX_NOTES_LENGTH,
+  validateStringArray,
+  validatePathArray,
+  isPrismaFKViolation,
+  isPrismaNotFound,
+} from "@/lib/validation";
 
 export const dynamic = 'force-dynamic';
 
-const MAX_NOTES_LENGTH = 5000;
-const MAX_ARRAY_ITEMS = 50;
-
-function validatePathArray(value: unknown): string[] | null {
-  if (!Array.isArray(value)) return null;
-  if (value.length > MAX_ARRAY_ITEMS) return null;
-  for (const item of value) {
-    if (typeof item !== "string") return null;
-    if (item.length > 500) return null;
+/** Validate all photo/string array fields from a request body. Returns an error response or null. */
+function validateSampleBody(body: Record<string, unknown>): NextResponse | null {
+  if (body.reviewNotes !== undefined && body.reviewNotes !== null) {
+    if (typeof body.reviewNotes !== "string" || body.reviewNotes.length > MAX_NOTES_LENGTH) {
+      return NextResponse.json({ error: `Notes trop longues (max ${MAX_NOTES_LENGTH} car.)` }, { status: 422 });
+    }
   }
-  return value as string[];
+  for (const field of ["samplePhotoPaths", "detailPhotoPaths", "reviewPhotoPaths", "packshotPaths"] as const) {
+    if (body[field] !== undefined && body[field] !== null && validatePathArray(body[field]) === null) {
+      return NextResponse.json({ error: `${field} invalide` }, { status: 422 });
+    }
+  }
+  for (const field of ["definitiveColors", "definitiveMaterials"] as const) {
+    if (body[field] !== undefined && body[field] !== null && validateStringArray(body[field]) === null) {
+      return NextResponse.json({ error: `${field} invalide` }, { status: 422 });
+    }
+  }
+  return null;
+}
+
+/** Build the Prisma data object for sample fields (partial update). */
+function buildSampleUpdate(body: Record<string, unknown>) {
+  return {
+    ...(body.samplePhotoPaths !== undefined && {
+      samplePhotoPaths: JSON.stringify(body.samplePhotoPaths),
+    }),
+    ...(body.detailPhotoPaths !== undefined && {
+      detailPhotoPaths: JSON.stringify(body.detailPhotoPaths),
+    }),
+    ...(body.reviewPhotoPaths !== undefined && {
+      reviewPhotoPaths: JSON.stringify(body.reviewPhotoPaths),
+    }),
+    ...(body.reviewNotes !== undefined && {
+      reviewNotes: typeof body.reviewNotes === "string" ? body.reviewNotes : null,
+    }),
+    ...(body.packshotPaths !== undefined && {
+      packshotPaths: JSON.stringify(body.packshotPaths),
+    }),
+    ...(body.definitiveColors !== undefined && {
+      definitiveColors: JSON.stringify(body.definitiveColors),
+    }),
+    ...(body.definitiveMaterials !== undefined && {
+      definitiveMaterials: JSON.stringify(body.definitiveMaterials),
+    }),
+  };
 }
 
 export async function GET(
@@ -22,15 +63,14 @@ export async function GET(
 ) {
   const { id } = await params;
   try {
-    const sample = await prisma.sample.findFirst({
-      where: { productId: id },
-    });
+    const sample = await prisma.sample.findFirst({ where: { productId: id } });
     return NextResponse.json(sample ?? null);
   } catch {
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
 
+/** PUT: update an existing sample by sampleId. */
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -44,92 +84,34 @@ export async function PUT(
     return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
   }
 
-  // Validate reviewNotes length
-  if (body.reviewNotes !== undefined && body.reviewNotes !== null) {
-    if (typeof body.reviewNotes !== "string" || body.reviewNotes.length > MAX_NOTES_LENGTH) {
-      return NextResponse.json({ error: `Notes trop longues (max ${MAX_NOTES_LENGTH} car.)` }, { status: 422 });
-    }
-  }
-
-  // Validate path arrays
-  for (const field of ["samplePhotoPaths", "detailPhotoPaths", "reviewPhotoPaths", "packshotPaths"] as const) {
-    if (body[field] !== undefined && body[field] !== null) {
-      if (validatePathArray(body[field]) === null) {
-        return NextResponse.json({ error: `${field} invalide` }, { status: 422 });
-      }
-    }
-  }
-
-  // Validate string arrays
-  for (const field of ["definitiveColors", "definitiveMaterials"] as const) {
-    if (body[field] !== undefined && body[field] !== null) {
-      if (!Array.isArray(body[field]) || (body[field] as unknown[]).some((v) => typeof v !== "string")) {
-        return NextResponse.json({ error: `${field} invalide` }, { status: 422 });
-      }
-    }
-  }
+  const validationError = validateSampleBody(body);
+  if (validationError) return validationError;
 
   try {
-    // IDOR fix: if sampleId is provided, verify it belongs to this product
+    // IDOR: verify sampleId belongs to this product before upsert
     if (body.sampleId && typeof body.sampleId === "string") {
       const existing = await prisma.sample.findUnique({
         where: { id: body.sampleId },
         select: { productId: true },
       });
       if (!existing || existing.productId !== id) {
-        return NextResponse.json({ error: "Sample introuvable" }, { status: 404 });
+        return NextResponse.json({ error: "Prototype introuvable" }, { status: 404 });
       }
     }
 
     const sample = await prisma.sample.upsert({
-      where: {
-        id: typeof body.sampleId === "string" ? body.sampleId : "new",
-      },
+      where: { id: typeof body.sampleId === "string" ? body.sampleId : "new" },
       create: {
         productId: id,
-        samplePhotoPaths: body.samplePhotoPaths
-          ? JSON.stringify(body.samplePhotoPaths)
-          : null,
-        detailPhotoPaths: body.detailPhotoPaths
-          ? JSON.stringify(body.detailPhotoPaths)
-          : null,
-        reviewPhotoPaths: body.reviewPhotoPaths
-          ? JSON.stringify(body.reviewPhotoPaths)
-          : null,
+        samplePhotoPaths: body.samplePhotoPaths ? JSON.stringify(body.samplePhotoPaths) : null,
+        detailPhotoPaths: body.detailPhotoPaths ? JSON.stringify(body.detailPhotoPaths) : null,
+        reviewPhotoPaths: body.reviewPhotoPaths ? JSON.stringify(body.reviewPhotoPaths) : null,
         reviewNotes: typeof body.reviewNotes === "string" ? body.reviewNotes : null,
-        packshotPaths: body.packshotPaths
-          ? JSON.stringify(body.packshotPaths)
-          : null,
-        definitiveColors: body.definitiveColors
-          ? JSON.stringify(body.definitiveColors)
-          : null,
-        definitiveMaterials: body.definitiveMaterials
-          ? JSON.stringify(body.definitiveMaterials)
-          : null,
+        packshotPaths: body.packshotPaths ? JSON.stringify(body.packshotPaths) : null,
+        definitiveColors: body.definitiveColors ? JSON.stringify(body.definitiveColors) : null,
+        definitiveMaterials: body.definitiveMaterials ? JSON.stringify(body.definitiveMaterials) : null,
       },
-      update: {
-        ...(body.samplePhotoPaths !== undefined && {
-          samplePhotoPaths: JSON.stringify(body.samplePhotoPaths),
-        }),
-        ...(body.detailPhotoPaths !== undefined && {
-          detailPhotoPaths: JSON.stringify(body.detailPhotoPaths),
-        }),
-        ...(body.reviewPhotoPaths !== undefined && {
-          reviewPhotoPaths: JSON.stringify(body.reviewPhotoPaths),
-        }),
-        ...(body.reviewNotes !== undefined && {
-          reviewNotes: typeof body.reviewNotes === "string" ? body.reviewNotes : null,
-        }),
-        ...(body.packshotPaths !== undefined && {
-          packshotPaths: JSON.stringify(body.packshotPaths),
-        }),
-        ...(body.definitiveColors !== undefined && {
-          definitiveColors: JSON.stringify(body.definitiveColors),
-        }),
-        ...(body.definitiveMaterials !== undefined && {
-          definitiveMaterials: JSON.stringify(body.definitiveMaterials),
-        }),
-      },
+      update: buildSampleUpdate(body),
     });
 
     return NextResponse.json(sample);
@@ -138,6 +120,7 @@ export async function PUT(
   }
 }
 
+/** POST: create or update the sample for a product (no sampleId required). */
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -151,79 +134,36 @@ export async function POST(
     return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
   }
 
-  // Validate reviewNotes length
-  if (body.reviewNotes !== undefined && body.reviewNotes !== null) {
-    if (typeof body.reviewNotes !== "string" || body.reviewNotes.length > MAX_NOTES_LENGTH) {
-      return NextResponse.json({ error: `Notes trop longues (max ${MAX_NOTES_LENGTH} car.)` }, { status: 422 });
-    }
-  }
-
-  // Validate path arrays
-  for (const field of ["samplePhotoPaths", "detailPhotoPaths", "reviewPhotoPaths", "packshotPaths"] as const) {
-    if (body[field] !== undefined && body[field] !== null) {
-      if (validatePathArray(body[field]) === null) {
-        return NextResponse.json({ error: `${field} invalide` }, { status: 422 });
-      }
-    }
-  }
+  const validationError = validateSampleBody(body);
+  if (validationError) return validationError;
 
   try {
-    // Verify product exists
-    const product = await prisma.product.findUnique({ where: { id }, select: { id: true } });
-    if (!product) {
-      return NextResponse.json({ error: "Produit introuvable" }, { status: 404 });
-    }
-
+    // Find existing sample by productId (no unique constraint → can't use upsert directly)
     const existing = await prisma.sample.findFirst({ where: { productId: id } });
 
     if (existing) {
       const updated = await prisma.sample.update({
         where: { id: existing.id },
-        data: {
-          ...(body.samplePhotoPaths !== undefined && {
-            samplePhotoPaths: JSON.stringify(body.samplePhotoPaths),
-          }),
-          ...(body.detailPhotoPaths !== undefined && {
-            detailPhotoPaths: JSON.stringify(body.detailPhotoPaths),
-          }),
-          ...(body.reviewPhotoPaths !== undefined && {
-            reviewPhotoPaths: JSON.stringify(body.reviewPhotoPaths),
-          }),
-          ...(body.reviewNotes !== undefined && {
-            reviewNotes: typeof body.reviewNotes === "string" ? body.reviewNotes : null,
-          }),
-          ...(body.packshotPaths !== undefined && {
-            packshotPaths: JSON.stringify(body.packshotPaths),
-          }),
-          ...(body.definitiveColors !== undefined && {
-            definitiveColors: JSON.stringify(body.definitiveColors),
-          }),
-          ...(body.definitiveMaterials !== undefined && {
-            definitiveMaterials: JSON.stringify(body.definitiveMaterials),
-          }),
-        },
+        data: buildSampleUpdate(body),
       });
       return NextResponse.json(updated);
     }
 
+    // No existing sample — create one (FK error caught below if product doesn't exist)
     const sample = await prisma.sample.create({
       data: {
         productId: id,
-        samplePhotoPaths: body.samplePhotoPaths
-          ? JSON.stringify(body.samplePhotoPaths)
-          : null,
-        detailPhotoPaths: body.detailPhotoPaths
-          ? JSON.stringify(body.detailPhotoPaths)
-          : null,
-        reviewPhotoPaths: body.reviewPhotoPaths
-          ? JSON.stringify(body.reviewPhotoPaths)
-          : null,
+        samplePhotoPaths: body.samplePhotoPaths ? JSON.stringify(body.samplePhotoPaths) : null,
+        detailPhotoPaths: body.detailPhotoPaths ? JSON.stringify(body.detailPhotoPaths) : null,
+        reviewPhotoPaths: body.reviewPhotoPaths ? JSON.stringify(body.reviewPhotoPaths) : null,
         reviewNotes: typeof body.reviewNotes === "string" ? body.reviewNotes : null,
       },
     });
-
     return NextResponse.json(sample, { status: 201 });
-  } catch {
+  } catch (err) {
+    if (isPrismaFKViolation(err) || isPrismaNotFound(err)) {
+      return NextResponse.json({ error: "Produit introuvable" }, { status: 404 });
+    }
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

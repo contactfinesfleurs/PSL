@@ -1,29 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { generateSKU, PRODUCT_FAMILIES, SEASONS, SIZE_RANGES } from "@/lib/utils";
-import { Prisma } from "@prisma/client";
+import {
+  MAX_NAME_LENGTH,
+  MAX_ARRAY_ITEM_LENGTH,
+  validateStringArray,
+  isPrismaUniqueConflict,
+} from "@/lib/validation";
 
 export const dynamic = 'force-dynamic';
 
 const VALID_FAMILIES = new Set<string>(PRODUCT_FAMILIES.map((f) => f.value));
 const VALID_SEASONS = new Set<string>(SEASONS.map((s) => s.value));
 const VALID_SIZE_RANGES = new Set<string>(SIZE_RANGES.map((s) => s.value));
-
-const MAX_NAME_LENGTH = 200;
-const MAX_ARRAY_ITEMS = 50;
-const MAX_ARRAY_ITEM_LENGTH = 100;
-
-function validateStringArray(value: unknown): string[] | null {
-  if (!Array.isArray(value)) return null;
-  if (value.length > MAX_ARRAY_ITEMS) return null;
-  const result: string[] = [];
-  for (const item of value) {
-    if (typeof item !== "string") return null;
-    if (item.length > MAX_ARRAY_ITEM_LENGTH) return null;
-    result.push(item);
-  }
-  return result;
-}
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -55,7 +44,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
   }
 
-  // Required field validation
   if (!body.name || typeof body.name !== "string" || !body.name.trim()) {
     return NextResponse.json({ error: "Nom requis" }, { status: 422 });
   }
@@ -76,7 +64,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Gamme de tailles invalide" }, { status: 422 });
   }
 
-  // Validate arrays
   const sizes = validateStringArray(body.sizes ?? []);
   if (sizes === null) {
     return NextResponse.json({ error: "Tailles invalides" }, { status: 422 });
@@ -90,9 +77,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Couleurs invalides" }, { status: 422 });
   }
 
-  // SKU generation with retry loop for race-condition on unique constraint
-  const MAX_RETRIES = 3;
-  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+  // SKU generation with retry loop to handle race-condition on unique constraint
+  for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const count = await prisma.product.count({
         where: {
@@ -121,18 +107,16 @@ export async function POST(req: NextRequest) {
           measurements: body.measurements ? JSON.stringify(body.measurements) : null,
           materials: materials ? JSON.stringify(materials) : null,
           colors: colors ? JSON.stringify(colors) : null,
-          reference: typeof body.reference === "string" ? body.reference.slice(0, 100) : null,
+          reference: typeof body.reference === "string"
+            ? body.reference.slice(0, MAX_ARRAY_ITEM_LENGTH)
+            : null,
         },
       });
 
       return NextResponse.json(product, { status: 201 });
     } catch (err) {
-      // Prisma unique constraint violation → retry with next index
-      if (
-        err instanceof Prisma.PrismaClientKnownRequestError &&
-        err.code === "P2002"
-      ) {
-        if (attempt < MAX_RETRIES - 1) continue;
+      if (isPrismaUniqueConflict(err) && attempt < 2) continue;
+      if (isPrismaUniqueConflict(err)) {
         return NextResponse.json(
           { error: "Conflit de référence SKU, veuillez réessayer" },
           { status: 409 }
@@ -141,6 +125,5 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
     }
   }
-
-  return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+  // unreachable — loop always returns
 }

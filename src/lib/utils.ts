@@ -52,6 +52,29 @@ export const CAMPAIGN_TYPES = [
   { value: "OTHER", label: "Autre" },
 ] as const;
 
+export const SAMPLE_STATUSES = [
+  { value: "PENDING", label: "En attente" },
+  { value: "VALIDATED", label: "Validé" },
+  { value: "NOT_VALIDATED", label: "Non validé" },
+] as const;
+
+export const CAMPAIGN_STATUSES = [
+  { value: "DRAFT", label: "Brouillon" },
+  { value: "ACTIVE", label: "Active" },
+  { value: "PAUSED", label: "En pause" },
+  { value: "COMPLETED", label: "Terminée" },
+  { value: "CANCELLED", label: "Annulée" },
+] as const;
+
+export const EVENT_STATUSES = [
+  { value: "DRAFT", label: "Brouillon" },
+  { value: "CONFIRMED", label: "Confirmé" },
+  { value: "COMPLETED", label: "Terminé" },
+  { value: "CANCELLED", label: "Annulé" },
+] as const;
+
+export const CURRENCIES = ["EUR", "USD", "GBP", "CHF", "JPY", "CNY"] as const;
+
 export function generateSKU(params: {
   family: string;
   season: string;

@@ -1,25 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { CAMPAIGN_TYPES } from "@/lib/utils";
-import { Prisma } from "@prisma/client";
+import { CAMPAIGN_TYPES, CAMPAIGN_STATUSES, CURRENCIES } from "@/lib/utils";
+import {
+  MAX_NAME_LENGTH,
+  MAX_TEXT_LENGTH,
+  isValidDate,
+  isValidBudget,
+  isPrismaNotFound,
+} from "@/lib/validation";
 
 export const dynamic = 'force-dynamic';
 
 const VALID_TYPES = new Set<string>(CAMPAIGN_TYPES.map((t) => t.value));
-const VALID_STATUSES = new Set<string>(["DRAFT", "ACTIVE", "PAUSED", "COMPLETED", "CANCELLED"]);
-const VALID_CURRENCIES = new Set(["EUR", "USD", "GBP", "CHF", "JPY", "CNY"]);
-
-const MAX_NAME_LENGTH = 200;
-const MAX_TEXT_LENGTH = 5000;
-
-function isValidDate(v: unknown): v is string {
-  if (typeof v !== "string") return false;
-  return !isNaN(new Date(v).getTime());
-}
-
-function isValidBudget(v: unknown): v is number {
-  return typeof v === "number" && Number.isFinite(v) && v >= 0;
-}
+const VALID_STATUSES = new Set<string>(CAMPAIGN_STATUSES.map((s) => s.value));
+const VALID_CURRENCIES = new Set<string>(CURRENCIES);
 
 export async function GET(
   _req: NextRequest,
@@ -57,7 +51,6 @@ export async function PATCH(
     return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
   }
 
-  // Name validation
   if (body.name !== undefined) {
     if (typeof body.name !== "string" || !body.name.trim()) {
       return NextResponse.json({ error: "Nom invalide" }, { status: 422 });
@@ -97,9 +90,7 @@ export async function PATCH(
       where: { id },
       data: {
         ...(body.name !== undefined && { name: (body.name as string).trim() }),
-        ...(body.description !== undefined && {
-          description: body.description as string | null,
-        }),
+        ...(body.description !== undefined && { description: body.description as string | null }),
         ...(body.type !== undefined && { type: body.type as string }),
         ...(body.status !== undefined && { status: body.status as string }),
         ...(body.startAt !== undefined && {
@@ -114,14 +105,12 @@ export async function PATCH(
         ...(body.currency !== undefined && body.currency !== null && {
           currency: body.currency as string,
         }),
-        ...(body.eventId !== undefined && {
-          eventId: body.eventId as string | null,
-        }),
+        ...(body.eventId !== undefined && { eventId: body.eventId as string | null }),
       },
     });
     return NextResponse.json(campaign);
   } catch (err) {
-    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
+    if (isPrismaNotFound(err)) {
       return NextResponse.json({ error: "Campagne introuvable" }, { status: 404 });
     }
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
@@ -137,7 +126,7 @@ export async function DELETE(
     await prisma.campaign.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (err) {
-    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
+    if (isPrismaNotFound(err)) {
       return NextResponse.json({ error: "Campagne introuvable" }, { status: 404 });
     }
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });

@@ -1,19 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { EVENT_TYPES } from "@/lib/utils";
+import { EVENT_TYPES, EVENT_STATUSES } from "@/lib/utils";
+import { MAX_NAME_LENGTH, MAX_TEXT_LENGTH, isValidDate } from "@/lib/validation";
 
 export const dynamic = 'force-dynamic';
 
 const VALID_TYPES = new Set<string>(EVENT_TYPES.map((t) => t.value));
-const VALID_STATUSES = new Set<string>(["DRAFT", "CONFIRMED", "COMPLETED", "CANCELLED"]);
-
-const MAX_NAME_LENGTH = 200;
-const MAX_TEXT_LENGTH = 5000;
-
-function isValidDate(v: unknown): v is string {
-  if (typeof v !== "string") return false;
-  return !isNaN(new Date(v).getTime());
-}
+const VALID_STATUSES = new Set<string>(EVENT_STATUSES.map((s) => s.value));
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -49,7 +42,7 @@ export async function POST(req: NextRequest) {
   if (!body.name || typeof body.name !== "string" || !body.name.trim()) {
     return NextResponse.json({ error: "Nom requis" }, { status: 422 });
   }
-  if ((body.name as string).trim().length > MAX_NAME_LENGTH) {
+  if (body.name.trim().length > MAX_NAME_LENGTH) {
     return NextResponse.json({ error: `Nom trop long (max ${MAX_NAME_LENGTH} car.)` }, { status: 422 });
   }
   if (!body.type || !VALID_TYPES.has(body.type as string)) {
