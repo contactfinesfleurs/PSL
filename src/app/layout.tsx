@@ -15,10 +15,10 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body>
-        <div className="flex h-screen bg-gray-50">
+        <div className="flex h-screen" style={{ backgroundColor: '#F5F5F7' }}>
           <Sidebar />
           <main className="flex-1 overflow-auto">
-            <div className="p-6 max-w-7xl mx-auto">{children}</div>
+            <div className="p-8 max-w-6xl mx-auto">{children}</div>
           </main>
         </div>
       </body>
