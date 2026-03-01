@@ -7,6 +7,7 @@ import {
   isValidDate,
   isValidBudget,
   isPrismaNotFound,
+  isPrismaFKViolation,
 } from "@/lib/validation";
 
 export const dynamic = 'force-dynamic';
@@ -115,6 +116,9 @@ export async function PATCH(
   } catch (err) {
     if (isPrismaNotFound(err)) {
       return NextResponse.json({ error: "Campagne introuvable" }, { status: 404 });
+    }
+    if (isPrismaFKViolation(err)) {
+      return NextResponse.json({ error: "Événement introuvable" }, { status: 404 });
     }
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { CAMPAIGN_TYPES, CAMPAIGN_STATUSES, CURRENCIES } from "@/lib/utils";
-import { MAX_NAME_LENGTH, MAX_TEXT_LENGTH, isValidDate, isValidBudget } from "@/lib/validation";
+import { MAX_NAME_LENGTH, MAX_TEXT_LENGTH, isValidDate, isValidBudget, isPrismaFKViolation } from "@/lib/validation";
 
 export const dynamic = 'force-dynamic';
 
@@ -89,7 +89,10 @@ export async function POST(req: NextRequest) {
       },
     });
     return NextResponse.json(campaign, { status: 201 });
-  } catch {
+  } catch (err) {
+    if (isPrismaFKViolation(err)) {
+      return NextResponse.json({ error: "Événement introuvable" }, { status: 404 });
+    }
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
     // Verify the resolved path stays within the expected uploads directory
     const resolvedUploadDir = path.resolve(uploadDir);
     const allowedBase = path.resolve(process.cwd(), "public", "uploads");
-    if (!resolvedUploadDir.startsWith(allowedBase)) {
+    if (!resolvedUploadDir.startsWith(allowedBase + path.sep)) {
       return NextResponse.json({ error: "Chemin non autorisé" }, { status: 400 });
     }
 
