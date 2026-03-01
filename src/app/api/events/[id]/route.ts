@@ -63,7 +63,7 @@ export async function PATCH(
   if (body.status !== undefined && !VALID_STATUSES.has(body.status as string)) {
     return NextResponse.json({ error: "Statut invalide" }, { status: 422 });
   }
-  if (body.startAt !== undefined && body.startAt !== null && !isValidDate(body.startAt)) {
+  if (body.startAt !== undefined && !isValidDate(body.startAt)) {
     return NextResponse.json({ error: "Date de début invalide" }, { status: 422 });
   }
   if (body.endAt !== undefined && body.endAt !== null && !isValidDate(body.endAt)) {
@@ -88,7 +88,7 @@ export async function PATCH(
         ...(body.description !== undefined && { description: body.description as string | null }),
         ...(body.type !== undefined && { type: body.type as string }),
         ...(body.status !== undefined && { status: body.status as string }),
-        ...(body.startAt !== undefined && { startAt: new Date(body.startAt as string) }),
+        ...(body.startAt != null && { startAt: new Date(body.startAt as string) }),
         ...(body.endAt !== undefined && {
           endAt: body.endAt ? new Date(body.endAt as string) : null,
         }),

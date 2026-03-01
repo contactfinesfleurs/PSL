@@ -84,6 +84,9 @@ export async function PATCH(
   if (body.endAt !== undefined && body.endAt !== null && !isValidDate(body.endAt)) {
     return NextResponse.json({ error: "Date de fin invalide" }, { status: 422 });
   }
+  if (body.eventId !== undefined && body.eventId !== null && typeof body.eventId !== "string") {
+    return NextResponse.json({ error: "eventId invalide" }, { status: 422 });
+  }
 
   try {
     const campaign = await prisma.campaign.update({

@@ -83,7 +83,14 @@ export async function PATCH(
     }
   }
 
-  for (const field of ["sizes", "materials", "colors", "sketchPaths", "metaTags"] as const) {
+  // sizes is required (non-nullable) — reject null
+  if (body.sizes !== undefined) {
+    if (body.sizes === null || validateStringArray(body.sizes) === null) {
+      return NextResponse.json({ error: "Champ sizes invalide" }, { status: 422 });
+    }
+  }
+  // nullable JSON array fields — allow null (clears the field)
+  for (const field of ["materials", "colors", "sketchPaths", "metaTags"] as const) {
     if (body[field] !== undefined && body[field] !== null) {
       if (validateStringArray(body[field]) === null) {
         return NextResponse.json({ error: `Champ ${field} invalide` }, { status: 422 });
@@ -127,14 +134,14 @@ export async function PATCH(
         ...(body.year !== undefined && { year: Number(body.year) }),
         ...(body.sizeRange !== undefined && { sizeRange: body.sizeRange as string }),
         ...(body.sizes !== undefined && { sizes: JSON.stringify(body.sizes) }),
-        ...(body.measurements !== undefined && { measurements: JSON.stringify(body.measurements) }),
-        ...(body.materials !== undefined && { materials: JSON.stringify(body.materials) }),
-        ...(body.colors !== undefined && { colors: JSON.stringify(body.colors) }),
-        ...(body.sketchPaths !== undefined && { sketchPaths: JSON.stringify(body.sketchPaths) }),
+        ...(body.measurements !== undefined && { measurements: body.measurements != null ? JSON.stringify(body.measurements) : null }),
+        ...(body.materials !== undefined && { materials: body.materials != null ? JSON.stringify(body.materials) : null }),
+        ...(body.colors !== undefined && { colors: body.colors != null ? JSON.stringify(body.colors) : null }),
+        ...(body.sketchPaths !== undefined && { sketchPaths: body.sketchPaths != null ? JSON.stringify(body.sketchPaths) : null }),
         ...(body.techPackPath !== undefined && { techPackPath: body.techPackPath as string | null }),
         ...(body.sampleStatus !== undefined && { sampleStatus: body.sampleStatus as string }),
         ...(body.description !== undefined && { description: body.description as string | null }),
-        ...(body.metaTags !== undefined && { metaTags: JSON.stringify(body.metaTags) }),
+        ...(body.metaTags !== undefined && { metaTags: body.metaTags != null ? JSON.stringify(body.metaTags) : null }),
         ...(body.plannedLaunchAt !== undefined && {
           plannedLaunchAt: body.plannedLaunchAt ? new Date(body.plannedLaunchAt as string) : null,
         }),
