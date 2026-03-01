@@ -8,11 +8,13 @@ export default async function ProductPage({
   params,
   searchParams,
 }: {
-  params: { id: string };
-  searchParams: { tab?: string };
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
+  const { id } = await params;
+  const { tab } = await searchParams;
   const product = await prisma.product.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       samples: true,
       campaigns: {
@@ -36,7 +38,7 @@ export default async function ProductPage({
     <ProductTabs
       product={product}
       allCampaigns={allCampaigns}
-      activeTab={searchParams.tab ?? "techpack"}
+      activeTab={tab ?? "techpack"}
     />
   );
 }

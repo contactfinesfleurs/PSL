@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -38,8 +38,9 @@ type Campaign = {
 export default function CampaignDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = use(params);
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [editing, setEditing] = useState(false);
@@ -50,13 +51,13 @@ export default function CampaignDetailPage({
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/campaigns/${params.id}`)
+    fetch(`/api/campaigns/${id}`)
       .then((r) => r.json())
       .then(setCampaign);
     fetch("/api/products")
       .then((r) => r.json())
       .then(setAllProducts);
-  }, [params.id]);
+  }, [id]);
 
   if (!campaign) {
     return (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -40,8 +40,9 @@ type Event = {
 export default function EventDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = use(params);
   const [event, setEvent] = useState<Event | null>(null);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [editing, setEditing] = useState(false);
@@ -52,13 +53,13 @@ export default function EventDetailPage({
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/events/${params.id}`)
+    fetch(`/api/events/${id}`)
       .then((r) => r.json())
       .then(setEvent);
     fetch("/api/products")
       .then((r) => r.json())
       .then(setAllProducts);
-  }, [params.id]);
+  }, [id]);
 
   if (!event) {
     return (
