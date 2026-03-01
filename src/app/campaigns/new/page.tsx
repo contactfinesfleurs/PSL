@@ -60,7 +60,7 @@ export default function NewCampaignPage() {
 
   return (
     <div className="max-w-xl space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Nouvelle campagne</h1>
+      <h1 className="text-2xl font-light text-gray-900">Nouvelle campagne</h1>
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
@@ -73,7 +73,7 @@ export default function NewCampaignPage() {
             value={form.name}
             onChange={(e) => set("name", e.target.value)}
             placeholder="ex. Campagne Instagram AH 2026"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
           />
         </div>
 
@@ -84,7 +84,7 @@ export default function NewCampaignPage() {
           <select
             value={form.type}
             onChange={(e) => set("type", e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
           >
             {CAMPAIGN_TYPES.map((t) => (
               <option key={t.value} value={t.value}>
@@ -103,7 +103,7 @@ export default function NewCampaignPage() {
               type="date"
               value={form.startAt}
               onChange={(e) => set("startAt", e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
             />
           </div>
           <div>
@@ -114,7 +114,7 @@ export default function NewCampaignPage() {
               type="date"
               value={form.endAt}
               onChange={(e) => set("endAt", e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
             />
           </div>
         </div>
@@ -130,7 +130,7 @@ export default function NewCampaignPage() {
               value={form.budget}
               onChange={(e) => set("budget", e.target.value)}
               placeholder="0"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
             />
           </div>
           <div>
@@ -140,7 +140,7 @@ export default function NewCampaignPage() {
             <select
               value={form.currency}
               onChange={(e) => set("currency", e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
             >
               <option value="EUR">EUR €</option>
               <option value="USD">USD $</option>
@@ -156,7 +156,7 @@ export default function NewCampaignPage() {
           <select
             value={form.eventId}
             onChange={(e) => set("eventId", e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
           >
             <option value="">— Aucun —</option>
             {events.map((ev) => (
@@ -175,7 +175,7 @@ export default function NewCampaignPage() {
             value={form.description}
             onChange={(e) => set("description", e.target.value)}
             rows={3}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 resize-none"
           />
         </div>
 
@@ -183,7 +183,7 @@ export default function NewCampaignPage() {
           <button
             type="submit"
             disabled={saving}
-            className="bg-purple-700 hover:bg-purple-800 disabled:opacity-50 text-white text-sm font-medium px-6 py-2 rounded-lg transition-colors"
+            className="bg-[#1D1D1F] hover:opacity-80 disabled:opacity-50 text-white text-sm font-medium px-6 py-2 rounded-lg transition-opacity"
           >
             {saving ? "Création…" : "Créer la campagne"}
           </button>

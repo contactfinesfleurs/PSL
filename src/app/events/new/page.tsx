@@ -52,7 +52,7 @@ export default function NewEventPage() {
   return (
     <div className="max-w-xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Nouvel événement</h1>
+        <h1 className="text-2xl font-light text-gray-900">Nouvel événement</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
@@ -66,7 +66,7 @@ export default function NewEventPage() {
             value={form.name}
             onChange={(e) => set("name", e.target.value)}
             placeholder="ex. Défilé AH 2026"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
           />
         </div>
 
@@ -77,7 +77,7 @@ export default function NewEventPage() {
           <select
             value={form.type}
             onChange={(e) => set("type", e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
           >
             {EVENT_TYPES.map((t) => (
               <option key={t.value} value={t.value}>
@@ -97,7 +97,7 @@ export default function NewEventPage() {
               type="date"
               value={form.startAt}
               onChange={(e) => set("startAt", e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
             />
           </div>
           <div>
@@ -108,7 +108,7 @@ export default function NewEventPage() {
               type="date"
               value={form.endAt}
               onChange={(e) => set("endAt", e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
             />
           </div>
         </div>
@@ -122,7 +122,7 @@ export default function NewEventPage() {
             value={form.location}
             onChange={(e) => set("location", e.target.value)}
             placeholder="ex. Paris"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
           />
         </div>
 
@@ -135,7 +135,7 @@ export default function NewEventPage() {
             value={form.venue}
             onChange={(e) => set("venue", e.target.value)}
             placeholder="ex. Palais Royal, 75001 Paris"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
           />
         </div>
 
@@ -147,7 +147,7 @@ export default function NewEventPage() {
             value={form.description}
             onChange={(e) => set("description", e.target.value)}
             rows={3}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 resize-none"
           />
         </div>
 
@@ -155,7 +155,7 @@ export default function NewEventPage() {
           <button
             type="submit"
             disabled={saving}
-            className="bg-purple-700 hover:bg-purple-800 disabled:opacity-50 text-white text-sm font-medium px-6 py-2 rounded-lg transition-colors"
+            className="bg-[#1D1D1F] hover:opacity-80 disabled:opacity-50 text-white text-sm font-medium px-6 py-2 rounded-lg transition-opacity"
           >
             {saving ? "Création…" : "Créer l'événement"}
           </button>

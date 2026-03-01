@@ -27,7 +27,7 @@ export default function GlobalError({
           <AlertTriangle className="h-7 w-7 text-yellow-500" />
         </div>
 
-        <h1 className="text-xl font-bold text-gray-900 mb-2">
+        <h1 className="text-xl font-light text-gray-900 mb-2">
           {isDbError ? "Base de données inaccessible" : "Une erreur est survenue"}
         </h1>
 
@@ -56,7 +56,7 @@ export default function GlobalError({
 
         <button
           onClick={reset}
-          className="inline-flex items-center gap-2 bg-purple-700 hover:bg-purple-800 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors"
+          className="inline-flex items-center gap-2 bg-[#1D1D1F] hover:opacity-80 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-opacity"
         >
           Réessayer
         </button>

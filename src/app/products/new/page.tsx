@@ -71,7 +71,7 @@ export default function NewProductPage() {
   return (
     <div className="max-w-2xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Nouveau produit</h1>
+        <h1 className="text-2xl font-light text-gray-900">Nouveau produit</h1>
         <p className="text-sm text-gray-500 mt-1">
           Remplissez les informations de base. La référence SKU sera générée automatiquement.
         </p>
@@ -89,7 +89,7 @@ export default function NewProductPage() {
             value={form.name}
             onChange={(e) => set("name", e.target.value)}
             placeholder="ex. Veste Structurée Noire"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
           />
         </div>
 
@@ -103,7 +103,7 @@ export default function NewProductPage() {
             value={form.reference}
             onChange={(e) => set("reference", e.target.value)}
             placeholder="ex. REF-001"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
           />
         </div>
 
@@ -116,7 +116,7 @@ export default function NewProductPage() {
             <select
               value={form.family}
               onChange={(e) => set("family", e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
             >
               {PRODUCT_FAMILIES.map((f) => (
                 <option key={f.value} value={f.value}>
@@ -133,7 +133,7 @@ export default function NewProductPage() {
             <select
               value={form.season}
               onChange={(e) => set("season", e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
             >
               {SEASONS.map((s) => (
                 <option key={s.value} value={s.value}>
@@ -153,7 +153,7 @@ export default function NewProductPage() {
               onChange={(e) => set("year", parseInt(e.target.value))}
               min={2020}
               max={2040}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
             />
           </div>
         </div>
@@ -166,7 +166,7 @@ export default function NewProductPage() {
           <select
             value={form.sizeRange}
             onChange={(e) => set("sizeRange", e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
           >
             {SIZE_RANGES.map((s) => (
               <option key={s.value} value={s.value}>
@@ -226,7 +226,7 @@ export default function NewProductPage() {
             onChange={(e) => set("measurements", e.target.value)}
             rows={3}
             placeholder="ex. Tour de poitrine : 86-92cm, Longueur dos : 68cm…"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 resize-none"
           />
         </div>
 
@@ -267,7 +267,7 @@ export default function NewProductPage() {
           <button
             type="submit"
             disabled={saving || !form.name.trim()}
-            className="bg-purple-700 hover:bg-purple-800 disabled:opacity-50 text-white text-sm font-medium px-6 py-2 rounded-lg transition-colors"
+            className="bg-[#1D1D1F] hover:opacity-80 disabled:opacity-50 text-white text-sm font-medium px-6 py-2 rounded-lg transition-opacity"
           >
             {saving ? "Création…" : "Créer le produit"}
           </button>
