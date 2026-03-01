@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { RotateCcw } from "lucide-react";
 import {
   PRODUCT_FAMILIES,
   SEASONS,
   SIZE_RANGES,
+  generateReference,
 } from "@/lib/utils";
 import { TagInput } from "@/components/ui/TagInput";
 import { FileUpload } from "@/components/ui/FileUpload";
@@ -13,6 +15,7 @@ import { FileUpload } from "@/components/ui/FileUpload";
 export default function NewProductPage() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [refIsAuto, setRefIsAuto] = useState(true);
 
   const currentYear = new Date().getFullYear();
 
@@ -30,6 +33,21 @@ export default function NewProductPage() {
     sketchPaths: [] as string[],
     techPackPath: null as string | null,
   });
+
+  // Auto-generate reference when relevant fields change
+  const autoRef = generateReference({
+    name: form.name,
+    season: form.season,
+    year: form.year,
+    colors: form.colors,
+    materials: form.materials,
+  });
+
+  useEffect(() => {
+    if (refIsAuto) {
+      setForm((prev) => ({ ...prev, reference: autoRef }));
+    }
+  }, [autoRef, refIsAuto]);
 
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -95,16 +113,41 @@ export default function NewProductPage() {
 
         {/* Reference interne */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Référence interne (optionnel)
-          </label>
-          <input
-            type="text"
-            value={form.reference}
-            onChange={(e) => set("reference", e.target.value)}
-            placeholder="ex. REF-001"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
-          />
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-sm font-medium text-gray-700">
+              Référence interne
+            </label>
+            {!refIsAuto && (
+              <button
+                type="button"
+                onClick={() => setRefIsAuto(true)}
+                className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600"
+              >
+                <RotateCcw style={{ width: 10, height: 10 }} />
+                Réinitialiser
+              </button>
+            )}
+          </div>
+          <div className="relative">
+            <input
+              type="text"
+              value={form.reference}
+              onChange={(e) => {
+                setRefIsAuto(false);
+                set("reference", e.target.value);
+              }}
+              placeholder="Générée automatiquement"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 font-mono"
+            />
+            {refIsAuto && form.reference && (
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 font-sans">
+                auto
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-gray-400 mt-1">
+            Initiaux du nom · Saison · Coloris · Matière
+          </p>
         </div>
 
         {/* Family + Season + Year */}

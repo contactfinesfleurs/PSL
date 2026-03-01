@@ -85,6 +85,49 @@ export function generateSKU(params: {
   return `${fam}-${sea}${yr}-${idx}`;
 }
 
+function stripAccents(str: string): string {
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+export function generateReference(params: {
+  name: string;
+  season: string;
+  year: number;
+  colors: string[];
+  materials: string[];
+}): string {
+  // Initials from product name (ex. "Veste Structurée Noire" → "VSN")
+  const initials = stripAccents(params.name)
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w[0].toUpperCase())
+    .join("");
+
+  const seasonCode: Record<string, string> = {
+    "FALL-WINTER": "FW",
+    "PRE-FALL": "PF",
+    "SPRING-SUMMER": "SS",
+    CRUISE: "CR",
+    RESORT: "RS",
+  };
+  const sea = seasonCode[params.season] ?? "XX";
+  const yr = String(params.year).slice(-2);
+
+  // Color code: first 3 letters of first color, no accents (ex. "Noir" → "NOI")
+  const colorCode = params.colors[0]
+    ? stripAccents(params.colors[0]).replace(/\s+/g, "").slice(0, 3).toUpperCase()
+    : null;
+
+  // Material code: first 3 letters of first material, no accents (ex. "Soie" → "SOI")
+  const materialCode = params.materials[0]
+    ? stripAccents(params.materials[0]).replace(/\s+/g, "").slice(0, 3).toUpperCase()
+    : null;
+
+  return [initials || "REF", `${sea}${yr}`, colorCode, materialCode]
+    .filter(Boolean)
+    .join("-");
+}
+
 export function formatDate(date: Date | string | null | undefined): string {
   if (!date) return "—";
   return new Date(date).toLocaleDateString("fr-FR", {
