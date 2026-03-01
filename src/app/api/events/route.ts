@@ -7,6 +7,14 @@ export const dynamic = 'force-dynamic';
 const VALID_TYPES = new Set<string>(EVENT_TYPES.map((t) => t.value));
 const VALID_STATUSES = new Set<string>(["DRAFT", "CONFIRMED", "COMPLETED", "CANCELLED"]);
 
+const MAX_NAME_LENGTH = 200;
+const MAX_TEXT_LENGTH = 5000;
+
+function isValidDate(v: unknown): v is string {
+  if (typeof v !== "string") return false;
+  return !isNaN(new Date(v).getTime());
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const status = searchParams.get("status");
@@ -41,18 +49,35 @@ export async function POST(req: NextRequest) {
   if (!body.name || typeof body.name !== "string" || !body.name.trim()) {
     return NextResponse.json({ error: "Nom requis" }, { status: 422 });
   }
+  if ((body.name as string).trim().length > MAX_NAME_LENGTH) {
+    return NextResponse.json({ error: `Nom trop long (max ${MAX_NAME_LENGTH} car.)` }, { status: 422 });
+  }
   if (!body.type || !VALID_TYPES.has(body.type as string)) {
     return NextResponse.json({ error: "Type invalide" }, { status: 422 });
   }
   if (body.status !== undefined && !VALID_STATUSES.has(body.status as string)) {
     return NextResponse.json({ error: "Statut invalide" }, { status: 422 });
   }
-  if (!body.startAt) {
-    return NextResponse.json({ error: "Date de début requise" }, { status: 422 });
+  if (body.description !== undefined && body.description !== null) {
+    if (typeof body.description !== "string" || body.description.length > MAX_TEXT_LENGTH) {
+      return NextResponse.json({ error: `Description trop longue (max ${MAX_TEXT_LENGTH} car.)` }, { status: 422 });
+    }
   }
-  const startAt = new Date(body.startAt as string);
-  if (isNaN(startAt.getTime())) {
+  if (!body.startAt || !isValidDate(body.startAt)) {
     return NextResponse.json({ error: "Date de début invalide" }, { status: 422 });
+  }
+  if (body.endAt !== undefined && body.endAt !== null && !isValidDate(body.endAt)) {
+    return NextResponse.json({ error: "Date de fin invalide" }, { status: 422 });
+  }
+  if (body.location !== undefined && body.location !== null) {
+    if (typeof body.location !== "string" || body.location.length > MAX_NAME_LENGTH) {
+      return NextResponse.json({ error: "Lieu trop long" }, { status: 422 });
+    }
+  }
+  if (body.venue !== undefined && body.venue !== null) {
+    if (typeof body.venue !== "string" || body.venue.length > MAX_NAME_LENGTH) {
+      return NextResponse.json({ error: "Salle trop longue" }, { status: 422 });
+    }
   }
 
   try {
@@ -62,7 +87,7 @@ export async function POST(req: NextRequest) {
         description: typeof body.description === "string" ? body.description : null,
         type: body.type as string,
         status: (body.status as string | undefined) ?? "DRAFT",
-        startAt,
+        startAt: new Date(body.startAt as string),
         endAt: body.endAt ? new Date(body.endAt as string) : null,
         location: typeof body.location === "string" ? body.location : null,
         venue: typeof body.venue === "string" ? body.venue : null,

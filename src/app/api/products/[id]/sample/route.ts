@@ -3,6 +3,19 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = 'force-dynamic';
 
+const MAX_NOTES_LENGTH = 5000;
+const MAX_ARRAY_ITEMS = 50;
+
+function validatePathArray(value: unknown): string[] | null {
+  if (!Array.isArray(value)) return null;
+  if (value.length > MAX_ARRAY_ITEMS) return null;
+  for (const item of value) {
+    if (typeof item !== "string") return null;
+    if (item.length > 500) return null;
+  }
+  return value as string[];
+}
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -29,6 +42,31 @@ export async function PUT(
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
+  }
+
+  // Validate reviewNotes length
+  if (body.reviewNotes !== undefined && body.reviewNotes !== null) {
+    if (typeof body.reviewNotes !== "string" || body.reviewNotes.length > MAX_NOTES_LENGTH) {
+      return NextResponse.json({ error: `Notes trop longues (max ${MAX_NOTES_LENGTH} car.)` }, { status: 422 });
+    }
+  }
+
+  // Validate path arrays
+  for (const field of ["samplePhotoPaths", "detailPhotoPaths", "reviewPhotoPaths", "packshotPaths"] as const) {
+    if (body[field] !== undefined && body[field] !== null) {
+      if (validatePathArray(body[field]) === null) {
+        return NextResponse.json({ error: `${field} invalide` }, { status: 422 });
+      }
+    }
+  }
+
+  // Validate string arrays
+  for (const field of ["definitiveColors", "definitiveMaterials"] as const) {
+    if (body[field] !== undefined && body[field] !== null) {
+      if (!Array.isArray(body[field]) || (body[field] as unknown[]).some((v) => typeof v !== "string")) {
+        return NextResponse.json({ error: `${field} invalide` }, { status: 422 });
+      }
+    }
   }
 
   try {
@@ -100,7 +138,6 @@ export async function PUT(
   }
 }
 
-// Dedicated POST for creating a new sample if none exists
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -112,6 +149,22 @@ export async function POST(
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
+  }
+
+  // Validate reviewNotes length
+  if (body.reviewNotes !== undefined && body.reviewNotes !== null) {
+    if (typeof body.reviewNotes !== "string" || body.reviewNotes.length > MAX_NOTES_LENGTH) {
+      return NextResponse.json({ error: `Notes trop longues (max ${MAX_NOTES_LENGTH} car.)` }, { status: 422 });
+    }
+  }
+
+  // Validate path arrays
+  for (const field of ["samplePhotoPaths", "detailPhotoPaths", "reviewPhotoPaths", "packshotPaths"] as const) {
+    if (body[field] !== undefined && body[field] !== null) {
+      if (validatePathArray(body[field]) === null) {
+        return NextResponse.json({ error: `${field} invalide` }, { status: 422 });
+      }
+    }
   }
 
   try {

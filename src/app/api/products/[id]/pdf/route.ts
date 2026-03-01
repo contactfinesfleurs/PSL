@@ -40,8 +40,10 @@ export async function GET(
   let reviewPhotos: string[] = [];
   try {
     reviewPhotos = sample?.reviewPhotoPaths
-      ? (JSON.parse(sample.reviewPhotoPaths) as string[]).filter(
-          (p) => typeof p === "string" && /^https?:\/\//.test(p) || p.startsWith("/")
+      ? (JSON.parse(sample.reviewPhotoPaths) as unknown[]).filter(
+          (p): p is string =>
+            typeof p === "string" &&
+            (p.startsWith("/") || /^https?:\/\//.test(p))
         )
       : [];
   } catch {

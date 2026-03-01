@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { EVENT_TYPES } from "@/lib/utils";
+import { Prisma } from "@prisma/client";
 
 export const dynamic = 'force-dynamic';
 
 const VALID_TYPES = new Set<string>(EVENT_TYPES.map((t) => t.value));
 const VALID_STATUSES = new Set<string>(["DRAFT", "CONFIRMED", "COMPLETED", "CANCELLED"]);
+
+const MAX_NAME_LENGTH = 200;
+const MAX_TEXT_LENGTH = 5000;
+
+function isValidDate(v: unknown): v is string {
+  if (typeof v !== "string") return false;
+  return !isNaN(new Date(v).getTime());
+}
 
 export async function GET(
   _req: NextRequest,
@@ -43,16 +52,40 @@ export async function PATCH(
     return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
   }
 
+  // Name
+  if (body.name !== undefined) {
+    if (typeof body.name !== "string" || !body.name.trim()) {
+      return NextResponse.json({ error: "Nom invalide" }, { status: 422 });
+    }
+    if (body.name.trim().length > MAX_NAME_LENGTH) {
+      return NextResponse.json({ error: `Nom trop long (max ${MAX_NAME_LENGTH} car.)` }, { status: 422 });
+    }
+  }
+  if (body.description !== undefined && body.description !== null) {
+    if (typeof body.description !== "string" || body.description.length > MAX_TEXT_LENGTH) {
+      return NextResponse.json({ error: `Description trop longue (max ${MAX_TEXT_LENGTH} car.)` }, { status: 422 });
+    }
+  }
   if (body.type !== undefined && !VALID_TYPES.has(body.type as string)) {
     return NextResponse.json({ error: "Type invalide" }, { status: 422 });
   }
   if (body.status !== undefined && !VALID_STATUSES.has(body.status as string)) {
     return NextResponse.json({ error: "Statut invalide" }, { status: 422 });
   }
-  if (body.startAt !== undefined) {
-    const d = new Date(body.startAt as string);
-    if (isNaN(d.getTime())) {
-      return NextResponse.json({ error: "Date de début invalide" }, { status: 422 });
+  if (body.startAt !== undefined && body.startAt !== null && !isValidDate(body.startAt)) {
+    return NextResponse.json({ error: "Date de début invalide" }, { status: 422 });
+  }
+  if (body.endAt !== undefined && body.endAt !== null && !isValidDate(body.endAt)) {
+    return NextResponse.json({ error: "Date de fin invalide" }, { status: 422 });
+  }
+  if (body.location !== undefined && body.location !== null) {
+    if (typeof body.location !== "string" || body.location.length > MAX_NAME_LENGTH) {
+      return NextResponse.json({ error: "Lieu trop long" }, { status: 422 });
+    }
+  }
+  if (body.venue !== undefined && body.venue !== null) {
+    if (typeof body.venue !== "string" || body.venue.length > MAX_NAME_LENGTH) {
+      return NextResponse.json({ error: "Salle trop longue" }, { status: 422 });
     }
   }
 
@@ -60,9 +93,7 @@ export async function PATCH(
     const event = await prisma.event.update({
       where: { id },
       data: {
-        ...(body.name !== undefined && {
-          name: typeof body.name === "string" ? body.name.trim() : String(body.name),
-        }),
+        ...(body.name !== undefined && { name: (body.name as string).trim() }),
         ...(body.description !== undefined && {
           description: body.description as string | null,
         }),
@@ -79,7 +110,10 @@ export async function PATCH(
       },
     });
     return NextResponse.json(event);
-  } catch {
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
+      return NextResponse.json({ error: "Événement introuvable" }, { status: 404 });
+    }
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
@@ -92,7 +126,10 @@ export async function DELETE(
   try {
     await prisma.event.delete({ where: { id } });
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
+      return NextResponse.json({ error: "Événement introuvable" }, { status: 404 });
+    }
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

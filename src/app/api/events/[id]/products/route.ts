@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 
 export const dynamic = 'force-dynamic';
+
+const MAX_NOTES_LENGTH = 2000;
 
 export async function POST(
   req: NextRequest,
@@ -18,6 +21,16 @@ export async function POST(
 
   if (!body.productId || typeof body.productId !== "string") {
     return NextResponse.json({ error: "productId requis" }, { status: 422 });
+  }
+  if (body.notes !== undefined && body.notes !== null) {
+    if (typeof body.notes !== "string" || body.notes.length > MAX_NOTES_LENGTH) {
+      return NextResponse.json({ error: `Notes trop longues (max ${MAX_NOTES_LENGTH} car.)` }, { status: 422 });
+    }
+  }
+  if (body.look !== undefined && body.look !== null) {
+    if (typeof body.look !== "number" || !Number.isInteger(body.look) || body.look < 0) {
+      return NextResponse.json({ error: "Numéro de look invalide" }, { status: 422 });
+    }
   }
 
   try {
@@ -40,7 +53,10 @@ export async function POST(
       },
     });
     return NextResponse.json(eventProduct, { status: 201 });
-  } catch {
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2003") {
+      return NextResponse.json({ error: "Événement ou produit introuvable" }, { status: 404 });
+    }
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
@@ -69,7 +85,10 @@ export async function DELETE(
       },
     });
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
+      return NextResponse.json({ error: "Association introuvable" }, { status: 404 });
+    }
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
