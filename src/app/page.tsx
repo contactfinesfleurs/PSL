@@ -1,19 +1,18 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-
-export const dynamic = 'force-dynamic';
 import { formatDate } from "@/lib/utils";
 import { Package, Calendar, Tag, CheckCircle, Clock, AlertTriangle } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   try {
-    const [productCount, eventCount, campaignCount, validatedCount] =
-      await Promise.all([
-        prisma.product.count(),
-        prisma.event.count(),
-        prisma.campaign.count(),
-        prisma.product.count({ where: { sampleStatus: "VALIDATED" } }),
-      ]);
+    const [productCount, eventCount, campaignCount, validatedCount] = await Promise.all([
+      prisma.product.count(),
+      prisma.event.count(),
+      prisma.campaign.count(),
+      prisma.product.count({ where: { sampleStatus: "VALIDATED" } }),
+    ]);
 
     const recentProducts = await prisma.product.findMany({
       take: 6,
@@ -28,127 +27,82 @@ export default async function DashboardPage() {
     });
 
     return (
-      <div className="space-y-10">
+      <div style={{ display: "flex", flexDirection: "column", gap: "52px" }}>
+
         {/* Header */}
         <div>
-          <h1 style={{ fontSize: '32px', fontWeight: 200, color: '#1D1D1F', letterSpacing: '-0.03em', lineHeight: 1.1 }}>
-            Tableau de bord
-          </h1>
-          <p style={{ marginTop: '6px', fontSize: '13px', color: '#86868B', fontWeight: 300 }}>
-            Vue d&apos;ensemble de vos produits et événements
+          <h1>Vue d&apos;ensemble</h1>
+          <p style={{ marginTop: "6px", fontSize: "13px", color: "#8E8E93", fontWeight: 300 }}>
+            Bienvenue sur PSL Studio
           </p>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatCard label="Produits" value={productCount} icon={<Package className="h-4 w-4" style={{ color: '#6E6E73' }} strokeWidth={1.5} />} href="/products" />
-          <StatCard label="Événements" value={eventCount} icon={<Calendar className="h-4 w-4" style={{ color: '#6E6E73' }} strokeWidth={1.5} />} href="/events" />
-          <StatCard label="Campagnes" value={campaignCount} icon={<Tag className="h-4 w-4" style={{ color: '#6E6E73' }} strokeWidth={1.5} />} href="/campaigns" />
-          <StatCard label="Validés" value={validatedCount} icon={<CheckCircle className="h-4 w-4" style={{ color: '#6E6E73' }} strokeWidth={1.5} />} href="/products?status=VALIDATED" />
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px" }}>
+          {[
+            { label: "Produits",   value: productCount,   Icon: Package,     href: "/products" },
+            { label: "Événements", value: eventCount,     Icon: Calendar,    href: "/events" },
+            { label: "Campagnes",  value: campaignCount,  Icon: Tag,         href: "/campaigns" },
+            { label: "Validés",    value: validatedCount, Icon: CheckCircle, href: "/products?status=VALIDATED" },
+          ].map(({ label, value, Icon, href }) => (
+            <StatCard key={label} label={label} value={value} Icon={Icon} href={href} />
+          ))}
         </div>
 
-        {/* Recent Products & Upcoming Events */}
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-          {/* Recent Products */}
-          <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)' }}>
-            <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
-              <span style={{ fontSize: '13px', fontWeight: 400, color: '#1D1D1F', letterSpacing: '-0.01em' }}>Produits récents</span>
-              <Link href="/products" style={{ fontSize: '12px', color: '#6E6E73', fontWeight: 300 }} className="hover:text-[#1D1D1F] transition-colors">
-                Voir tout
-              </Link>
-            </div>
-            <div>
-              {recentProducts.length === 0 ? (
-                <p className="px-5 py-8 text-center" style={{ fontSize: '13px', color: '#86868B', fontWeight: 300 }}>
-                  Aucun produit.{" "}
-                  <Link href="/products/new" style={{ color: '#1D1D1F' }}>Créer le premier</Link>
-                </p>
-              ) : (
-                recentProducts.map((product, i) => (
-                  <Link
-                    key={product.id}
-                    href={`/products/${product.id}`}
-                    className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-black/[0.02]"
-                    style={{ borderTop: i > 0 ? '1px solid rgba(0,0,0,0.04)' : 'none' }}
-                  >
-                    <div>
-                      <p style={{ fontSize: '13px', fontWeight: 300, color: '#1D1D1F', letterSpacing: '-0.01em' }}>
-                        {product.name}
-                      </p>
-                      <p style={{ fontSize: '11px', color: '#86868B', fontWeight: 300, marginTop: '1px', fontFamily: 'monospace' }}>
-                        {product.sku}
-                      </p>
-                    </div>
-                    <StatusBadge status={product.sampleStatus} />
-                  </Link>
-                ))
-              )}
-            </div>
-          </div>
+        {/* Tables */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+          <Panel title="Produits récents" href="/products" hrefLabel="Voir tout">
+            {recentProducts.length === 0 ? (
+              <Empty label="Aucun produit." cta="Créer le premier" href="/products/new" />
+            ) : recentProducts.map((p, i) => (
+              <Row key={p.id} href={`/products/${p.id}`} index={i}>
+                <div>
+                  <div style={{ fontSize: "12.5px", fontWeight: 300, color: "#1D1D1F", letterSpacing: "-0.01em" }}>
+                    {p.name}
+                  </div>
+                  <div style={{ fontSize: "10.5px", color: "#8E8E93", fontWeight: 300, marginTop: "1px", fontFamily: "ui-monospace, monospace" }}>
+                    {p.sku}
+                  </div>
+                </div>
+                <StatusPill status={p.sampleStatus} type="product" />
+              </Row>
+            ))}
+          </Panel>
 
-          {/* Upcoming Events */}
-          <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)' }}>
-            <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
-              <span style={{ fontSize: '13px', fontWeight: 400, color: '#1D1D1F', letterSpacing: '-0.01em' }}>Événements à venir</span>
-              <Link href="/events" style={{ fontSize: '12px', color: '#6E6E73', fontWeight: 300 }} className="hover:text-[#1D1D1F] transition-colors">
-                Voir tout
-              </Link>
-            </div>
-            <div>
-              {upcomingEvents.length === 0 ? (
-                <p className="px-5 py-8 text-center" style={{ fontSize: '13px', color: '#86868B', fontWeight: 300 }}>
-                  Aucun événement à venir.{" "}
-                  <Link href="/events/new" style={{ color: '#1D1D1F' }}>Créer un événement</Link>
-                </p>
-              ) : (
-                upcomingEvents.map((event, i) => (
-                  <Link
-                    key={event.id}
-                    href={`/events/${event.id}`}
-                    className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-black/[0.02]"
-                    style={{ borderTop: i > 0 ? '1px solid rgba(0,0,0,0.04)' : 'none' }}
-                  >
-                    <div>
-                      <p style={{ fontSize: '13px', fontWeight: 300, color: '#1D1D1F', letterSpacing: '-0.01em' }}>
-                        {event.name}
-                      </p>
-                      <p style={{ fontSize: '11px', color: '#86868B', fontWeight: 300, marginTop: '1px' }}>
-                        <Clock className="inline h-3 w-3 mr-1" strokeWidth={1.5} />
-                        {formatDate(event.startAt)}
-                        {event.location ? ` · ${event.location}` : ""}
-                      </p>
-                    </div>
-                    <EventStatusBadge status={event.status} />
-                  </Link>
-                ))
-              )}
-            </div>
-          </div>
+          <Panel title="Événements à venir" href="/events" hrefLabel="Voir tout">
+            {upcomingEvents.length === 0 ? (
+              <Empty label="Aucun événement." cta="Créer un événement" href="/events/new" />
+            ) : upcomingEvents.map((ev, i) => (
+              <Row key={ev.id} href={`/events/${ev.id}`} index={i}>
+                <div>
+                  <div style={{ fontSize: "12.5px", fontWeight: 300, color: "#1D1D1F", letterSpacing: "-0.01em" }}>
+                    {ev.name}
+                  </div>
+                  <div style={{ fontSize: "10.5px", color: "#8E8E93", fontWeight: 300, marginTop: "1px", display: "flex", alignItems: "center", gap: "3px" }}>
+                    <Clock strokeWidth={1.5} style={{ width: 10, height: 10 }} />
+                    {formatDate(ev.startAt)}{ev.location ? ` · ${ev.location}` : ""}
+                  </div>
+                </div>
+                <StatusPill status={ev.status} type="event" />
+              </Row>
+            ))}
+          </Panel>
         </div>
+
       </div>
     );
   } catch (error) {
     console.error("Dashboard DB error:", error);
-    const missingEnv =
-      !process.env.DATABASE_URL || !process.env.DATABASE_URL_UNPOOLED;
     return (
-      <div className="space-y-8">
-        <div>
-          <h1 style={{ fontSize: '32px', fontWeight: 200, color: '#1D1D1F', letterSpacing: '-0.03em' }}>
-            Tableau de bord
-          </h1>
-        </div>
-        <div className="rounded-2xl p-6 flex gap-4" style={{ backgroundColor: '#FFFBEB', border: '1px solid rgba(0,0,0,0.08)' }}>
-          <AlertTriangle className="h-5 w-5 flex-shrink-0 mt-0.5" style={{ color: '#92400E' }} strokeWidth={1.5} />
+      <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
+        <h1>Vue d&apos;ensemble</h1>
+        <div style={{ backgroundColor: "#FFFBEB", border: "1px solid rgba(234,179,8,0.2)", borderRadius: "14px", padding: "18px 20px", display: "flex", gap: "12px" }}>
+          <AlertTriangle strokeWidth={1.5} style={{ width: 14, height: 14, color: "#92400E", flexShrink: 0, marginTop: 2 }} />
           <div>
-            <p style={{ fontSize: '13px', fontWeight: 400, color: '#92400E', marginBottom: '4px' }}>
-              Connexion à la base de données impossible
-            </p>
-            <p style={{ fontSize: '12px', color: '#B45309', fontWeight: 300 }}>
-              {missingEnv
-                ? "Configurez DATABASE_URL et DATABASE_URL_UNPOOLED dans Vercel."
-                : "Vérifiez vos variables d'environnement et que votre base Neon est accessible."}
-            </p>
+            <div style={{ fontSize: "12.5px", fontWeight: 400, color: "#92400E" }}>Connexion à la base de données impossible</div>
+            <div style={{ fontSize: "12px", color: "#B45309", fontWeight: 300, marginTop: "3px" }}>
+              Vérifiez les variables d&apos;environnement DATABASE_URL dans Vercel.
+            </div>
           </div>
         </div>
       </div>
@@ -156,95 +110,95 @@ export default async function DashboardPage() {
   }
 }
 
-function StatCard({
-  label,
-  value,
-  icon,
-  href,
-}: {
-  label: string;
-  value: number;
-  icon: React.ReactNode;
-  href: string;
-}) {
+/* ─── Sub-components ────────────────────────────────── */
+
+function StatCard({ label, value, Icon, href }: { label: string; value: number; Icon: React.ElementType; href: string }) {
   return (
     <Link href={href}>
       <div
-        className="rounded-2xl p-5 transition-all hover:bg-white/90"
-        style={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)' }}
+        className="apple-card"
+        style={{ padding: "20px 18px", cursor: "pointer", transition: "box-shadow 0.15s" }}
+        onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.07)")}
+        onMouseLeave={e => (e.currentTarget.style.boxShadow = "none")}
       >
-        <div className="flex items-center justify-between mb-4">
-          {icon}
-        </div>
-        <p style={{ fontSize: '28px', fontWeight: 200, color: '#1D1D1F', letterSpacing: '-0.03em', lineHeight: 1 }}>
+        <Icon strokeWidth={1.25} style={{ width: 14, height: 14, color: "#8E8E93", marginBottom: "18px" }} />
+        <div style={{ fontSize: "36px", fontWeight: 200, color: "#1D1D1F", letterSpacing: "-0.04em", lineHeight: 1 }}>
           {value}
-        </p>
-        <p style={{ fontSize: '12px', color: '#86868B', fontWeight: 300, marginTop: '4px', letterSpacing: '-0.01em' }}>
+        </div>
+        <div style={{ fontSize: "11px", color: "#8E8E93", fontWeight: 300, marginTop: "5px", letterSpacing: "0.005em" }}>
           {label}
-        </p>
+        </div>
       </div>
     </Link>
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const styles: Record<string, { bg: string; color: string }> = {
-    PENDING:       { bg: 'rgba(251,191,36,0.12)', color: '#92400E' },
-    VALIDATED:     { bg: 'rgba(34,197,94,0.12)',  color: '#166534' },
-    NOT_VALIDATED: { bg: 'rgba(239,68,68,0.12)',  color: '#991B1B' },
-  };
-  const labels: Record<string, string> = {
-    PENDING: "En attente",
-    VALIDATED: "Validé",
-    NOT_VALIDATED: "Non validé",
-  };
-  const s = styles[status] ?? { bg: 'rgba(0,0,0,0.06)', color: '#6E6E73' };
+function Panel({ title, href, hrefLabel, children }: { title: string; href: string; hrefLabel: string; children: React.ReactNode }) {
   return (
-    <span
-      style={{
-        fontSize: '11px',
-        fontWeight: 300,
-        padding: '2px 8px',
-        borderRadius: '20px',
-        backgroundColor: s.bg,
-        color: s.color,
-        letterSpacing: '-0.01em',
-        whiteSpace: 'nowrap',
-      }}
-    >
-      {labels[status] ?? status}
-    </span>
+    <div className="apple-card">
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
+        <span style={{ fontSize: "12px", fontWeight: 400, color: "#1D1D1F", letterSpacing: "-0.015em" }}>
+          {title}
+        </span>
+        <Link
+          href={href}
+          style={{ fontSize: "11px", color: "#0071E3", fontWeight: 300 }}
+        >
+          {hrefLabel}
+        </Link>
+      </div>
+      <div>{children}</div>
+    </div>
   );
 }
 
-function EventStatusBadge({ status }: { status: string }) {
-  const styles: Record<string, { bg: string; color: string }> = {
-    DRAFT:     { bg: 'rgba(0,0,0,0.06)',          color: '#6E6E73' },
-    CONFIRMED: { bg: 'rgba(59,130,246,0.12)',      color: '#1E40AF' },
-    COMPLETED: { bg: 'rgba(34,197,94,0.12)',       color: '#166534' },
-    CANCELLED: { bg: 'rgba(239,68,68,0.12)',       color: '#991B1B' },
-  };
-  const labels: Record<string, string> = {
-    DRAFT: "Brouillon",
-    CONFIRMED: "Confirmé",
-    COMPLETED: "Terminé",
-    CANCELLED: "Annulé",
-  };
-  const s = styles[status] ?? { bg: 'rgba(0,0,0,0.06)', color: '#6E6E73' };
+function Row({ href, index, children }: { href: string; index: number; children: React.ReactNode }) {
   return (
-    <span
+    <Link
+      href={href}
       style={{
-        fontSize: '11px',
-        fontWeight: 300,
-        padding: '2px 8px',
-        borderRadius: '20px',
-        backgroundColor: s.bg,
-        color: s.color,
-        letterSpacing: '-0.01em',
-        whiteSpace: 'nowrap',
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "10px 18px",
+        borderTop: index > 0 ? "1px solid rgba(0,0,0,0.04)" : "none",
+        transition: "background 0.1s",
       }}
+      onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = "rgba(0,0,0,0.02)")}
+      onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = "transparent")}
     >
-      {labels[status] ?? status}
+      {children}
+    </Link>
+  );
+}
+
+function Empty({ label, cta, href }: { label: string; cta: string; href: string }) {
+  return (
+    <div style={{ padding: "32px 18px", textAlign: "center", color: "#8E8E93", fontSize: "12px", fontWeight: 300 }}>
+      {label}{" "}
+      <Link href={href} style={{ color: "#0071E3", fontWeight: 300 }}>{cta}</Link>
+    </div>
+  );
+}
+
+const productPills: Record<string, { label: string; color: string; bg: string }> = {
+  PENDING:       { label: "En attente", color: "#92400E", bg: "rgba(245,158,11,0.12)" },
+  VALIDATED:     { label: "Validé",     color: "#166534", bg: "rgba(34,197,94,0.12)"  },
+  NOT_VALIDATED: { label: "Non validé", color: "#991B1B", bg: "rgba(239,68,68,0.12)"  },
+};
+const eventPills: Record<string, { label: string; color: string; bg: string }> = {
+  DRAFT:     { label: "Brouillon", color: "#6E6E73", bg: "rgba(0,0,0,0.06)"       },
+  CONFIRMED: { label: "Confirmé",  color: "#1E40AF", bg: "rgba(59,130,246,0.12)"  },
+  COMPLETED: { label: "Terminé",   color: "#166534", bg: "rgba(34,197,94,0.12)"   },
+  CANCELLED: { label: "Annulé",    color: "#991B1B", bg: "rgba(239,68,68,0.12)"   },
+};
+
+function StatusPill({ status, type }: { status: string; type: "product" | "event" }) {
+  const map = type === "product" ? productPills : eventPills;
+  const s = map[status] ?? { label: status, color: "#6E6E73", bg: "rgba(0,0,0,0.06)" };
+  return (
+    <span style={{ fontSize: "10.5px", fontWeight: 300, padding: "2px 9px", borderRadius: "20px", backgroundColor: s.bg, color: s.color, whiteSpace: "nowrap", letterSpacing: "0.005em" }}>
+      {s.label}
     </span>
   );
 }

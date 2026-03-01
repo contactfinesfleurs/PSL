@@ -2,85 +2,130 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  Package,
-  Calendar,
-  Megaphone,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+import { LayoutDashboard, Package, Calendar, Megaphone } from "lucide-react";
 
-const navigation = [
-  { name: "Tableau de bord", href: "/", icon: LayoutDashboard },
-  { name: "Produits", href: "/products", icon: Package },
-  { name: "Événements", href: "/events", icon: Calendar },
-  { name: "Campagnes", href: "/campaigns", icon: Megaphone },
+const sections = [
+  {
+    label: "GÉNÉRAL",
+    items: [
+      { name: "Vue d'ensemble", href: "/", icon: LayoutDashboard },
+    ],
+  },
+  {
+    label: "CATALOGUE",
+    items: [
+      { name: "Produits",   href: "/products",  icon: Package },
+      { name: "Événements", href: "/events",    icon: Calendar },
+      { name: "Campagnes",  href: "/campaigns", icon: Megaphone },
+    ],
+  },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-52 shrink-0 flex flex-col border-r" style={{ backgroundColor: '#F5F5F7', borderColor: 'rgba(0,0,0,0.08)' }}>
-      {/* Logo */}
-      <div className="px-5 pt-7 pb-6">
-        <div className="flex items-center gap-2.5">
+    <aside
+      style={{
+        width: "200px",
+        flexShrink: 0,
+        display: "flex",
+        flexDirection: "column",
+        backgroundColor: "rgba(248,248,250,0.95)",
+        backdropFilter: "saturate(180%) blur(20px)",
+        borderRight: "1px solid rgba(0,0,0,0.06)",
+        userSelect: "none",
+      }}
+    >
+      {/* App name */}
+      <div style={{ padding: "20px 16px 18px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <div
-            className="w-6 h-6 rounded-md flex items-center justify-center"
-            style={{ backgroundColor: '#1D1D1F' }}
+            style={{
+              width: "20px",
+              height: "20px",
+              borderRadius: "5px",
+              backgroundColor: "#1D1D1F",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
           >
-            <span className="text-white text-[10px]" style={{ fontWeight: 500, letterSpacing: '0.05em' }}>P</span>
+            <span style={{ color: "#fff", fontSize: "9px", fontWeight: 600, letterSpacing: "0.02em" }}>P</span>
           </div>
-          <span style={{ color: '#1D1D1F', fontSize: '13px', fontWeight: 400, letterSpacing: '-0.01em' }}>
+          <span style={{ fontSize: "13px", fontWeight: 400, color: "#1D1D1F", letterSpacing: "-0.02em" }}>
             PSL Studio
           </span>
         </div>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 px-2.5 space-y-0.5">
-        {navigation.map((item) => {
-          const isActive =
-            item.href === "/"
-              ? pathname === "/"
-              : pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all",
-                isActive
-                  ? "bg-white/80"
-                  : "hover:bg-black/[0.04]"
-              )}
+      {/* Navigation sections */}
+      <nav style={{ flex: 1, padding: "0 8px", display: "flex", flexDirection: "column", gap: "20px" }}>
+        {sections.map((section) => (
+          <div key={section.label}>
+            <div
               style={{
-                boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                fontSize: "10px",
+                fontWeight: 600,
+                color: "#8E8E93",
+                letterSpacing: "0.06em",
+                padding: "0 8px",
+                marginBottom: "4px",
               }}
             >
-              <item.icon
-                className="h-[15px] w-[15px] flex-shrink-0"
-                style={{ color: isActive ? '#1D1D1F' : '#86868B' }}
-                strokeWidth={isActive ? 1.75 : 1.5}
-              />
-              <span
-                style={{
-                  fontSize: '13px',
-                  fontWeight: isActive ? 400 : 300,
-                  color: isActive ? '#1D1D1F' : '#6E6E73',
-                  letterSpacing: '-0.01em',
-                }}
-              >
-                {item.name}
-              </span>
-            </Link>
-          );
-        })}
+              {section.label}
+            </div>
+            {section.items.map((item) => {
+              const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    padding: "6px 8px",
+                    borderRadius: "8px",
+                    backgroundColor: isActive ? "rgba(0,113,227,0.1)" : "transparent",
+                    transition: "background-color 0.1s",
+                    textDecoration: "none",
+                  }}
+                  onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.backgroundColor = "rgba(0,0,0,0.04)"; }}
+                  onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.backgroundColor = "transparent"; }}
+                >
+                  <item.icon
+                    strokeWidth={isActive ? 1.75 : 1.5}
+                    style={{
+                      width: "14px",
+                      height: "14px",
+                      color: isActive ? "#0071E3" : "#8E8E93",
+                      flexShrink: 0,
+                    }}
+                  />
+                  <span
+                    style={{
+                      fontSize: "12.5px",
+                      fontWeight: isActive ? 500 : 300,
+                      color: isActive ? "#0071E3" : "#3A3A3C",
+                      letterSpacing: "-0.01em",
+                    }}
+                  >
+                    {item.name}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
-      {/* Footer */}
-      <div className="px-5 py-5">
-        <p style={{ fontSize: '11px', color: '#C7C7CC', fontWeight: 300 }}>v1.0</p>
+      {/* Version */}
+      <div style={{ padding: "16px", borderTop: "1px solid rgba(0,0,0,0.05)" }}>
+        <span style={{ fontSize: "10px", color: "#C7C7CC", fontWeight: 300, letterSpacing: "0.01em" }}>
+          PSL Studio v1.0
+        </span>
       </div>
     </aside>
   );
