@@ -101,13 +101,13 @@ export function LaunchTab({
     <div className="max-w-2xl space-y-8">
       {/* Launch Date Summary */}
       {product.plannedLaunchAt && (
-        <div className="flex items-center gap-3 bg-purple-50 border border-purple-200 rounded-lg px-4 py-3">
-          <Calendar className="h-5 w-5 text-purple-600 shrink-0" />
+        <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
+          <Calendar className="h-5 w-5 text-[#1D1D1F] shrink-0" />
           <div>
-            <p className="text-sm font-semibold text-purple-800">
+            <p className="text-sm font-medium text-[#1D1D1F]">
               Lancement prévu
             </p>
-            <p className="text-sm text-purple-700">
+            <p className="text-sm text-gray-600">
               {formatDate(product.plannedLaunchAt)}
             </p>
           </div>
@@ -183,7 +183,7 @@ export function LaunchTab({
             <p className="text-xs text-gray-500">
               Toutes les campagnes disponibles ont déjà été associées. Créez
               une nouvelle campagne depuis le menu{" "}
-              <a href="/campaigns/new" className="text-purple-600 hover:underline">
+              <a href="/campaigns/new" className="text-[#1D1D1F] hover:underline">
                 Campagnes
               </a>
               .
@@ -193,7 +193,7 @@ export function LaunchTab({
               <select
                 value={selectedCampaign}
                 onChange={(e) => setSelectedCampaign(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
               >
                 <option value="">— Choisir une campagne —</option>
                 {availableCampaigns.map((c) => (
@@ -207,12 +207,12 @@ export function LaunchTab({
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Notes (optionnel)"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
               />
               <button
                 onClick={addCampaign}
                 disabled={!selectedCampaign || adding}
-                className="inline-flex items-center gap-2 bg-purple-700 hover:bg-purple-800 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                className="inline-flex items-center gap-2 bg-[#1D1D1F] hover:opacity-80 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-opacity"
               >
                 <Plus className="h-4 w-4" />
                 {adding ? "Ajout…" : "Ajouter à la campagne"}

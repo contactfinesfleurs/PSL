@@ -82,7 +82,7 @@ export function FileUpload({
         className={cn(
           "border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer",
           dragOver
-            ? "border-purple-400 bg-purple-50"
+            ? "border-gray-400 bg-gray-50"
             : "border-gray-300 hover:border-gray-400 hover:bg-gray-50"
         )}
         onDragOver={(e) => {
@@ -107,7 +107,7 @@ export function FileUpload({
         <p className="text-sm text-gray-600 font-medium">{label}</p>
         {hint && <p className="text-xs text-gray-400 mt-1">{hint}</p>}
         {uploading && (
-          <p className="text-xs text-purple-600 mt-2 animate-pulse">
+          <p className="text-xs text-[#1D1D1F] mt-2 animate-pulse">
             Téléversement en cours…
           </p>
         )}

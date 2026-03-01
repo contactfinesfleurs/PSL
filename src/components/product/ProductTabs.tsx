@@ -88,12 +88,12 @@ export function ProductTabs({
 
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{product.name}</h1>
+            <h1 className="text-2xl font-light text-gray-900">{product.name}</h1>
             <div className="flex items-center gap-2 mt-1">
               <button
                 onClick={copyToClipboard}
                 title="Copier la référence"
-                className="inline-flex items-center gap-1 text-xs font-mono text-gray-500 hover:text-purple-700 transition-colors"
+                className="inline-flex items-center gap-1 text-xs font-mono text-gray-500 hover:text-[#1D1D1F] transition-colors"
               >
                 <Clipboard className="h-3 w-3" />
                 {product.sku}
@@ -126,7 +126,7 @@ export function ProductTabs({
                 className={cn(
                   "pb-3 text-sm font-medium border-b-2 transition-colors",
                   tab === id
-                    ? "border-purple-700 text-purple-700"
+                    ? "border-[#1D1D1F] text-[#1D1D1F]"
                     : locked
                       ? "border-transparent text-gray-300 cursor-not-allowed"
                       : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
