@@ -7,6 +7,57 @@ import { PRODUCT_FAMILIES, SEASONS, SIZE_RANGES } from "@/lib/utils";
 import { TagInput } from "@/components/ui/TagInput";
 import { FileUpload } from "@/components/ui/FileUpload";
 
+type MeasurementField = { key: string; label: string; unit: string };
+
+const MEASUREMENT_FIELDS: Record<string, MeasurementField[]> = {
+  "pret-a-porter": [
+    { key: "poitrine", label: "Tour de poitrine", unit: "cm" },
+    { key: "taille", label: "Tour de taille", unit: "cm" },
+    { key: "hanches", label: "Tour de hanches", unit: "cm" },
+    { key: "epaule", label: "Largeur épaule", unit: "cm" },
+    { key: "mancheLongueur", label: "Longueur manche", unit: "cm" },
+    { key: "longueurTotale", label: "Longueur totale", unit: "cm" },
+    { key: "longueurDos", label: "Longueur dos", unit: "cm" },
+  ],
+  shoes: [
+    { key: "hauteurTalon", label: "Hauteur talon", unit: "cm" },
+    { key: "largeurSemelle", label: "Largeur semelle", unit: "cm" },
+    { key: "hauteurTige", label: "Hauteur tige", unit: "cm" },
+  ],
+  "leather-goods": [
+    { key: "hauteur", label: "Hauteur", unit: "cm" },
+    { key: "largeur", label: "Largeur", unit: "cm" },
+    { key: "profondeur", label: "Profondeur", unit: "cm" },
+    { key: "longueurBandouliere", label: "Longueur bandoulière", unit: "cm" },
+  ],
+  "small-leather-goods": [
+    { key: "hauteur", label: "Hauteur", unit: "cm" },
+    { key: "largeur", label: "Largeur", unit: "cm" },
+    { key: "profondeur", label: "Profondeur", unit: "cm" },
+  ],
+  accessories: [
+    { key: "hauteur", label: "Hauteur", unit: "cm" },
+    { key: "largeur", label: "Largeur", unit: "cm" },
+    { key: "profondeur", label: "Profondeur", unit: "cm" },
+  ],
+  jewelry: [
+    { key: "longueur", label: "Longueur", unit: "cm" },
+    { key: "diametre", label: "Diamètre", unit: "mm" },
+    { key: "taillePierre", label: "Taille pierre", unit: "mm" },
+  ],
+};
+
+function parseMeasurements(s: string | null): Record<string, string> {
+  if (!s) return {};
+  try {
+    const parsed = JSON.parse(s);
+    if (typeof parsed === "object" && !Array.isArray(parsed)) return parsed as Record<string, string>;
+    return {};
+  } catch {
+    return {};
+  }
+}
+
 type Product = {
   id: string;
   name: string;
@@ -46,7 +97,7 @@ export function TechPackTab({ product }: { product: Product }) {
     sizes: parse(product.sizes),
     materials: parse(product.materials),
     colors: parse(product.colors),
-    measurements: product.measurements ?? "",
+    measurements: parseMeasurements(product.measurements),
     reference: product.reference ?? "",
     sketchPaths: parse(product.sketchPaths),
     techPackPath: product.techPackPath,
@@ -69,7 +120,7 @@ export function TechPackTab({ product }: { product: Product }) {
         sizes: form.sizes,
         materials: form.materials,
         colors: form.colors,
-        measurements: form.measurements,
+        measurements: JSON.stringify(form.measurements),
         reference: form.reference,
         sketchPaths: form.sketchPaths,
         techPackPath: form.techPackPath,
@@ -216,17 +267,11 @@ export function TechPackTab({ product }: { product: Product }) {
       </div>
 
       {/* Measurements */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Mensurations / Notes techniques
-        </label>
-        <textarea
-          value={form.measurements}
-          onChange={(e) => set("measurements", e.target.value)}
-          rows={4}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 resize-none"
-        />
-      </div>
+      <MeasurementsSection
+        family={form.family}
+        values={form.measurements}
+        onChange={(v) => set("measurements", v)}
+      />
 
       {/* Sketches */}
       <div>
@@ -277,6 +322,61 @@ export function TechPackTab({ product }: { product: Product }) {
             ✓ Sauvegardé
           </span>
         )}
+      </div>
+    </div>
+  );
+}
+
+function MeasurementsSection({
+  family,
+  values,
+  onChange,
+}: {
+  family: string;
+  values: Record<string, string>;
+  onChange: (v: Record<string, string>) => void;
+}) {
+  const fields = MEASUREMENT_FIELDS[family];
+
+  if (!fields) {
+    // Generic textarea for families without structured fields (fragrance, other…)
+    return (
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Mensurations / Notes techniques
+        </label>
+        <textarea
+          value={values.__notes ?? ""}
+          onChange={(e) => onChange({ ...values, __notes: e.target.value })}
+          rows={4}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 resize-none"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-3">
+        Mesures
+      </label>
+      <div className="grid grid-cols-2 gap-3">
+        {fields.map(({ key, label, unit }) => (
+          <div key={key}>
+            <label className="block text-xs text-gray-500 mb-1">
+              {label} <span className="text-gray-400">({unit})</span>
+            </label>
+            <input
+              type="number"
+              min={0}
+              step="0.1"
+              value={values[key] ?? ""}
+              onChange={(e) => onChange({ ...values, [key]: e.target.value })}
+              placeholder="—"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+            />
+          </div>
+        ))}
       </div>
     </div>
   );
