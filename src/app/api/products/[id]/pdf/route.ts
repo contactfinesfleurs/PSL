@@ -3,15 +3,30 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = 'force-dynamic';
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const product = await prisma.product.findUnique({
-    where: { id },
-    include: { samples: true },
-  });
+
+  let product;
+  try {
+    product = await prisma.product.findUnique({
+      where: { id },
+      include: { samples: true },
+    });
+  } catch {
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+  }
 
   if (!product) {
     return NextResponse.json({ error: "Produit introuvable" }, { status: 404 });
@@ -20,16 +35,24 @@ export async function GET(
   const sample = product.samples[0];
 
   // Generate HTML for PDF (using browser print)
-  const reviewNotes = sample?.reviewNotes ?? "";
-  const reviewPhotos: string[] = sample?.reviewPhotoPaths
-    ? JSON.parse(sample.reviewPhotoPaths)
-    : [];
+  const reviewNotes = escapeHtml(sample?.reviewNotes ?? "");
+
+  let reviewPhotos: string[] = [];
+  try {
+    reviewPhotos = sample?.reviewPhotoPaths
+      ? (JSON.parse(sample.reviewPhotoPaths) as string[]).filter(
+          (p) => typeof p === "string" && /^https?:\/\//.test(p) || p.startsWith("/")
+        )
+      : [];
+  } catch {
+    reviewPhotos = [];
+  }
 
   const html = `<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Rapport de Non-Validation — ${product.name}</title>
+  <title>Rapport de Non-Validation — ${escapeHtml(product.name)}</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: Arial, sans-serif; color: #1a1a1a; padding: 40px; }
@@ -66,19 +89,19 @@ export async function GET(
     <div class="info-grid">
       <div class="info-item">
         <div class="label">Nom du produit</div>
-        <div class="value">${product.name}</div>
+        <div class="value">${escapeHtml(product.name)}</div>
       </div>
       <div class="info-item">
         <div class="label">Référence SKU</div>
-        <div class="value">${product.sku}</div>
+        <div class="value">${escapeHtml(product.sku)}</div>
       </div>
       <div class="info-item">
         <div class="label">Famille</div>
-        <div class="value">${product.family}</div>
+        <div class="value">${escapeHtml(product.family)}</div>
       </div>
       <div class="info-item">
         <div class="label">Saison</div>
-        <div class="value">${product.season} ${product.year}</div>
+        <div class="value">${escapeHtml(product.season)} ${product.year}</div>
       </div>
     </div>
   </div>
@@ -97,7 +120,7 @@ export async function GET(
       ? `<div class="section">
     <h2>Photos des détails à revoir (${reviewPhotos.length})</h2>
     <div class="photos-grid">
-      ${reviewPhotos.map((p) => `<img src="${p}" alt="Détail à revoir" />`).join("")}
+      ${reviewPhotos.map((p) => `<img src="${escapeHtml(p)}" alt="Détail à revoir" />`).join("")}
     </div>
   </div>`
       : ""
@@ -105,7 +128,7 @@ export async function GET(
 
   <div class="footer">
     <p>PSL Studio — Document confidentiel destiné au fournisseur</p>
-    <p>Produit : ${product.name} · SKU : ${product.sku}</p>
+    <p>Produit : ${escapeHtml(product.name)} · SKU : ${escapeHtml(product.sku)}</p>
   </div>
 </body>
 </html>`;

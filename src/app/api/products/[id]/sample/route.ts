@@ -8,10 +8,14 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const sample = await prisma.sample.findFirst({
-    where: { productId: id },
-  });
-  return NextResponse.json(sample ?? null);
+  try {
+    const sample = await prisma.sample.findFirst({
+      where: { productId: id },
+    });
+    return NextResponse.json(sample ?? null);
+  } catch {
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+  }
 }
 
 export async function PUT(
@@ -19,79 +23,53 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const body = await req.json();
 
-  const sample = await prisma.sample.upsert({
-    where: {
-      // Use findFirst pattern via update or create
-      id: body.sampleId ?? "new",
-    },
-    create: {
-      productId: id,
-      samplePhotoPaths: body.samplePhotoPaths
-        ? JSON.stringify(body.samplePhotoPaths)
-        : null,
-      detailPhotoPaths: body.detailPhotoPaths
-        ? JSON.stringify(body.detailPhotoPaths)
-        : null,
-      reviewPhotoPaths: body.reviewPhotoPaths
-        ? JSON.stringify(body.reviewPhotoPaths)
-        : null,
-      reviewNotes: body.reviewNotes ?? null,
-      packshotPaths: body.packshotPaths
-        ? JSON.stringify(body.packshotPaths)
-        : null,
-      definitiveColors: body.definitiveColors
-        ? JSON.stringify(body.definitiveColors)
-        : null,
-      definitiveMaterials: body.definitiveMaterials
-        ? JSON.stringify(body.definitiveMaterials)
-        : null,
-    },
-    update: {
-      ...(body.samplePhotoPaths !== undefined && {
-        samplePhotoPaths: JSON.stringify(body.samplePhotoPaths),
-      }),
-      ...(body.detailPhotoPaths !== undefined && {
-        detailPhotoPaths: JSON.stringify(body.detailPhotoPaths),
-      }),
-      ...(body.reviewPhotoPaths !== undefined && {
-        reviewPhotoPaths: JSON.stringify(body.reviewPhotoPaths),
-      }),
-      ...(body.reviewNotes !== undefined && { reviewNotes: body.reviewNotes }),
-      ...(body.packshotPaths !== undefined && {
-        packshotPaths: JSON.stringify(body.packshotPaths),
-      }),
-      ...(body.definitiveColors !== undefined && {
-        definitiveColors: JSON.stringify(body.definitiveColors),
-      }),
-      ...(body.definitiveMaterials !== undefined && {
-        definitiveMaterials: JSON.stringify(body.definitiveMaterials),
-      }),
-    },
-  });
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
+  }
 
-  return NextResponse.json(sample);
-}
+  try {
+    // IDOR fix: if sampleId is provided, verify it belongs to this product
+    if (body.sampleId && typeof body.sampleId === "string") {
+      const existing = await prisma.sample.findUnique({
+        where: { id: body.sampleId },
+        select: { productId: true },
+      });
+      if (!existing || existing.productId !== id) {
+        return NextResponse.json({ error: "Sample introuvable" }, { status: 404 });
+      }
+    }
 
-// Dedicated POST for creating a new sample if none exists
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
-  const body = await req.json();
-
-  // Check if sample already exists
-  const existing = await prisma.sample.findFirst({
-    where: { productId: id },
-  });
-
-  if (existing) {
-    // Update instead
-    const updated = await prisma.sample.update({
-      where: { id: existing.id },
-      data: {
+    const sample = await prisma.sample.upsert({
+      where: {
+        id: typeof body.sampleId === "string" ? body.sampleId : "new",
+      },
+      create: {
+        productId: id,
+        samplePhotoPaths: body.samplePhotoPaths
+          ? JSON.stringify(body.samplePhotoPaths)
+          : null,
+        detailPhotoPaths: body.detailPhotoPaths
+          ? JSON.stringify(body.detailPhotoPaths)
+          : null,
+        reviewPhotoPaths: body.reviewPhotoPaths
+          ? JSON.stringify(body.reviewPhotoPaths)
+          : null,
+        reviewNotes: typeof body.reviewNotes === "string" ? body.reviewNotes : null,
+        packshotPaths: body.packshotPaths
+          ? JSON.stringify(body.packshotPaths)
+          : null,
+        definitiveColors: body.definitiveColors
+          ? JSON.stringify(body.definitiveColors)
+          : null,
+        definitiveMaterials: body.definitiveMaterials
+          ? JSON.stringify(body.definitiveMaterials)
+          : null,
+      },
+      update: {
         ...(body.samplePhotoPaths !== undefined && {
           samplePhotoPaths: JSON.stringify(body.samplePhotoPaths),
         }),
@@ -101,7 +79,9 @@ export async function POST(
         ...(body.reviewPhotoPaths !== undefined && {
           reviewPhotoPaths: JSON.stringify(body.reviewPhotoPaths),
         }),
-        ...(body.reviewNotes !== undefined && { reviewNotes: body.reviewNotes }),
+        ...(body.reviewNotes !== undefined && {
+          reviewNotes: typeof body.reviewNotes === "string" ? body.reviewNotes : null,
+        }),
         ...(body.packshotPaths !== undefined && {
           packshotPaths: JSON.stringify(body.packshotPaths),
         }),
@@ -113,24 +93,84 @@ export async function POST(
         }),
       },
     });
-    return NextResponse.json(updated);
+
+    return NextResponse.json(sample);
+  } catch {
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+  }
+}
+
+// Dedicated POST for creating a new sample if none exists
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
   }
 
-  const sample = await prisma.sample.create({
-    data: {
-      productId: id,
-      samplePhotoPaths: body.samplePhotoPaths
-        ? JSON.stringify(body.samplePhotoPaths)
-        : null,
-      detailPhotoPaths: body.detailPhotoPaths
-        ? JSON.stringify(body.detailPhotoPaths)
-        : null,
-      reviewPhotoPaths: body.reviewPhotoPaths
-        ? JSON.stringify(body.reviewPhotoPaths)
-        : null,
-      reviewNotes: body.reviewNotes ?? null,
-    },
-  });
+  try {
+    // Verify product exists
+    const product = await prisma.product.findUnique({ where: { id }, select: { id: true } });
+    if (!product) {
+      return NextResponse.json({ error: "Produit introuvable" }, { status: 404 });
+    }
 
-  return NextResponse.json(sample, { status: 201 });
+    const existing = await prisma.sample.findFirst({ where: { productId: id } });
+
+    if (existing) {
+      const updated = await prisma.sample.update({
+        where: { id: existing.id },
+        data: {
+          ...(body.samplePhotoPaths !== undefined && {
+            samplePhotoPaths: JSON.stringify(body.samplePhotoPaths),
+          }),
+          ...(body.detailPhotoPaths !== undefined && {
+            detailPhotoPaths: JSON.stringify(body.detailPhotoPaths),
+          }),
+          ...(body.reviewPhotoPaths !== undefined && {
+            reviewPhotoPaths: JSON.stringify(body.reviewPhotoPaths),
+          }),
+          ...(body.reviewNotes !== undefined && {
+            reviewNotes: typeof body.reviewNotes === "string" ? body.reviewNotes : null,
+          }),
+          ...(body.packshotPaths !== undefined && {
+            packshotPaths: JSON.stringify(body.packshotPaths),
+          }),
+          ...(body.definitiveColors !== undefined && {
+            definitiveColors: JSON.stringify(body.definitiveColors),
+          }),
+          ...(body.definitiveMaterials !== undefined && {
+            definitiveMaterials: JSON.stringify(body.definitiveMaterials),
+          }),
+        },
+      });
+      return NextResponse.json(updated);
+    }
+
+    const sample = await prisma.sample.create({
+      data: {
+        productId: id,
+        samplePhotoPaths: body.samplePhotoPaths
+          ? JSON.stringify(body.samplePhotoPaths)
+          : null,
+        detailPhotoPaths: body.detailPhotoPaths
+          ? JSON.stringify(body.detailPhotoPaths)
+          : null,
+        reviewPhotoPaths: body.reviewPhotoPaths
+          ? JSON.stringify(body.reviewPhotoPaths)
+          : null,
+        reviewNotes: typeof body.reviewNotes === "string" ? body.reviewNotes : null,
+      },
+    });
+
+    return NextResponse.json(sample, { status: 201 });
+  } catch {
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+  }
 }

@@ -8,28 +8,41 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const body = await req.json();
 
-  const eventProduct = await prisma.eventProduct.upsert({
-    where: {
-      eventId_productId: {
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
+  }
+
+  if (!body.productId || typeof body.productId !== "string") {
+    return NextResponse.json({ error: "productId requis" }, { status: 422 });
+  }
+
+  try {
+    const eventProduct = await prisma.eventProduct.upsert({
+      where: {
+        eventId_productId: {
+          eventId: id,
+          productId: body.productId,
+        },
+      },
+      create: {
         eventId: id,
         productId: body.productId,
+        notes: typeof body.notes === "string" ? body.notes : null,
+        look: typeof body.look === "number" ? body.look : null,
       },
-    },
-    create: {
-      eventId: id,
-      productId: body.productId,
-      notes: body.notes ?? null,
-      look: body.look ?? null,
-    },
-    update: {
-      notes: body.notes ?? null,
-      look: body.look ?? null,
-    },
-  });
-
-  return NextResponse.json(eventProduct, { status: 201 });
+      update: {
+        notes: typeof body.notes === "string" ? body.notes : null,
+        look: typeof body.look === "number" ? body.look : null,
+      },
+    });
+    return NextResponse.json(eventProduct, { status: 201 });
+  } catch {
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+  }
 }
 
 export async function DELETE(
@@ -37,13 +50,26 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const { productId } = await req.json();
 
-  await prisma.eventProduct.delete({
-    where: {
-      eventId_productId: { eventId: id, productId },
-    },
-  });
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
+  }
 
-  return NextResponse.json({ success: true });
+  if (!body.productId || typeof body.productId !== "string") {
+    return NextResponse.json({ error: "productId requis" }, { status: 422 });
+  }
+
+  try {
+    await prisma.eventProduct.delete({
+      where: {
+        eventId_productId: { eventId: id, productId: body.productId },
+      },
+    });
+    return NextResponse.json({ success: true });
+  } catch {
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+  }
 }
