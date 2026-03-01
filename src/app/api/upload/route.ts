@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Type de fichier non autorisé" }, { status: 415 });
   }
 
-  const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+  const safeName = file.name.slice(0, 200).replace(/[^a-zA-Z0-9.\-_]/g, "_");
   const timestamp = Date.now();
 
   // Use Vercel Blob in production, local filesystem in development

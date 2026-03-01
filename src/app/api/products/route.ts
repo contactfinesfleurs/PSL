@@ -4,6 +4,7 @@ import { generateSKU, PRODUCT_FAMILIES, SEASONS, SIZE_RANGES } from "@/lib/utils
 import {
   MAX_NAME_LENGTH,
   MAX_REFERENCE_LENGTH,
+  isJsonObject,
   validateStringArray,
   validateMeasurements,
   isPrismaUniqueConflict,
@@ -40,7 +41,9 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   let body: Record<string, unknown>;
   try {
-    body = await req.json();
+    const raw: unknown = await req.json();
+    if (!isJsonObject(raw)) return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
+    body = raw;
   } catch {
     return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
   }

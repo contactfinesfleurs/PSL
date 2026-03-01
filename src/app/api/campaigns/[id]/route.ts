@@ -4,6 +4,7 @@ import { CAMPAIGN_TYPES, CAMPAIGN_STATUSES, CURRENCIES } from "@/lib/utils";
 import {
   MAX_NAME_LENGTH,
   MAX_TEXT_LENGTH,
+  isJsonObject,
   isValidDate,
   isValidBudget,
   isPrismaNotFound,
@@ -47,7 +48,9 @@ export async function PATCH(
 
   let body: Record<string, unknown>;
   try {
-    body = await req.json();
+    const raw: unknown = await req.json();
+    if (!isJsonObject(raw)) return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
+    body = raw;
   } catch {
     return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
   }

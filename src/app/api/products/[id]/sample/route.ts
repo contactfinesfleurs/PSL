@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
   MAX_NOTES_LENGTH,
+  isJsonObject,
   validateStringArray,
   validatePathArray,
   isPrismaFKViolation,
@@ -79,7 +80,9 @@ export async function PUT(
 
   let body: Record<string, unknown>;
   try {
-    body = await req.json();
+    const raw: unknown = await req.json();
+    if (!isJsonObject(raw)) return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
+    body = raw;
   } catch {
     return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
   }
@@ -87,11 +90,14 @@ export async function PUT(
   const validationError = validateSampleBody(body);
   if (validationError) return validationError;
 
+  // Normalise sampleId: only accept non-empty strings (falsy/empty bypasses IDOR check)
+  const sampleId = typeof body.sampleId === "string" && body.sampleId ? body.sampleId : null;
+
   try {
     // IDOR: verify sampleId belongs to this product before upsert
-    if (body.sampleId && typeof body.sampleId === "string") {
+    if (sampleId) {
       const existing = await prisma.sample.findUnique({
-        where: { id: body.sampleId },
+        where: { id: sampleId },
         select: { productId: true },
       });
       if (!existing || existing.productId !== id) {
@@ -100,7 +106,7 @@ export async function PUT(
     }
 
     const sample = await prisma.sample.upsert({
-      where: { id: typeof body.sampleId === "string" ? body.sampleId : "new" },
+      where: { id: sampleId ?? "new" },
       create: { productId: id, ...buildSampleUpdate(body) },
       update: buildSampleUpdate(body),
     });
@@ -120,7 +126,9 @@ export async function POST(
 
   let body: Record<string, unknown>;
   try {
-    body = await req.json();
+    const raw: unknown = await req.json();
+    if (!isJsonObject(raw)) return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
+    body = raw;
   } catch {
     return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
   }

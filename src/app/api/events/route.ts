@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { EVENT_TYPES, EVENT_STATUSES } from "@/lib/utils";
-import { MAX_NAME_LENGTH, MAX_TEXT_LENGTH, isValidDate } from "@/lib/validation";
+import { MAX_NAME_LENGTH, MAX_TEXT_LENGTH, isJsonObject, isValidDate } from "@/lib/validation";
 
 export const dynamic = 'force-dynamic';
 
@@ -34,7 +34,9 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   let body: Record<string, unknown>;
   try {
-    body = await req.json();
+    const raw: unknown = await req.json();
+    if (!isJsonObject(raw)) return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
+    body = raw;
   } catch {
     return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
   }

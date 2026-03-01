@@ -12,6 +12,11 @@ export const MAX_REFERENCE_LENGTH = 100;
 
 // ─── Type guards ─────────────────────────────────────────────────────────────
 
+/** Ensures the parsed JSON body is a plain object (not null, array, string, etc.). */
+export function isJsonObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
 export function isValidDate(v: unknown): v is string {
   if (typeof v !== "string") return false;
   return !isNaN(new Date(v).getTime());

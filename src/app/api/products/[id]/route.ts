@@ -6,6 +6,7 @@ import {
   MAX_TEXT_LENGTH,
   MAX_REFERENCE_LENGTH,
   MAX_PATH_LENGTH,
+  isJsonObject,
   validateStringArray,
   validateMeasurements,
   isValidDate,
@@ -51,7 +52,9 @@ export async function PATCH(
 
   let body: Record<string, unknown>;
   try {
-    body = await req.json();
+    const raw: unknown = await req.json();
+    if (!isJsonObject(raw)) return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
+    body = raw;
   } catch {
     return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
   }
