@@ -45,50 +45,73 @@ export default async function DashboardPage() {
             { label: "Campagnes",  value: campaignCount,  Icon: Tag,         href: "/campaigns" },
             { label: "Validés",    value: validatedCount, Icon: CheckCircle, href: "/products?status=VALIDATED" },
           ].map(({ label, value, Icon, href }) => (
-            <StatCard key={label} label={label} value={value} Icon={Icon} href={href} />
+            <Link key={label} href={href} className="apple-card card-hover" style={{ display: "block", padding: "20px 18px", transition: "box-shadow 0.15s" }}>
+              <Icon strokeWidth={1.25} style={{ width: 14, height: 14, color: "#8E8E93", marginBottom: "18px" }} />
+              <div style={{ fontSize: "36px", fontWeight: 200, color: "#1D1D1F", letterSpacing: "-0.04em", lineHeight: 1 }}>
+                {value}
+              </div>
+              <div style={{ fontSize: "11px", color: "#8E8E93", fontWeight: 300, marginTop: "5px" }}>
+                {label}
+              </div>
+            </Link>
           ))}
         </div>
 
         {/* Tables */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
-          <Panel title="Produits récents" href="/products" hrefLabel="Voir tout">
-            {recentProducts.length === 0 ? (
-              <Empty label="Aucun produit." cta="Créer le premier" href="/products/new" />
-            ) : recentProducts.map((p, i) => (
-              <Row key={p.id} href={`/products/${p.id}`} index={i}>
-                <div>
-                  <div style={{ fontSize: "12.5px", fontWeight: 300, color: "#1D1D1F", letterSpacing: "-0.01em" }}>
-                    {p.name}
-                  </div>
-                  <div style={{ fontSize: "10.5px", color: "#8E8E93", fontWeight: 300, marginTop: "1px", fontFamily: "ui-monospace, monospace" }}>
-                    {p.sku}
-                  </div>
-                </div>
-                <StatusPill status={p.sampleStatus} type="product" />
-              </Row>
-            ))}
-          </Panel>
 
-          <Panel title="Événements à venir" href="/events" hrefLabel="Voir tout">
-            {upcomingEvents.length === 0 ? (
-              <Empty label="Aucun événement." cta="Créer un événement" href="/events/new" />
-            ) : upcomingEvents.map((ev, i) => (
-              <Row key={ev.id} href={`/events/${ev.id}`} index={i}>
-                <div>
-                  <div style={{ fontSize: "12.5px", fontWeight: 300, color: "#1D1D1F", letterSpacing: "-0.01em" }}>
-                    {ev.name}
-                  </div>
-                  <div style={{ fontSize: "10.5px", color: "#8E8E93", fontWeight: 300, marginTop: "1px", display: "flex", alignItems: "center", gap: "3px" }}>
-                    <Clock strokeWidth={1.5} style={{ width: 10, height: 10 }} />
-                    {formatDate(ev.startAt)}{ev.location ? ` · ${ev.location}` : ""}
-                  </div>
+          {/* Recent Products */}
+          <div className="apple-card">
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
+              <span style={{ fontSize: "12px", fontWeight: 400, color: "#1D1D1F", letterSpacing: "-0.015em" }}>Produits récents</span>
+              <Link href="/products" className="link-hover" style={{ fontSize: "11px" }}>Voir tout</Link>
+            </div>
+            <div>
+              {recentProducts.length === 0 ? (
+                <div style={{ padding: "32px 18px", textAlign: "center", color: "#8E8E93", fontSize: "12px", fontWeight: 300 }}>
+                  Aucun produit.{" "}
+                  <Link href="/products/new" style={{ color: "#0071E3" }}>Créer le premier</Link>
                 </div>
-                <StatusPill status={ev.status} type="event" />
-              </Row>
-            ))}
-          </Panel>
+              ) : recentProducts.map((p, i) => (
+                <Link key={p.id} href={`/products/${p.id}`} className="row-hover" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 18px", borderTop: i > 0 ? "1px solid rgba(0,0,0,0.04)" : "none" }}>
+                  <div>
+                    <div style={{ fontSize: "12.5px", fontWeight: 300, color: "#1D1D1F", letterSpacing: "-0.01em" }}>{p.name}</div>
+                    <div style={{ fontSize: "10.5px", color: "#8E8E93", fontWeight: 300, marginTop: "1px", fontFamily: "ui-monospace, monospace" }}>{p.sku}</div>
+                  </div>
+                  <StatusPill status={p.sampleStatus} type="product" />
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Upcoming Events */}
+          <div className="apple-card">
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
+              <span style={{ fontSize: "12px", fontWeight: 400, color: "#1D1D1F", letterSpacing: "-0.015em" }}>Événements à venir</span>
+              <Link href="/events" className="link-hover" style={{ fontSize: "11px" }}>Voir tout</Link>
+            </div>
+            <div>
+              {upcomingEvents.length === 0 ? (
+                <div style={{ padding: "32px 18px", textAlign: "center", color: "#8E8E93", fontSize: "12px", fontWeight: 300 }}>
+                  Aucun événement.{" "}
+                  <Link href="/events/new" style={{ color: "#0071E3" }}>Créer un événement</Link>
+                </div>
+              ) : upcomingEvents.map((ev, i) => (
+                <Link key={ev.id} href={`/events/${ev.id}`} className="row-hover" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 18px", borderTop: i > 0 ? "1px solid rgba(0,0,0,0.04)" : "none" }}>
+                  <div>
+                    <div style={{ fontSize: "12.5px", fontWeight: 300, color: "#1D1D1F", letterSpacing: "-0.01em" }}>{ev.name}</div>
+                    <div style={{ fontSize: "10.5px", color: "#8E8E93", fontWeight: 300, marginTop: "1px", display: "flex", alignItems: "center", gap: "3px" }}>
+                      <Clock strokeWidth={1.5} style={{ width: 10, height: 10 }} />
+                      {formatDate(ev.startAt)}{ev.location ? ` · ${ev.location}` : ""}
+                    </div>
+                  </div>
+                  <StatusPill status={ev.status} type="event" />
+                </Link>
+              ))}
+            </div>
+          </div>
+
         </div>
-
       </div>
     );
   } catch (error) {
@@ -110,77 +133,6 @@ export default async function DashboardPage() {
   }
 }
 
-/* ─── Sub-components ────────────────────────────────── */
-
-function StatCard({ label, value, Icon, href }: { label: string; value: number; Icon: React.ElementType; href: string }) {
-  return (
-    <Link href={href}>
-      <div
-        className="apple-card"
-        style={{ padding: "20px 18px", cursor: "pointer", transition: "box-shadow 0.15s" }}
-        onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.07)")}
-        onMouseLeave={e => (e.currentTarget.style.boxShadow = "none")}
-      >
-        <Icon strokeWidth={1.25} style={{ width: 14, height: 14, color: "#8E8E93", marginBottom: "18px" }} />
-        <div style={{ fontSize: "36px", fontWeight: 200, color: "#1D1D1F", letterSpacing: "-0.04em", lineHeight: 1 }}>
-          {value}
-        </div>
-        <div style={{ fontSize: "11px", color: "#8E8E93", fontWeight: 300, marginTop: "5px", letterSpacing: "0.005em" }}>
-          {label}
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-function Panel({ title, href, hrefLabel, children }: { title: string; href: string; hrefLabel: string; children: React.ReactNode }) {
-  return (
-    <div className="apple-card">
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
-        <span style={{ fontSize: "12px", fontWeight: 400, color: "#1D1D1F", letterSpacing: "-0.015em" }}>
-          {title}
-        </span>
-        <Link
-          href={href}
-          style={{ fontSize: "11px", color: "#0071E3", fontWeight: 300 }}
-        >
-          {hrefLabel}
-        </Link>
-      </div>
-      <div>{children}</div>
-    </div>
-  );
-}
-
-function Row({ href, index, children }: { href: string; index: number; children: React.ReactNode }) {
-  return (
-    <Link
-      href={href}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "10px 18px",
-        borderTop: index > 0 ? "1px solid rgba(0,0,0,0.04)" : "none",
-        transition: "background 0.1s",
-      }}
-      onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = "rgba(0,0,0,0.02)")}
-      onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = "transparent")}
-    >
-      {children}
-    </Link>
-  );
-}
-
-function Empty({ label, cta, href }: { label: string; cta: string; href: string }) {
-  return (
-    <div style={{ padding: "32px 18px", textAlign: "center", color: "#8E8E93", fontSize: "12px", fontWeight: 300 }}>
-      {label}{" "}
-      <Link href={href} style={{ color: "#0071E3", fontWeight: 300 }}>{cta}</Link>
-    </div>
-  );
-}
-
 const productPills: Record<string, { label: string; color: string; bg: string }> = {
   PENDING:       { label: "En attente", color: "#92400E", bg: "rgba(245,158,11,0.12)" },
   VALIDATED:     { label: "Validé",     color: "#166534", bg: "rgba(34,197,94,0.12)"  },
@@ -197,7 +149,7 @@ function StatusPill({ status, type }: { status: string; type: "product" | "event
   const map = type === "product" ? productPills : eventPills;
   const s = map[status] ?? { label: status, color: "#6E6E73", bg: "rgba(0,0,0,0.06)" };
   return (
-    <span style={{ fontSize: "10.5px", fontWeight: 300, padding: "2px 9px", borderRadius: "20px", backgroundColor: s.bg, color: s.color, whiteSpace: "nowrap", letterSpacing: "0.005em" }}>
+    <span style={{ fontSize: "10.5px", fontWeight: 300, padding: "2px 9px", borderRadius: "20px", backgroundColor: s.bg, color: s.color, whiteSpace: "nowrap" }}>
       {s.label}
     </span>
   );
