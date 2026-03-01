@@ -8,15 +8,16 @@ import { Plus, Package } from "lucide-react";
 export default async function ProductsPage({
   searchParams,
 }: {
-  searchParams: { status?: string; family?: string; season?: string };
+  searchParams: Promise<{ status?: string; family?: string; season?: string }>;
 }) {
+  const sp = await searchParams;
   const products = await prisma.product.findMany({
     where: {
-      ...(searchParams.status
-        ? { sampleStatus: searchParams.status as never }
+      ...(sp.status
+        ? { sampleStatus: sp.status as never }
         : {}),
-      ...(searchParams.family ? { family: searchParams.family } : {}),
-      ...(searchParams.season ? { season: searchParams.season } : {}),
+      ...(sp.family ? { family: sp.family } : {}),
+      ...(sp.season ? { season: sp.season } : {}),
     },
     include: { samples: true },
     orderBy: { createdAt: "desc" },
@@ -51,14 +52,14 @@ export default async function ProductsPage({
       <div className="flex flex-wrap gap-2">
         <FilterLink
           href="/products"
-          active={!searchParams.family && !searchParams.status && !searchParams.season}
+          active={!sp.family && !sp.status && !sp.season}
           label="Tous"
         />
         {["VALIDATED", "NOT_VALIDATED", "PENDING"].map((s) => (
           <FilterLink
             key={s}
             href={`/products?status=${s}`}
-            active={searchParams.status === s}
+            active={sp.status === s}
             label={
               s === "VALIDATED"
                 ? "Validés"
