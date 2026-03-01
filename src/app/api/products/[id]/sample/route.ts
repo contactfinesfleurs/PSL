@@ -34,25 +34,25 @@ function validateSampleBody(body: Record<string, unknown>): NextResponse | null 
 function buildSampleUpdate(body: Record<string, unknown>) {
   return {
     ...(body.samplePhotoPaths !== undefined && {
-      samplePhotoPaths: JSON.stringify(body.samplePhotoPaths),
+      samplePhotoPaths: body.samplePhotoPaths != null ? JSON.stringify(body.samplePhotoPaths) : null,
     }),
     ...(body.detailPhotoPaths !== undefined && {
-      detailPhotoPaths: JSON.stringify(body.detailPhotoPaths),
+      detailPhotoPaths: body.detailPhotoPaths != null ? JSON.stringify(body.detailPhotoPaths) : null,
     }),
     ...(body.reviewPhotoPaths !== undefined && {
-      reviewPhotoPaths: JSON.stringify(body.reviewPhotoPaths),
+      reviewPhotoPaths: body.reviewPhotoPaths != null ? JSON.stringify(body.reviewPhotoPaths) : null,
     }),
     ...(body.reviewNotes !== undefined && {
       reviewNotes: typeof body.reviewNotes === "string" ? body.reviewNotes : null,
     }),
     ...(body.packshotPaths !== undefined && {
-      packshotPaths: JSON.stringify(body.packshotPaths),
+      packshotPaths: body.packshotPaths != null ? JSON.stringify(body.packshotPaths) : null,
     }),
     ...(body.definitiveColors !== undefined && {
-      definitiveColors: JSON.stringify(body.definitiveColors),
+      definitiveColors: body.definitiveColors != null ? JSON.stringify(body.definitiveColors) : null,
     }),
     ...(body.definitiveMaterials !== undefined && {
-      definitiveMaterials: JSON.stringify(body.definitiveMaterials),
+      definitiveMaterials: body.definitiveMaterials != null ? JSON.stringify(body.definitiveMaterials) : null,
     }),
   };
 }
@@ -153,10 +153,7 @@ export async function POST(
     const sample = await prisma.sample.create({
       data: {
         productId: id,
-        samplePhotoPaths: body.samplePhotoPaths ? JSON.stringify(body.samplePhotoPaths) : null,
-        detailPhotoPaths: body.detailPhotoPaths ? JSON.stringify(body.detailPhotoPaths) : null,
-        reviewPhotoPaths: body.reviewPhotoPaths ? JSON.stringify(body.reviewPhotoPaths) : null,
-        reviewNotes: typeof body.reviewNotes === "string" ? body.reviewNotes : null,
+        ...buildSampleUpdate(body),
       },
     });
     return NextResponse.json(sample, { status: 201 });

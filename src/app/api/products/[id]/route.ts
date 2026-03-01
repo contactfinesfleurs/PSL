@@ -4,7 +4,10 @@ import { PRODUCT_FAMILIES, SEASONS, SIZE_RANGES, SAMPLE_STATUSES } from "@/lib/u
 import {
   MAX_NAME_LENGTH,
   MAX_TEXT_LENGTH,
+  MAX_REFERENCE_LENGTH,
+  MAX_PATH_LENGTH,
   validateStringArray,
+  validateMeasurements,
   isValidDate,
   isPrismaNotFound,
 } from "@/lib/validation";
@@ -94,8 +97,18 @@ export async function PATCH(
     }
   }
   if (body.reference !== undefined && body.reference !== null) {
-    if (typeof body.reference !== "string" || body.reference.length > 100) {
-      return NextResponse.json({ error: "Référence invalide" }, { status: 422 });
+    if (typeof body.reference !== "string" || body.reference.length > MAX_REFERENCE_LENGTH) {
+      return NextResponse.json({ error: `Référence invalide (max ${MAX_REFERENCE_LENGTH} car.)` }, { status: 422 });
+    }
+  }
+  if (body.techPackPath !== undefined && body.techPackPath !== null) {
+    if (typeof body.techPackPath !== "string" || body.techPackPath.length > MAX_PATH_LENGTH) {
+      return NextResponse.json({ error: "Chemin techPackPath invalide" }, { status: 422 });
+    }
+  }
+  if (body.measurements !== undefined && body.measurements !== null) {
+    if (validateMeasurements(body.measurements) === null) {
+      return NextResponse.json({ error: "Mesures invalides" }, { status: 422 });
     }
   }
   if (body.plannedLaunchAt !== undefined && body.plannedLaunchAt !== null) {

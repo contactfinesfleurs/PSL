@@ -8,6 +8,7 @@ export const MAX_NOTES_LENGTH = 2000;
 export const MAX_ARRAY_ITEMS = 50;
 export const MAX_ARRAY_ITEM_LENGTH = 100;
 export const MAX_PATH_LENGTH = 500;
+export const MAX_REFERENCE_LENGTH = 100;
 
 // ─── Type guards ─────────────────────────────────────────────────────────────
 
@@ -40,6 +41,19 @@ export function validateStringArray(
 /** Like validateStringArray but for file paths (longer max item length). */
 export function validatePathArray(value: unknown): string[] | null {
   return validateStringArray(value, MAX_PATH_LENGTH);
+}
+
+/** Validate a measurements object: plain object, keys/values are strings ≤ 100 chars, ≤ 50 entries. */
+export function validateMeasurements(value: unknown): Record<string, string> | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+  const entries = Object.entries(value as Record<string, unknown>);
+  if (entries.length > MAX_ARRAY_ITEMS) return null;
+  const result: Record<string, string> = {};
+  for (const [k, v] of entries) {
+    if (k.length > MAX_ARRAY_ITEM_LENGTH || typeof v !== "string" || v.length > MAX_ARRAY_ITEM_LENGTH) return null;
+    result[k] = v;
+  }
+  return result;
 }
 
 // ─── String utilities ─────────────────────────────────────────────────────────

@@ -42,6 +42,7 @@ export async function GET(
     reviewPhotos = [];
   }
 
+  const now = new Date();
   const html = `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -74,7 +75,7 @@ export async function GET(
 <body>
   <div class="header">
     <h1>Rapport de Non-Validation — Prototypage</h1>
-    <p>Document généré le ${new Date().toLocaleDateString("fr-FR")} à ${new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</p>
+    <p>Document généré le ${now.toLocaleDateString("fr-FR")} à ${now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</p>
     <span class="badge">NON VALIDÉ</span>
   </div>
 

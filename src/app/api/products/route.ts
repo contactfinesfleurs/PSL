@@ -3,8 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { generateSKU, PRODUCT_FAMILIES, SEASONS, SIZE_RANGES } from "@/lib/utils";
 import {
   MAX_NAME_LENGTH,
-  MAX_ARRAY_ITEM_LENGTH,
+  MAX_REFERENCE_LENGTH,
   validateStringArray,
+  validateMeasurements,
   isPrismaUniqueConflict,
 } from "@/lib/validation";
 
@@ -77,6 +78,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Couleurs invalides" }, { status: 422 });
   }
 
+  if (body.reference !== undefined && body.reference !== null) {
+    if (typeof body.reference !== "string" || body.reference.length > MAX_REFERENCE_LENGTH) {
+      return NextResponse.json({ error: `Référence invalide (max ${MAX_REFERENCE_LENGTH} car.)` }, { status: 422 });
+    }
+  }
+
+  if (body.measurements !== undefined && body.measurements !== null) {
+    if (validateMeasurements(body.measurements) === null) {
+      return NextResponse.json({ error: "Mesures invalides" }, { status: 422 });
+    }
+  }
+
   // SKU generation with retry loop to handle race-condition on unique constraint
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
@@ -107,9 +120,7 @@ export async function POST(req: NextRequest) {
           measurements: body.measurements ? JSON.stringify(body.measurements) : null,
           materials: materials ? JSON.stringify(materials) : null,
           colors: colors ? JSON.stringify(colors) : null,
-          reference: typeof body.reference === "string"
-            ? body.reference.slice(0, MAX_ARRAY_ITEM_LENGTH)
-            : null,
+          reference: typeof body.reference === "string" ? body.reference : null,
         },
       });
 
