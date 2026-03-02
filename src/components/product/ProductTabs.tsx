@@ -1,13 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Clipboard } from "lucide-react";
-import { cn, PRODUCT_FAMILIES, SEASONS } from "@/lib/utils";
+import { ArrowLeft, Clipboard, Trash2, Check } from "lucide-react";
+import { cn, PRODUCT_FAMILIES, SEASONS, EVENT_TYPES, formatDate } from "@/lib/utils";
 import { TechPackTab } from "./TechPackTab";
 import { SampleTab } from "./SampleTab";
 import { LaunchTab } from "./LaunchTab";
+
+type TimelineStep = {
+  id: string;
+  label: string;
+  sublabel: string;
+  done: boolean;
+  color: "default" | "green" | "red";
+};
 
 type Product = {
   id: string;
@@ -26,10 +34,13 @@ type Product = {
   sampleStatus: string;
   description: string | null;
   metaTags: string | null;
-  plannedLaunchAt: Date | null;
+  plannedLaunchAt: string | null;
   reference: string | null;
+  createdAt: string;
   samples: {
     id: string;
+    createdAt: string;
+    updatedAt: string;
     samplePhotoPaths: string | null;
     detailPhotoPaths: string | null;
     reviewPhotoPaths: string | null;
@@ -42,7 +53,7 @@ type Product = {
     campaign: { id: string; name: string; type: string; status: string };
   }[];
   events: {
-    event: { id: string; name: string; type: string; startAt: Date };
+    event: { id: string; name: string; type: string; startAt: string; endAt: string | null };
   }[];
 };
 
@@ -63,6 +74,7 @@ export function ProductTabs({
 }) {
   const router = useRouter();
   const [tab, setTab] = useState(activeTab);
+  const [deleting, setDeleting] = useState(false);
 
   const familyLabel =
     PRODUCT_FAMILIES.find((f) => f.value === product.family)?.label ??
@@ -72,6 +84,13 @@ export function ProductTabs({
 
   function copyToClipboard() {
     navigator.clipboard.writeText(product.sku);
+  }
+
+  async function handleDelete() {
+    if (!confirm(`Supprimer "${product.name}" ? Cette action est irréversible.`)) return;
+    setDeleting(true);
+    await fetch(`/api/products/${product.id}`, { method: "DELETE" });
+    router.push("/products");
   }
 
   return (
@@ -92,7 +111,7 @@ export function ProductTabs({
             <div className="flex items-center gap-2 mt-1">
               <button
                 onClick={copyToClipboard}
-                title="Copier la référence"
+                title="Copier la référence SKU"
                 className="inline-flex items-center gap-1 text-xs font-mono text-gray-500 hover:text-[#1D1D1F] transition-colors"
               >
                 <Clipboard className="h-3 w-3" />
@@ -104,9 +123,22 @@ export function ProductTabs({
               </span>
             </div>
           </div>
-          <StatusBadge status={product.sampleStatus} />
+          <div className="flex items-center gap-2">
+            <StatusBadge status={product.sampleStatus} />
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              title="Supprimer le produit"
+              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Timeline */}
+      <ProductTimeline product={product} />
 
       {/* Tabs */}
       <div className="border-b border-gray-200">
@@ -183,5 +215,150 @@ function StatusBadge({ status }: { status: string }) {
     >
       {labels[status] ?? status}
     </span>
+  );
+}
+
+function ProductTimeline({ product }: { product: Product }) {
+  const steps: TimelineStep[] = [
+    {
+      id: "created",
+      label: "Fiche créée",
+      sublabel: formatDate(product.createdAt),
+      done: true,
+      color: "default",
+    },
+    {
+      id: "techpack",
+      label: "Tech pack",
+      sublabel: product.techPackPath ? "Ajouté" : "—",
+      done: !!product.techPackPath,
+      color: "default",
+    },
+    {
+      id: "prototype",
+      label: "Prototype",
+      sublabel: product.samples[0]
+        ? formatDate(product.samples[0].createdAt)
+        : "—",
+      done: product.samples.length > 0,
+      color: "default",
+    },
+    {
+      id: "validation",
+      label: "Validation",
+      sublabel:
+        product.sampleStatus === "VALIDATED"
+          ? "Validé"
+          : product.sampleStatus === "NOT_VALIDATED"
+            ? "Refusé"
+            : "En attente",
+      done: product.sampleStatus !== "PENDING",
+      color:
+        product.sampleStatus === "VALIDATED"
+          ? "green"
+          : product.sampleStatus === "NOT_VALIDATED"
+            ? "red"
+            : "default",
+    },
+    {
+      id: "launch",
+      label: "Lancement",
+      sublabel: product.plannedLaunchAt
+        ? formatDate(product.plannedLaunchAt)
+        : "—",
+      done:
+        !!product.plannedLaunchAt &&
+        new Date(product.plannedLaunchAt) <= new Date(),
+      color: "default",
+    },
+  ];
+
+  // Also show linked events after launch if any
+  const linkedEvents = product.events
+    .map((ep) => ({
+      id: `event-${ep.event.id}`,
+      label: ep.event.name,
+      sublabel: formatDate(ep.event.startAt),
+      done: new Date(ep.event.startAt) < new Date(),
+      color: "default" as const,
+      typeLabel: EVENT_TYPES.find((t) => t.value === ep.event.type)?.label,
+    }))
+    .sort((a, b) => new Date(a.sublabel).getTime() - new Date(b.sublabel).getTime());
+
+  const dotStyle = (step: TimelineStep) => {
+    if (!step.done) return "bg-white border-gray-200";
+    if (step.color === "green") return "bg-green-500 border-green-500";
+    if (step.color === "red") return "bg-red-400 border-red-400";
+    return "bg-[#1D1D1F] border-[#1D1D1F]";
+  };
+
+  const lineStyle = (i: number, arr: TimelineStep[]) =>
+    arr[i + 1]?.done ? "bg-[#1D1D1F]" : "bg-gray-200";
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl shadow-sm px-6 py-4">
+      {/* Horizontal stepper: 5 main stages */}
+      <div className="flex items-center">
+        {steps.map((step, i) => (
+          <Fragment key={step.id}>
+            <div
+              className={cn(
+                "h-6 w-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center",
+                dotStyle(step)
+              )}
+            >
+              {step.done && <Check className="h-3.5 w-3.5 text-white" />}
+            </div>
+            {i < steps.length - 1 && (
+              <div className={cn("flex-1 h-0.5 min-w-[16px]", lineStyle(i, steps))} />
+            )}
+          </Fragment>
+        ))}
+      </div>
+
+      {/* Labels */}
+      <div className="flex mt-3">
+        {steps.map((step) => (
+          <div key={step.id} className="flex-1 text-center">
+            <p
+              className={cn(
+                "text-xs font-medium leading-tight",
+                step.done ? "text-gray-700" : "text-gray-400"
+              )}
+            >
+              {step.label}
+            </p>
+            <p className="text-xs text-gray-400 mt-0.5">{step.sublabel}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Linked events (if any) */}
+      {linkedEvents.length > 0 && (
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
+            Événements liés
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {linkedEvents.map((ev) => (
+              <span
+                key={ev.id}
+                className={cn(
+                  "inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border",
+                  ev.done
+                    ? "bg-gray-100 text-gray-600 border-gray-200"
+                    : "bg-blue-50 text-blue-700 border-blue-100"
+                )}
+              >
+                <span className={cn("h-1.5 w-1.5 rounded-full flex-shrink-0", ev.done ? "bg-gray-400" : "bg-blue-500")} />
+                {ev.label}
+                {ev.typeLabel && <span className="text-gray-400">· {ev.typeLabel}</span>}
+                <span className="text-gray-400">{ev.sublabel}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

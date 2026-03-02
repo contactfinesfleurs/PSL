@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Save } from "lucide-react";
-import { PRODUCT_FAMILIES, SEASONS, SIZE_RANGES } from "@/lib/utils";
+import { Save, RefreshCw } from "lucide-react";
+import { cn, generateReference, PRODUCT_FAMILIES, SEASONS, SIZE_RANGES } from "@/lib/utils";
 import { TagInput } from "@/components/ui/TagInput";
 import { FileUpload } from "@/components/ui/FileUpload";
 
@@ -78,6 +78,8 @@ export function TechPackTab({ product }: { product: Product }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  // refLocked=true → user has manually overridden the reference
+  const [refLocked, setRefLocked] = useState(!!product.reference);
 
   const parse = (s: string | null) => {
     if (!s) return [];
@@ -106,6 +108,18 @@ export function TechPackTab({ product }: { product: Product }) {
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
+  // Derived reference computed from current form values
+  const autoReference = generateReference({
+    name: form.name,
+    season: form.season,
+    year: form.year,
+    colors: form.colors,
+    materials: form.materials,
+  });
+
+  // The reference value actually sent on save
+  const effectiveReference = refLocked ? (form.reference || null) : autoReference;
+
   async function handleSave() {
     setSaving(true);
     await fetch(`/api/products/${product.id}`, {
@@ -121,7 +135,7 @@ export function TechPackTab({ product }: { product: Product }) {
         materials: form.materials,
         colors: form.colors,
         measurements: JSON.stringify(form.measurements),
-        reference: form.reference,
+        reference: effectiveReference,
         sketchPaths: form.sketchPaths,
         techPackPath: form.techPackPath,
       }),
@@ -149,15 +163,44 @@ export function TechPackTab({ product }: { product: Product }) {
 
       {/* Reference interne */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Référence interne
-        </label>
-        <input
-          type="text"
-          value={form.reference}
-          onChange={(e) => set("reference", e.target.value)}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
-        />
+        <div className="flex items-center justify-between mb-1">
+          <label className="block text-sm font-medium text-gray-700">
+            Référence interne
+          </label>
+          <span className="text-xs text-gray-400">
+            {refLocked ? "Saisie manuelle" : "Générée automatiquement"}
+          </span>
+        </div>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={refLocked ? form.reference : autoReference}
+            readOnly={!refLocked}
+            onChange={(e) => refLocked && set("reference", e.target.value)}
+            className={cn(
+              "flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-gray-300",
+              !refLocked && "bg-gray-50 text-gray-500 cursor-default"
+            )}
+          />
+          <button
+            type="button"
+            onClick={() => {
+              if (refLocked) {
+                // Back to auto
+                setRefLocked(false);
+              } else {
+                // Switch to manual, pre-fill with current auto value
+                set("reference", autoReference);
+                setRefLocked(true);
+              }
+            }}
+            title={refLocked ? "Revenir à la référence automatique" : "Modifier manuellement"}
+            className="inline-flex items-center gap-1.5 text-xs text-gray-500 border border-gray-300 px-3 py-2 rounded-lg hover:bg-gray-50 whitespace-nowrap"
+          >
+            <RefreshCw className="h-3 w-3" />
+            {refLocked ? "Auto" : "Modifier"}
+          </button>
+        </div>
       </div>
 
       {/* Family + Season + Year */}

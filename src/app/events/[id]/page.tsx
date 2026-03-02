@@ -1,7 +1,8 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useState, Fragment } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Calendar,
@@ -13,8 +14,9 @@ import {
   Edit2,
   Save,
   X,
+  Check,
 } from "lucide-react";
-import { EVENT_TYPES, formatDate } from "@/lib/utils";
+import { cn, EVENT_TYPES, CAMPAIGN_TYPES, formatDate } from "@/lib/utils";
 
 type Product = { id: string; name: string; sku: string; family: string };
 type Campaign = {
@@ -22,6 +24,8 @@ type Campaign = {
   name: string;
   type: string;
   status: string;
+  startAt: string | null;
+  endAt: string | null;
 };
 type Event = {
   id: string;
@@ -33,6 +37,7 @@ type Event = {
   endAt: string | null;
   location: string | null;
   venue: string | null;
+  createdAt: string;
   products: { event: never; product: Product; look: number | null; notes: string | null }[];
   campaigns: Campaign[];
 };
@@ -43,6 +48,7 @@ export default function EventDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const router = useRouter();
   const [event, setEvent] = useState<Event | null>(null);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [editing, setEditing] = useState(false);
@@ -51,6 +57,7 @@ export default function EventDetailPage({
   const [selectedProduct, setSelectedProduct] = useState("");
   const [lookNumber, setLookNumber] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetch(`/api/events/${id}`)
@@ -143,6 +150,13 @@ export default function EventDetailPage({
     });
     const updated = await res.json();
     setEvent({ ...event!, ...updated });
+  }
+
+  async function handleDelete() {
+    if (!confirm(`Supprimer "${event!.name}" ? Cette action est irréversible.`)) return;
+    setDeleting(true);
+    await fetch(`/api/events/${event!.id}`, { method: "DELETE" });
+    router.push("/events");
   }
 
   return (
@@ -262,16 +276,26 @@ export default function EventDetailPage({
                   </p>
                 )}
               </div>
-              <button
-                onClick={() => {
-                  setEditForm({});
-                  setEditing(true);
-                }}
-                className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 px-3 py-1.5 rounded-lg"
-              >
-                <Edit2 className="h-3.5 w-3.5" />
-                Modifier
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setEditForm({});
+                    setEditing(true);
+                  }}
+                  className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 px-3 py-1.5 rounded-lg"
+                >
+                  <Edit2 className="h-3.5 w-3.5" />
+                  Modifier
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  title="Supprimer l'événement"
+                  className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
             </div>
 
             <div className="mt-4 flex flex-wrap gap-4 text-sm text-gray-600">
@@ -310,6 +334,9 @@ export default function EventDetailPage({
           </>
         )}
       </div>
+
+      {/* Timeline */}
+      <EventTimeline event={event} />
 
       {/* Products */}
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
@@ -420,6 +447,117 @@ export default function EventDetailPage({
             ))}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Event Timeline ──────────────────────────────────────────────────────────
+
+type TimelineItem = {
+  date: Date;
+  label: string;
+  sublabel?: string;
+  past: boolean;
+  kind: "meta" | "main" | "campaign";
+};
+
+function EventTimeline({ event }: { event: Event }) {
+  const now = new Date();
+
+  const items: TimelineItem[] = [
+    {
+      date: new Date(event.createdAt),
+      label: "Événement créé",
+      past: true,
+      kind: "meta",
+    },
+    {
+      date: new Date(event.startAt),
+      label: "Début",
+      sublabel: [event.location, event.venue].filter(Boolean).join(" — ") || undefined,
+      past: new Date(event.startAt) < now,
+      kind: "main",
+    },
+    ...(event.endAt
+      ? ([{
+          date: new Date(event.endAt),
+          label: "Fin",
+          past: new Date(event.endAt) < now,
+          kind: "main",
+        }] as TimelineItem[])
+      : []),
+    ...event.campaigns
+      .filter((c) => c.startAt)
+      .map((c): TimelineItem => ({
+        date: new Date(c.startAt!),
+        label: c.name,
+        sublabel: CAMPAIGN_TYPES.find((t) => t.value === c.type)?.label,
+        past: new Date(c.startAt!) < now,
+        kind: "campaign",
+      })),
+  ].sort((a, b) => a.date.getTime() - b.date.getTime());
+
+  if (items.length === 0) return null;
+
+  const dotClass = (item: TimelineItem) => {
+    if (item.kind === "main")
+      return item.past
+        ? "bg-[#1D1D1F] border-[#1D1D1F]"
+        : "bg-white border-[#1D1D1F]";
+    if (item.kind === "campaign")
+      return item.past
+        ? "bg-blue-500 border-blue-500"
+        : "bg-white border-blue-300";
+    return item.past ? "bg-gray-400 border-gray-400" : "bg-white border-gray-300";
+  };
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+      <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-5">
+        Frise chronologique
+      </h2>
+      <div className="relative">
+        {/* Vertical connector line */}
+        <div className="absolute left-[6px] top-2 bottom-2 w-px bg-gray-200" />
+        <div className="space-y-5">
+          {items.map((item, i) => (
+            <Fragment key={i}>
+              <div className="flex items-start gap-4 relative">
+                {/* Dot */}
+                <div
+                  className={cn(
+                    "mt-0.5 h-3.5 w-3.5 rounded-full border-2 flex-shrink-0 z-10 flex items-center justify-center",
+                    dotClass(item)
+                  )}
+                >
+                  {item.past && item.kind === "main" && (
+                    <Check className="h-2.5 w-2.5 text-white" />
+                  )}
+                </div>
+                {/* Content */}
+                <div className="min-w-0 -mt-0.5">
+                  <div className="flex items-baseline gap-2 flex-wrap">
+                    <p
+                      className={cn(
+                        "text-sm font-medium",
+                        item.past ? "text-gray-900" : "text-gray-500"
+                      )}
+                    >
+                      {item.label}
+                    </p>
+                    <p className="text-xs text-gray-400 tabular-nums">
+                      {formatDate(item.date)}
+                    </p>
+                  </div>
+                  {item.sublabel && (
+                    <p className="text-xs text-gray-400 mt-0.5">{item.sublabel}</p>
+                  )}
+                </div>
+              </div>
+            </Fragment>
+          ))}
+        </div>
       </div>
     </div>
   );
