@@ -1,45 +1,87 @@
 import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
-
-export const dynamic = 'force-dynamic';
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
+
+export const dynamic = "force-dynamic";
+
+// ─── Security constants ────────────────────────────────────────────────────
+
+/** Maximum upload size: 10 MB */
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+/** Strict MIME type whitelist — images and PDF only */
+const ALLOWED_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "application/pdf",
+]);
+
+// ─── Handler ───────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
-  const folder = (formData.get("folder") as string) || "general";
+  const rawFolder = (formData.get("folder") as string) || "general";
 
   if (!file) {
     return NextResponse.json({ error: "Aucun fichier fourni" }, { status: 400 });
   }
 
-  // Use Vercel Blob in production, local filesystem in development
-  if (process.env.BLOB_READ_WRITE_TOKEN) {
-    const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
-    const timestamp = Date.now();
-    const filename = `${folder}/${timestamp}_${safeName}`;
-
-    const blob = await put(filename, file, { access: "public" });
-
-    return NextResponse.json({ path: blob.url, filename: blob.pathname });
+  // Validate MIME type against whitelist
+  if (!ALLOWED_MIME_TYPES.has(file.type)) {
+    return NextResponse.json(
+      { error: "Type de fichier non autorisé. Formats acceptés : JPEG, PNG, WebP, GIF, PDF." },
+      { status: 415 }
+    );
   }
 
-  // Local development fallback
-  const bytes = await file.arrayBuffer();
-  const buffer = Buffer.from(bytes);
+  // Validate file size
+  if (file.size > MAX_FILE_SIZE) {
+    return NextResponse.json(
+      { error: "Fichier trop volumineux. Taille maximale : 10 Mo." },
+      { status: 413 }
+    );
+  }
 
+  // Sanitize folder name — strip anything that isn't alphanumeric, hyphen or underscore
+  const folder = rawFolder.replace(/[^a-zA-Z0-9_-]/g, "_");
+
+  // Sanitize filename — preserve extension, strip dangerous characters
   const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
   const timestamp = Date.now();
-  const filename = `${timestamp}_${safeName}`;
 
-  const uploadDir = path.join(process.cwd(), "public", "uploads", folder);
-  await mkdir(uploadDir, { recursive: true });
+  try {
+    // ── Production: Vercel Blob ────────────────────────────────────────────
+    if (process.env.BLOB_READ_WRITE_TOKEN) {
+      const filename = `${folder}/${timestamp}_${safeName}`;
+      const blob = await put(filename, file, {
+        access: "public",
+        contentType: file.type, // Explicitly declare — don't rely on client header
+      });
+      return NextResponse.json({ path: blob.url, filename: blob.pathname });
+    }
 
-  const filePath = path.join(uploadDir, filename);
-  await writeFile(filePath, buffer);
+    // ── Development: local filesystem ─────────────────────────────────────
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+    const filename = `${timestamp}_${safeName}`;
 
-  const publicPath = `/uploads/${folder}/${filename}`;
+    // Resolve paths and guard against path traversal (e.g. folder = "../../etc")
+    const uploadsRoot = path.resolve(process.cwd(), "public", "uploads");
+    const uploadDir = path.resolve(uploadsRoot, folder);
 
-  return NextResponse.json({ path: publicPath, filename });
+    if (!uploadDir.startsWith(uploadsRoot + path.sep) && uploadDir !== uploadsRoot) {
+      return NextResponse.json({ error: "Chemin invalide." }, { status: 400 });
+    }
+
+    await mkdir(uploadDir, { recursive: true });
+    await writeFile(path.join(uploadDir, filename), buffer);
+
+    return NextResponse.json({ path: `/uploads/${folder}/${filename}`, filename });
+  } catch {
+    return NextResponse.json({ error: "Erreur lors de l'upload." }, { status: 500 });
+  }
 }
