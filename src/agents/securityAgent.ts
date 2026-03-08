@@ -146,7 +146,7 @@ ${context}
 Produis ton rapport de sécurité complet.`;
 
   const stream = client.messages.stream({
-    model: "claude-opus-4-6",
+    model: "claude-sonnet-4-6",
     max_tokens: 8000,
     thinking: { type: "adaptive" },
     system: SECURITY_AGENT_CONFIG.systemPrompt,
