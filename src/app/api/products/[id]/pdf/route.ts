@@ -1,17 +1,58 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
+
+/** Escape HTML special characters to prevent XSS when interpolating user data into HTML. */
+function esc(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
+/** Safely parse a JSON array stored in DB — returns [] on corrupt data. */
+function safeParseArray(raw: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as unknown[]).filter((v) => typeof v === "string") as string[] : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Only allow image URLs from trusted origins to prevent SSRF / XSS via img src. */
+function isTrustedImageUrl(url: string): boolean {
+  if (url.startsWith("/uploads/")) return true;
+  try {
+    const { protocol, hostname } = new URL(url);
+    return protocol === "https:" && (
+      hostname.endsWith(".vercel-storage.com") ||
+      hostname.endsWith(".blob.vercel-storage.com")
+    );
+  } catch {
+    return false;
+  }
+}
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const product = await prisma.product.findUnique({
-    where: { id },
-    include: { samples: true },
-  });
+
+  let product;
+  try {
+    product = await prisma.product.findUnique({
+      where: { id },
+      include: { samples: true },
+    });
+  } catch {
+    return NextResponse.json({ error: "Erreur serveur." }, { status: 500 });
+  }
 
   if (!product) {
     return NextResponse.json({ error: "Produit introuvable" }, { status: 404 });
@@ -19,17 +60,15 @@ export async function GET(
 
   const sample = product.samples[0];
 
-  // Generate HTML for PDF (using browser print)
-  const reviewNotes = sample?.reviewNotes ?? "";
-  const reviewPhotos: string[] = sample?.reviewPhotoPaths
-    ? JSON.parse(sample.reviewPhotoPaths)
-    : [];
+  // Escape user-controlled text; safely parse JSON arrays; filter untrusted URLs
+  const reviewNotes = esc(sample?.reviewNotes ?? "");
+  const reviewPhotos = safeParseArray(sample?.reviewPhotoPaths ?? null).filter(isTrustedImageUrl);
 
   const html = `<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Rapport de Non-Validation — ${product.name}</title>
+  <title>Rapport de Non-Validation — ${esc(product.name)}</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: Arial, sans-serif; color: #1a1a1a; padding: 40px; }
@@ -66,19 +105,19 @@ export async function GET(
     <div class="info-grid">
       <div class="info-item">
         <div class="label">Nom du produit</div>
-        <div class="value">${product.name}</div>
+        <div class="value">${esc(product.name)}</div>
       </div>
       <div class="info-item">
         <div class="label">Référence SKU</div>
-        <div class="value">${product.sku}</div>
+        <div class="value">${esc(product.sku)}</div>
       </div>
       <div class="info-item">
         <div class="label">Famille</div>
-        <div class="value">${product.family}</div>
+        <div class="value">${esc(product.family)}</div>
       </div>
       <div class="info-item">
         <div class="label">Saison</div>
-        <div class="value">${product.season} ${product.year}</div>
+        <div class="value">${esc(product.season)} ${esc(String(product.year))}</div>
       </div>
     </div>
   </div>
@@ -97,7 +136,7 @@ export async function GET(
       ? `<div class="section">
     <h2>Photos des détails à revoir (${reviewPhotos.length})</h2>
     <div class="photos-grid">
-      ${reviewPhotos.map((p) => `<img src="${p}" alt="Détail à revoir" />`).join("")}
+      ${reviewPhotos.map((p) => `<img src="${esc(p)}" alt="Détail à revoir" />`).join("")}
     </div>
   </div>`
       : ""
@@ -105,7 +144,7 @@ export async function GET(
 
   <div class="footer">
     <p>PSL Studio — Document confidentiel destiné au fournisseur</p>
-    <p>Produit : ${product.name} · SKU : ${product.sku}</p>
+    <p>Produit : ${esc(product.name)} · SKU : ${esc(product.sku)}</p>
   </div>
 </body>
 </html>`;
