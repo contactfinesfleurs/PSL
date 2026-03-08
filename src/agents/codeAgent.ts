@@ -167,7 +167,7 @@ ${context}
 Produis ton rapport technique complet avec du code d'implémentation prêt à l'emploi.`;
 
   const stream = client.messages.stream({
-    model: "claude-opus-4-6",
+    model: "claude-sonnet-4-6",
     max_tokens: 12000,
     thinking: { type: "adaptive" },
     system: CODE_AGENT_CONFIG.systemPrompt,
