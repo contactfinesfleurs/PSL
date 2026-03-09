@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle, XCircle, FileText, Save } from "lucide-react";
+import { CheckCircle, XCircle, FileText, Save, RotateCcw } from "lucide-react";
 import { FileUpload } from "@/components/ui/FileUpload";
 import { TagInput } from "@/components/ui/TagInput";
 
@@ -101,7 +101,7 @@ export function SampleTab({
     router.refresh();
   }
 
-  async function validate(status: "VALIDATED" | "NOT_VALIDATED") {
+  async function validate(status: "VALIDATED" | "NOT_VALIDATED" | "PENDING") {
     setValidating(true);
     // Save sample first
     await fetch(`/api/products/${product.id}/sample`, {
@@ -361,6 +361,17 @@ export function SampleTab({
               NON VALIDÉ
             </button>
           </>
+        )}
+
+        {isValidated && (
+          <button
+            onClick={() => validate("PENDING")}
+            disabled={validating}
+            className="inline-flex items-center gap-2 border border-gray-300 text-gray-600 hover:border-gray-400 hover:text-gray-800 disabled:opacity-50 text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+          >
+            <RotateCcw className="h-4 w-4" />
+            Remettre en attente
+          </button>
         )}
 
         {product.sampleStatus === "NOT_VALIDATED" && (
