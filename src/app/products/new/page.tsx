@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   PRODUCT_FAMILIES,
   SEASONS,
   SIZE_RANGES,
+  COLOR_CODES,
+  generateReference,
 } from "@/lib/utils";
 import { TagInput } from "@/components/ui/TagInput";
 import { FileUpload } from "@/components/ui/FileUpload";
@@ -24,12 +26,24 @@ export default function NewProductPage() {
     sizeRange: "S-XL",
     sizes: [] as string[],
     materials: [] as string[],
-    colors: [] as string[],
+    colorPrimary: "",
+    colorSecondary: "",
     measurements: "",
-    reference: "",
     sketchPaths: [] as string[],
     techPackPath: null as string | null,
   });
+
+  // Live reference preview
+  const referencePreview = useMemo(() => {
+    if (!form.name.trim()) return null;
+    return generateReference({
+      name: form.name,
+      season: form.season,
+      year: form.year,
+      material: form.materials[0] ?? null,
+      colorPrimary: form.colorPrimary || null,
+    });
+  }, [form.name, form.season, form.year, form.materials, form.colorPrimary]);
 
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -51,9 +65,9 @@ export default function NewProductPage() {
         sizeRange: form.sizeRange,
         sizes: form.sizes,
         materials: form.materials,
-        colors: form.colors,
+        colorPrimary: form.colorPrimary || null,
+        colorSecondary: form.colorSecondary || null,
         measurements: form.measurements || null,
-        reference: form.reference || null,
         sketchPaths: form.sketchPaths,
         techPackPath: form.techPackPath,
       }),
@@ -73,7 +87,7 @@ export default function NewProductPage() {
       <div>
         <h1 className="text-3xl font-light text-gray-900">Nouveau produit</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Remplissez les informations de base. La référence SKU sera générée automatiquement.
+          Remplissez les informations de base. La référence et le SKU seront générés automatiquement.
         </p>
       </div>
 
@@ -93,19 +107,22 @@ export default function NewProductPage() {
           />
         </div>
 
-        {/* Reference interne */}
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">
-            Référence interne (optionnel)
-          </label>
-          <input
-            type="text"
-            value={form.reference}
-            onChange={(e) => set("reference", e.target.value)}
-            placeholder="ex. REF-001"
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 bg-gray-50"
-          />
-        </div>
+        {/* Reference preview */}
+        {referencePreview && (
+          <div className="flex items-center gap-4 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
+            <div>
+              <p className="text-[10px] uppercase tracking-wide text-gray-400 font-medium mb-0.5">
+                Référence générée
+              </p>
+              <p className="text-sm font-mono font-semibold text-gray-900">
+                {referencePreview}
+              </p>
+            </div>
+            <p className="text-xs text-gray-400 ml-auto text-right leading-tight">
+              Initiales · Saison · Matière · Couleur
+            </p>
+          </div>
+        )}
 
         {/* Family + Season + Year */}
         <div className="grid grid-cols-3 gap-4">
@@ -201,19 +218,47 @@ export default function NewProductPage() {
             onChange={(v) => set("materials", v)}
             placeholder="ex. Soie, Laine, Cachemire"
           />
+          <p className="text-xs text-gray-400 mt-1">
+            La première matière est utilisée dans la référence
+          </p>
         </div>
 
         {/* Colors */}
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">
-            Coloris
-          </label>
-          <TagInput
-            value={form.colors}
-            onChange={(v) => set("colors", v)}
-            placeholder="ex. Noir, Ivoire, Rouge Sang"
-            colorMode
-          />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">
+              Couleur principale
+            </label>
+            <select
+              value={form.colorPrimary}
+              onChange={(e) => set("colorPrimary", e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 bg-gray-50"
+            >
+              <option value="">— Sélectionner</option>
+              {COLOR_CODES.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.code} — {c.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">
+              Couleur secondaire
+            </label>
+            <select
+              value={form.colorSecondary}
+              onChange={(e) => set("colorSecondary", e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 bg-gray-50"
+            >
+              <option value="">— Optionnel</option>
+              {COLOR_CODES.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.code} — {c.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Measurements */}

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { generateSKU } from "@/lib/utils";
+import { generateSKU, generateReference } from "@/lib/utils";
 import { z } from "zod";
 import { parseBodyJson, validateEnum } from "@/lib/api-helpers";
 
@@ -23,7 +23,8 @@ const ProductCreateSchema = z.object({
   measurements: z.record(z.string(), z.unknown()).optional().nullable(),
   materials: z.array(z.string().max(200)).optional().nullable(),
   colors: z.array(z.string().max(100)).optional().nullable(),
-  reference: z.string().max(200).optional().nullable(),
+  colorPrimary: z.string().max(10).optional().nullable(),
+  colorSecondary: z.string().max(10).optional().nullable(),
 });
 
 // ─── Handlers ─────────────────────────────────────────────────────────────
@@ -64,10 +65,19 @@ export async function POST(req: NextRequest) {
     index: count + 1,
   });
 
+  const reference = generateReference({
+    name: data.name,
+    season: data.season,
+    year: data.year,
+    material: data.materials?.[0] ?? null,
+    colorPrimary: data.colorPrimary ?? null,
+  });
+
   const product = await prisma.product.create({
     data: {
       name: data.name,
       sku,
+      reference,
       family: data.family,
       season: data.season,
       year: data.year,
@@ -76,7 +86,8 @@ export async function POST(req: NextRequest) {
       measurements: data.measurements ? JSON.stringify(data.measurements) : null,
       materials: data.materials ? JSON.stringify(data.materials) : null,
       colors: data.colors ? JSON.stringify(data.colors) : null,
-      reference: data.reference ?? null,
+      colorPrimary: data.colorPrimary ?? null,
+      colorSecondary: data.colorSecondary ?? null,
     },
   });
 
