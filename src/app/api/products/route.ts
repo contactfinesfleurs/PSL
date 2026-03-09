@@ -22,7 +22,6 @@ const ProductCreateSchema = z.object({
   sizes: z.array(z.string().max(20)).optional().default([]),
   measurements: z.record(z.string(), z.unknown()).optional().nullable(),
   materials: z.array(z.string().max(200)).optional().nullable(),
-  colors: z.array(z.string().max(100)).optional().nullable(),
   colorPrimary: z.string().max(10).optional().nullable(),
   colorSecondary: z.string().max(10).optional().nullable(),
 });
@@ -65,6 +64,9 @@ export async function POST(req: NextRequest) {
     index: count + 1,
   });
 
+  // Pack color codes into the colors JSON array: [primary, secondary?]
+  const colorCodes = [data.colorPrimary, data.colorSecondary].filter(Boolean) as string[];
+
   const reference = generateReference({
     name: data.name,
     season: data.season,
@@ -85,9 +87,7 @@ export async function POST(req: NextRequest) {
       sizes: JSON.stringify(data.sizes),
       measurements: data.measurements ? JSON.stringify(data.measurements) : null,
       materials: data.materials ? JSON.stringify(data.materials) : null,
-      colors: data.colors ? JSON.stringify(data.colors) : null,
-      colorPrimary: data.colorPrimary ?? null,
-      colorSecondary: data.colorSecondary ?? null,
+      colors: colorCodes.length > 0 ? JSON.stringify(colorCodes) : null,
     },
   });
 
