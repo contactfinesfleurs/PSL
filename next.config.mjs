@@ -1,4 +1,5 @@
 /** @type {import('next').NextConfig} */
+
 const nextConfig = {
   images: {
     remotePatterns: [
@@ -17,14 +18,13 @@ const nextConfig = {
   async headers() {
     return [
       {
-        // Apply security headers to all routes
         source: "/(.*)",
         headers: [
-          // Prevent MIME-type sniffing (blocks content-type confusion attacks)
+          // Prevent MIME-type sniffing
           { key: "X-Content-Type-Options", value: "nosniff" },
-          // Prevent clickjacking — allow same origin only
+          // Prevent clickjacking
           { key: "X-Frame-Options", value: "SAMEORIGIN" },
-          // Legacy XSS filter (belt + suspenders alongside CSP)
+          // Legacy XSS filter
           { key: "X-XSS-Protection", value: "1; mode=block" },
           // Limit referrer info sent to third parties
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
@@ -38,12 +38,12 @@ const nextConfig = {
             key: "Strict-Transport-Security",
             value: "max-age=63072000; includeSubDomains; preload",
           },
-          // Content Security Policy
+          // Content Security Policy — no 'unsafe-eval'
           {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+              "script-src 'self' 'unsafe-inline'",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https://*.vercel-storage.com https://*.public.blob.vercel-storage.com",
               "font-src 'self'",
