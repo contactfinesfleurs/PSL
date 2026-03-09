@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { generateSKU, generateReference } from "@/lib/generators";
 import { z } from "zod";
-import { parseBodyJson, validateEnum, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
+import { parseBodyJson, validateEnum, getProfileId, unauthorizedResponse, parsePagination } from "@/lib/api-helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -35,19 +35,32 @@ export async function GET(req: NextRequest) {
   const sampleStatus = validateEnum(searchParams.get("status"), SAMPLE_STATUSES);
   const family = searchParams.get("family");
   const season = searchParams.get("season");
+  const { skip, take, page, limit } = parsePagination(searchParams);
 
-  const products = await prisma.product.findMany({
-    where: {
-      profileId,
-      ...(sampleStatus ? { sampleStatus } : {}),
-      ...(family ? { family } : {}),
-      ...(season ? { season } : {}),
-    },
-    include: { samples: true, campaigns: true },
-    orderBy: { createdAt: "desc" },
+  const where = {
+    profileId,
+    ...(sampleStatus ? { sampleStatus } : {}),
+    ...(family ? { family } : {}),
+    ...(season ? { season } : {}),
+  };
+
+  const [products, total] = await Promise.all([
+    prisma.product.findMany({
+      where,
+      // Only include the lightweight sample count needed for list display.
+      // Deep relations (campaigns, events) are loaded on the detail route to avoid N+1.
+      include: { samples: true },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take,
+    }),
+    prisma.product.count({ where }),
+  ]);
+
+  return NextResponse.json({
+    data: products,
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
   });
-
-  return NextResponse.json(products);
 }
 
 export async function POST(req: NextRequest) {

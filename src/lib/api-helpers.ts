@@ -62,6 +62,21 @@ export async function parseBodyJson<T>(
 }
 
 /**
+ * Parse `page` and `limit` query parameters and return Prisma-ready pagination values.
+ * - page: default 1, minimum 1
+ * - limit: default 20, minimum 1, maximum 100
+ *
+ * @example
+ * const { skip, take, page, limit } = parsePagination(searchParams);
+ * const items = await prisma.product.findMany({ skip, take });
+ */
+export function parsePagination(searchParams: URLSearchParams): { skip: number; take: number; page: number; limit: number } {
+  const page = Math.max(1, parseInt(searchParams.get('page') ?? '1'))
+  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') ?? '20')))
+  return { skip: (page - 1) * limit, take: limit, page, limit }
+}
+
+/**
  * Validate a query-string value against a typed const enum array.
  * Returns undefined (and ignores the param) if the value is not in the enum.
  *
