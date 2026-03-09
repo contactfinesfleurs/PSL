@@ -92,7 +92,7 @@ export function TechPackTab({ product }: { product: Product }) {
           type="text"
           value={form.name}
           onChange={(e) => set("name", e.target.value)}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
         />
       </div>
 
@@ -105,7 +105,7 @@ export function TechPackTab({ product }: { product: Product }) {
           type="text"
           value={form.reference}
           onChange={(e) => set("reference", e.target.value)}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
         />
       </div>
 
@@ -118,7 +118,7 @@ export function TechPackTab({ product }: { product: Product }) {
           <select
             value={form.family}
             onChange={(e) => set("family", e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
           >
             {PRODUCT_FAMILIES.map((f) => (
               <option key={f.value} value={f.value}>
@@ -135,7 +135,7 @@ export function TechPackTab({ product }: { product: Product }) {
           <select
             value={form.season}
             onChange={(e) => set("season", e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
           >
             {SEASONS.map((s) => (
               <option key={s.value} value={s.value}>
@@ -155,7 +155,7 @@ export function TechPackTab({ product }: { product: Product }) {
             onChange={(e) => set("year", parseInt(e.target.value))}
             min={2020}
             max={2040}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
           />
         </div>
       </div>
@@ -168,7 +168,7 @@ export function TechPackTab({ product }: { product: Product }) {
         <select
           value={form.sizeRange}
           onChange={(e) => set("sizeRange", e.target.value)}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
         >
           {SIZE_RANGES.map((s) => (
             <option key={s.value} value={s.value}>
@@ -224,7 +224,7 @@ export function TechPackTab({ product }: { product: Product }) {
           value={form.measurements}
           onChange={(e) => set("measurements", e.target.value)}
           rows={4}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 resize-none"
         />
       </div>
 
@@ -267,7 +267,7 @@ export function TechPackTab({ product }: { product: Product }) {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="inline-flex items-center gap-2 bg-purple-700 hover:bg-purple-800 disabled:opacity-50 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors"
+          className="inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-800 disabled:opacity-50 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors"
         >
           <Save className="h-4 w-4" />
           {saving ? "Sauvegarde…" : "Sauvegarder"}

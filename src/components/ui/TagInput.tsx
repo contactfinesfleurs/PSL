@@ -46,7 +46,7 @@ export function TagInput({
   return (
     <div
       className={cn(
-        "flex flex-wrap gap-1.5 p-2 border border-gray-300 rounded-lg bg-white min-h-[42px] focus-within:ring-2 focus-within:ring-purple-400 focus-within:border-purple-400",
+        "flex flex-wrap gap-1.5 p-2 border border-gray-300 rounded-lg bg-white min-h-[42px] focus-within:ring-2 focus-within:ring-gray-300 focus-within:border-gray-300",
         className
       )}
     >

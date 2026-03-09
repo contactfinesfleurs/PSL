@@ -17,11 +17,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr" className={inter.variable}>
-      <body className="font-sans bg-[#f8f8fa]">
+      <body className="font-sans bg-[#f4f4f6]">
         <div className="flex h-screen">
           <Sidebar />
           <main className="flex-1 overflow-auto">
-            <div className="px-8 py-8 max-w-7xl mx-auto">{children}</div>
+            <div className="px-10 py-10 max-w-7xl mx-auto">{children}</div>
           </main>
         </div>
       </body>

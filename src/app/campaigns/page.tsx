@@ -16,19 +16,19 @@ export default async function CampaignsPage() {
     CAMPAIGN_TYPES.find((c) => c.value === t)?.label ?? t;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8">
+      <div className="flex items-end justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">
+          <h1 className="text-5xl font-light text-gray-900 tracking-tight">
             Campagnes
           </h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <p className="text-sm text-gray-500 mt-2">
             {campaigns.length} campagne{campaigns.length !== 1 ? "s" : ""}
           </p>
         </div>
         <Link
           href="/campaigns/new"
-          className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors shadow-sm"
+          className="inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
         >
           <Plus className="h-4 w-4" />
           Nouvelle campagne
@@ -36,12 +36,12 @@ export default async function CampaignsPage() {
       </div>
 
       {campaigns.length === 0 ? (
-        <div className="text-center py-24 bg-white rounded-2xl border border-gray-200/80">
+        <div className="text-center py-24 bg-white rounded-2xl border border-gray-200">
           <Megaphone className="mx-auto h-10 w-10 text-gray-300 mb-4" />
-          <p className="text-gray-500 font-medium text-sm">Aucune campagne</p>
+          <p className="text-gray-500 text-sm">Aucune campagne</p>
           <Link
             href="/campaigns/new"
-            className="mt-4 inline-flex items-center gap-1 text-sm text-purple-600 hover:underline"
+            className="mt-4 inline-flex items-center gap-1 text-sm text-indigo-600 hover:underline"
           >
             <Plus className="h-3 w-3" />
             Créer une campagne
@@ -53,10 +53,10 @@ export default async function CampaignsPage() {
             <Link
               key={campaign.id}
               href={`/campaigns/${campaign.id}`}
-              className="bg-white border border-gray-200/80 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 p-5 block"
+              className="bg-white border border-gray-200 rounded-2xl hover:border-gray-300 transition-colors p-5 block"
             >
               <div className="flex items-start justify-between gap-2">
-                <p className="font-semibold text-gray-900 truncate text-sm">
+                <p className="font-medium text-gray-900 truncate text-sm">
                   {campaign.name}
                 </p>
                 <Badge status={campaign.status} className="shrink-0" />

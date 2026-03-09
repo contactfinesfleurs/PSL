@@ -132,7 +132,7 @@ export function MediaPlacementsSection({ productId, initialPlacements }: Props) 
             "inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors",
             showForm
               ? "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              : "bg-purple-700 hover:bg-purple-800 text-white"
+              : "bg-gray-900 hover:bg-gray-800 text-white"
           )}
         >
           <Plus className="h-4 w-4" />
@@ -157,7 +157,7 @@ export function MediaPlacementsSection({ productId, initialPlacements }: Props) 
                 value={form.publication}
                 onChange={(e) => setField("publication", e.target.value)}
                 placeholder="Vogue France"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
               />
             </div>
             <div>
@@ -167,7 +167,7 @@ export function MediaPlacementsSection({ productId, initialPlacements }: Props) 
               <select
                 value={form.type}
                 onChange={(e) => setField("type", e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 bg-white"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white"
               >
                 {Object.entries(TYPE_LABELS).map(([val, label]) => (
                   <option key={val} value={val}>
@@ -188,7 +188,7 @@ export function MediaPlacementsSection({ productId, initialPlacements }: Props) 
                 required
                 value={form.publishedAt}
                 onChange={(e) => setField("publishedAt", e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
               />
             </div>
             <div>
@@ -201,7 +201,7 @@ export function MediaPlacementsSection({ productId, initialPlacements }: Props) 
                 value={form.reach}
                 onChange={(e) => setField("reach", e.target.value)}
                 placeholder="Audience estimée"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
               />
             </div>
           </div>
@@ -215,7 +215,7 @@ export function MediaPlacementsSection({ productId, initialPlacements }: Props) 
               value={form.url}
               onChange={(e) => setField("url", e.target.value)}
               placeholder="https://..."
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
             />
           </div>
 
@@ -228,7 +228,7 @@ export function MediaPlacementsSection({ productId, initialPlacements }: Props) 
               onChange={(e) => setField("notes", e.target.value)}
               rows={2}
               placeholder="Informations complémentaires…"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 resize-none"
             />
           </div>
 
@@ -236,7 +236,7 @@ export function MediaPlacementsSection({ productId, initialPlacements }: Props) 
             <button
               type="submit"
               disabled={submitting}
-              className="inline-flex items-center gap-2 bg-purple-700 hover:bg-purple-800 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+              className="inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-800 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
             >
               {submitting ? "Enregistrement…" : "Enregistrer la retombée"}
             </button>
@@ -276,7 +276,7 @@ export function MediaPlacementsSection({ productId, initialPlacements }: Props) 
                       href={placement.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-purple-600 hover:text-purple-800 transition-colors"
+                      className="text-gray-500 hover:text-gray-800 transition-colors"
                       title="Voir la publication"
                     >
                       <ExternalLink className="h-3.5 w-3.5" />
