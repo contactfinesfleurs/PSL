@@ -14,13 +14,12 @@ export default async function ProductPage({
   const { id } = await params;
   const { tab } = await searchParams;
 
-  const [product, allCampaigns] = await Promise.all([
+  // Core query — always works (samples, campaigns, events tables always exist)
+  const [baseProduct, allCampaigns] = await Promise.all([
     prisma.product.findUnique({
       where: { id },
       include: {
         samples: true,
-        loans: { orderBy: { sentAt: "desc" } },
-        placements: { orderBy: { publishedAt: "desc" } },
         campaigns: { include: { campaign: true } },
         events: { include: { event: true } },
       },
@@ -28,9 +27,31 @@ export default async function ProductPage({
     prisma.campaign.findMany({ orderBy: { createdAt: "desc" } }),
   ]);
 
-  if (!product) {
+  if (!baseProduct) {
     notFound();
   }
+
+  // Optional tables (SampleLoan, MediaPlacement) — wrapped in try/catch
+  // because they may not exist yet if the DB migration hasn't been run
+  let loans: Awaited<ReturnType<typeof prisma.sampleLoan.findMany>> = [];
+  let placements: Awaited<ReturnType<typeof prisma.mediaPlacement.findMany>> = [];
+
+  try {
+    [loans, placements] = await Promise.all([
+      prisma.sampleLoan.findMany({
+        where: { productId: id },
+        orderBy: { sentAt: "desc" },
+      }),
+      prisma.mediaPlacement.findMany({
+        where: { productId: id },
+        orderBy: { publishedAt: "desc" },
+      }),
+    ]);
+  } catch {
+    // Tables may not exist yet — silently fall back to empty arrays
+  }
+
+  const product = { ...baseProduct, loans, placements };
 
   return (
     <ProductTabs
