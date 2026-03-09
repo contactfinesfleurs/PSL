@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { parseBodyJson, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
+import { logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -102,6 +103,8 @@ export async function PATCH(
     },
   });
 
+  logAudit("PRODUCT_PATCH", profileId, "product", id, { fields: Object.keys(body) });
+
   return NextResponse.json(product);
 }
 
@@ -121,5 +124,6 @@ export async function DELETE(
   }
 
   await prisma.product.delete({ where: { id } });
+  logAudit("PRODUCT_DELETE", profileId, "product", id);
   return NextResponse.json({ success: true });
 }

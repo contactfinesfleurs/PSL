@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getProfileId, unauthorizedResponse, forbiddenResponse } from "@/lib/api-helpers";
 
 // 17track status tag → human-readable status
 const TAG_LABELS: Record<number, string> = {
@@ -13,10 +14,30 @@ const TAG_LABELS: Record<number, string> = {
 };
 
 export async function POST(req: NextRequest) {
+  // 1. Authenticate
+  const profileId = getProfileId(req);
+  if (!profileId) {
+    return unauthorizedResponse();
+  }
+
   const { trackingNumber, sampleId } = await req.json() as {
     trackingNumber: string;
     sampleId: string;
   };
+
+  // 2. Verify the sample exists and that its product belongs to the authenticated profile
+  const sample = await prisma.sample.findUnique({
+    where: { id: sampleId },
+    include: { product: { select: { profileId: true } } },
+  });
+
+  if (!sample) {
+    return NextResponse.json({ error: "Échantillon introuvable" }, { status: 404 });
+  }
+
+  if (!sample.product.profileId || sample.product.profileId !== profileId) {
+    return forbiddenResponse("Vous n'avez pas accès à cet échantillon");
+  }
 
   const apiKey = process.env.SEVENTEEN_TRACK_API_KEY;
   if (!apiKey) {
