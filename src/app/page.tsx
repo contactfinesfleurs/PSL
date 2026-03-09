@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/auth";
 import { formatDate } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
 import {
@@ -14,25 +15,29 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
+  const session = await getSession();
+  const profileId = session?.profileId ?? "";
+
   try {
     const [productCount, eventCount, campaignCount, validatedCount] =
       await Promise.all([
-        prisma.product.count(),
-        prisma.event.count(),
-        prisma.campaign.count(),
-        prisma.product.count({ where: { sampleStatus: "VALIDATED" } }),
+        prisma.product.count({ where: { profileId } }),
+        prisma.event.count({ where: { profileId } }),
+        prisma.campaign.count({ where: { profileId } }),
+        prisma.product.count({ where: { profileId, sampleStatus: "VALIDATED" } }),
       ]);
 
     const recentProducts = await prisma.product.findMany({
       take: 5,
       orderBy: { createdAt: "desc" },
+      where: { profileId },
       include: { samples: true },
     });
 
     const upcomingEvents = await prisma.event.findMany({
       take: 5,
       orderBy: { startAt: "asc" },
-      where: { startAt: { gte: new Date() }, status: { not: "CANCELLED" } },
+      where: { profileId, startAt: { gte: new Date() }, status: { not: "CANCELLED" } },
     });
 
     return (

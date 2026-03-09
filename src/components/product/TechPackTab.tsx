@@ -27,6 +27,7 @@ export function TechPackTab({ product }: { product: Product }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const parse = (s: string | null) => {
     if (!s) return [];
@@ -70,29 +71,40 @@ export function TechPackTab({ product }: { product: Product }) {
 
   async function handleSave() {
     setSaving(true);
-    await fetch(`/api/products/${product.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: form.name,
-        family: form.family,
-        season: form.season,
-        year: form.year,
-        sizeRange: form.sizeRange,
-        sizes: form.sizes,
-        materials: form.materials,
-        colorPrimary: form.colorPrimary || null,
-        colorSecondary: form.colorSecondary || null,
-        measurements: form.measurements,
-        reference: form.reference,
-        sketchPaths: form.sketchPaths,
-        techPackPath: form.techPackPath,
-      }),
-    });
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
-    router.refresh();
+    setSaveError(null);
+    try {
+      const res = await fetch(`/api/products/${product.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name,
+          family: form.family,
+          season: form.season,
+          year: form.year,
+          sizeRange: form.sizeRange,
+          sizes: form.sizes,
+          materials: form.materials,
+          colorPrimary: form.colorPrimary || null,
+          colorSecondary: form.colorSecondary || null,
+          measurements: form.measurements || null,
+          reference: form.reference,
+          sketchPaths: form.sketchPaths,
+          techPackPath: form.techPackPath,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setSaveError(body?.error ?? `Erreur ${res.status}`);
+      } else {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2500);
+        router.refresh();
+      }
+    } catch {
+      setSaveError("Erreur réseau, réessayez.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -321,6 +333,11 @@ export function TechPackTab({ product }: { product: Product }) {
         {saved && (
           <span className="text-sm text-green-600 font-medium">
             ✓ Sauvegardé
+          </span>
+        )}
+        {saveError && (
+          <span className="text-sm text-red-600 font-medium">
+            ✗ {saveError}
           </span>
         )}
       </div>

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import { parseBodyJson } from "@/lib/api-helpers";
+import { parseBodyJson, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -12,13 +12,12 @@ const ProductPatchSchema = z.object({
   year: z.number().int().min(2000).max(2100).optional(),
   sizeRange: z.string().min(1).max(100).optional(),
   sizes: z.array(z.string().max(20)).optional(),
-  measurements: z.record(z.string(), z.unknown()).nullable().optional(),
+  measurements: z.string().nullable().optional(),
   materials: z.array(z.string().max(200)).nullable().optional(),
   colors: z.array(z.string().max(100)).nullable().optional(),
   colorPrimary: z.string().max(10).nullable().optional(),
   colorSecondary: z.string().max(10).nullable().optional(),
   sketchPaths: z.array(z.string()).nullable().optional(),
-  // Note: colorPrimary/colorSecondary are merged into colors[] at update time
   techPackPath: z.string().max(500).nullable().optional(),
   sampleStatus: z.enum(["PENDING", "VALIDATED", "NOT_VALIDATED"]).optional(),
   description: z.string().max(5000).nullable().optional(),
@@ -28,20 +27,19 @@ const ProductPatchSchema = z.object({
 });
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const profileId = getProfileId(req);
+  if (!profileId) return unauthorizedResponse();
+
   const { id } = await params;
   const product = await prisma.product.findUnique({
-    where: { id },
+    where: { id, profileId },
     include: {
       samples: true,
-      campaigns: {
-        include: { campaign: true },
-      },
-      events: {
-        include: { event: true },
-      },
+      campaigns: { include: { campaign: true } },
+      events: { include: { event: true } },
     },
   });
 
@@ -56,7 +54,17 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const profileId = getProfileId(req);
+  if (!profileId) return unauthorizedResponse();
+
   const { id } = await params;
+
+  // Verify ownership before patching
+  const existing = await prisma.product.findUnique({ where: { id, profileId } });
+  if (!existing) {
+    return NextResponse.json({ error: "Produit introuvable" }, { status: 404 });
+  }
+
   const result = await parseBodyJson(req, ProductPatchSchema);
   if (!result.success) return result.response;
   const body = result.data;
@@ -70,37 +78,25 @@ export async function PATCH(
       ...(body.year !== undefined && { year: body.year }),
       ...(body.sizeRange !== undefined && { sizeRange: body.sizeRange }),
       ...(body.sizes !== undefined && { sizes: JSON.stringify(body.sizes) }),
-      ...(body.measurements !== undefined && {
-        measurements: JSON.stringify(body.measurements),
-      }),
-      ...(body.materials !== undefined && {
-        materials: JSON.stringify(body.materials),
-      }),
+      ...(body.measurements !== undefined && { measurements: body.measurements ?? null }),
+      ...(body.materials !== undefined && { materials: JSON.stringify(body.materials) }),
       // Merge colorPrimary/colorSecondary into colors JSON array
       ...((body.colorPrimary !== undefined || body.colorSecondary !== undefined || body.colors !== undefined) && {
         colors: (() => {
           if (body.colorPrimary !== undefined || body.colorSecondary !== undefined) {
             const codes = [body.colorPrimary, body.colorSecondary].filter(Boolean) as string[];
-            return JSON.stringify(codes.length > 0 ? codes : null);
+            return codes.length > 0 ? JSON.stringify(codes) : null;
           }
           return body.colors !== undefined ? JSON.stringify(body.colors) : undefined;
         })(),
       }),
-      ...(body.sketchPaths !== undefined && {
-        sketchPaths: JSON.stringify(body.sketchPaths),
-      }),
+      ...(body.sketchPaths !== undefined && { sketchPaths: JSON.stringify(body.sketchPaths) }),
       ...(body.techPackPath !== undefined && { techPackPath: body.techPackPath }),
-      ...(body.sampleStatus !== undefined && {
-        sampleStatus: body.sampleStatus,
-      }),
+      ...(body.sampleStatus !== undefined && { sampleStatus: body.sampleStatus }),
       ...(body.description !== undefined && { description: body.description }),
-      ...(body.metaTags !== undefined && {
-        metaTags: JSON.stringify(body.metaTags),
-      }),
+      ...(body.metaTags !== undefined && { metaTags: JSON.stringify(body.metaTags) }),
       ...(body.plannedLaunchAt !== undefined && {
-        plannedLaunchAt: body.plannedLaunchAt
-          ? new Date(body.plannedLaunchAt)
-          : null,
+        plannedLaunchAt: body.plannedLaunchAt ? new Date(body.plannedLaunchAt) : null,
       }),
       ...(body.reference !== undefined && { reference: body.reference }),
     },
@@ -110,10 +106,20 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const profileId = getProfileId(req);
+  if (!profileId) return unauthorizedResponse();
+
   const { id } = await params;
+
+  // Verify ownership before deleting
+  const existing = await prisma.product.findUnique({ where: { id, profileId } });
+  if (!existing) {
+    return NextResponse.json({ error: "Produit introuvable" }, { status: 404 });
+  }
+
   await prisma.product.delete({ where: { id } });
   return NextResponse.json({ success: true });
 }

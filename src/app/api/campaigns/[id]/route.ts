@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import { parseBodyJson } from "@/lib/api-helpers";
+import { parseBodyJson, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -18,12 +18,15 @@ const CampaignPatchSchema = z.object({
 });
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const profileId = getProfileId(req);
+  if (!profileId) return unauthorizedResponse();
+
   const { id } = await params;
   const campaign = await prisma.campaign.findUnique({
-    where: { id },
+    where: { id, profileId },
     include: {
       products: { include: { product: true } },
       event: true,
@@ -41,7 +44,16 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const profileId = getProfileId(req);
+  if (!profileId) return unauthorizedResponse();
+
   const { id } = await params;
+
+  const existing = await prisma.campaign.findUnique({ where: { id, profileId } });
+  if (!existing) {
+    return NextResponse.json({ error: "Campagne introuvable" }, { status: 404 });
+  }
+
   const result = await parseBodyJson(req, CampaignPatchSchema);
   if (!result.success) return result.response;
   const body = result.data;
@@ -69,10 +81,19 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const profileId = getProfileId(req);
+  if (!profileId) return unauthorizedResponse();
+
   const { id } = await params;
+
+  const existing = await prisma.campaign.findUnique({ where: { id, profileId } });
+  if (!existing) {
+    return NextResponse.json({ error: "Campagne introuvable" }, { status: 404 });
+  }
+
   await prisma.campaign.delete({ where: { id } });
   return NextResponse.json({ success: true });
 }

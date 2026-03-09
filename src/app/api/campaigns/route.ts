@@ -1,18 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import { parseBodyJson, validateEnum } from "@/lib/api-helpers";
+import { parseBodyJson, validateEnum, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 
 export const dynamic = "force-dynamic";
 
-// ─── Enums (must match Prisma schema comments) ────────────────────────────
-
-// Schema: DRAFT | ACTIVE | PAUSED | COMPLETED | CANCELLED
 const CAMPAIGN_STATUSES = ["DRAFT", "ACTIVE", "PAUSED", "COMPLETED", "CANCELLED"] as const;
-// Schema: DIGITAL | PRINT | OOH | SOCIAL | INFLUENCER | OTHER
 const CAMPAIGN_TYPES = ["DIGITAL", "PRINT", "OOH", "SOCIAL", "INFLUENCER", "OTHER"] as const;
-
-// ─── Schemas ───────────────────────────────────────────────────────────────
 
 const CampaignCreateSchema = z.object({
   name: z.string().min(1).max(200),
@@ -26,15 +20,17 @@ const CampaignCreateSchema = z.object({
   eventId: z.string().optional().nullable(),
 });
 
-// ─── Handlers ─────────────────────────────────────────────────────────────
-
 export async function GET(req: NextRequest) {
+  const profileId = getProfileId(req);
+  if (!profileId) return unauthorizedResponse();
+
   const { searchParams } = new URL(req.url);
   const status = validateEnum(searchParams.get("status"), CAMPAIGN_STATUSES);
   const type = validateEnum(searchParams.get("type"), CAMPAIGN_TYPES);
 
   const campaigns = await prisma.campaign.findMany({
     where: {
+      profileId,
       ...(status ? { status } : {}),
       ...(type ? { type } : {}),
     },
@@ -49,12 +45,16 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const profileId = getProfileId(req);
+  if (!profileId) return unauthorizedResponse();
+
   const result = await parseBodyJson(req, CampaignCreateSchema);
   if (!result.success) return result.response;
   const data = result.data;
 
   const campaign = await prisma.campaign.create({
     data: {
+      profileId,
       name: data.name,
       description: data.description ?? null,
       type: data.type,
