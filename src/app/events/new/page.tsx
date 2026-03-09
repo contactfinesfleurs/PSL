@@ -90,11 +90,11 @@ export default function NewEventPage() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Date de début <span className="text-red-500">*</span>
+              Début <span className="text-red-500">*</span>
             </label>
             <input
               required
-              type="date"
+              type="datetime-local"
               value={form.startAt}
               onChange={(e) => set("startAt", e.target.value)}
               className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
@@ -102,10 +102,10 @@ export default function NewEventPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Date de fin
+              Fin
             </label>
             <input
-              type="date"
+              type="datetime-local"
               value={form.endAt}
               onChange={(e) => set("endAt", e.target.value)}
               className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"

@@ -14,7 +14,7 @@ import {
   Save,
   X,
 } from "lucide-react";
-import { EVENT_TYPES, formatDate } from "@/lib/utils";
+import { EVENT_TYPES, formatDateTime } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
 import { EventGuestSection } from "@/components/events/EventGuestSection";
 
@@ -196,8 +196,8 @@ export default function EventDetailPage({
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">Début</label>
                 <input
-                  type="date"
-                  value={(editForm.startAt ?? event.startAt)?.split("T")[0]}
+                  type="datetime-local"
+                  value={(editForm.startAt ?? event.startAt)?.slice(0, 16)}
                   onChange={(e) =>
                     setEditForm({ ...editForm, startAt: e.target.value })
                   }
@@ -207,8 +207,8 @@ export default function EventDetailPage({
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">Fin</label>
                 <input
-                  type="date"
-                  value={(editForm.endAt ?? event.endAt)?.split("T")[0] ?? ""}
+                  type="datetime-local"
+                  value={(editForm.endAt ?? event.endAt)?.slice(0, 16) ?? ""}
                   onChange={(e) =>
                     setEditForm({ ...editForm, endAt: e.target.value || null })
                   }
@@ -227,7 +227,7 @@ export default function EventDetailPage({
                 />
               </div>
               <div>
-                <label className="text-xs text-gray-500 mb-1 block">Salle</label>
+                <label className="text-xs text-gray-500 mb-1 block">Lieu / Adresse</label>
                 <input
                   type="text"
                   value={editForm.venue ?? event.venue ?? ""}
@@ -297,14 +297,13 @@ export default function EventDetailPage({
             <div className="mt-4 flex flex-wrap gap-4 text-sm text-gray-600">
               <span className="flex items-center gap-1.5">
                 <Calendar className="h-4 w-4 text-gray-400" />
-                {formatDate(event.startAt)}
-                {event.endAt ? ` → ${formatDate(event.endAt)}` : ""}
+                {formatDateTime(event.startAt)}
+                {event.endAt ? ` → ${formatDateTime(event.endAt)}` : ""}
               </span>
-              {event.location && (
+              {(event.location || event.venue) && (
                 <span className="flex items-center gap-1.5">
                   <MapPin className="h-4 w-4 text-gray-400" />
-                  {event.location}
-                  {event.venue ? ` — ${event.venue}` : ""}
+                  {[event.location, event.venue].filter(Boolean).join(" — ")}
                 </span>
               )}
             </div>

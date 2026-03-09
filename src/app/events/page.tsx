@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { EVENT_TYPES, formatDate } from "@/lib/utils";
+import { EVENT_TYPES, formatDateTime } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
 import { Plus, Calendar, MapPin } from "lucide-react";
 
@@ -65,13 +65,13 @@ export default async function EventsPage() {
                 <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                   <span className="text-xs text-gray-400 flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
-                    {formatDate(event.startAt)}
-                    {event.endAt ? ` → ${formatDate(event.endAt)}` : ""}
+                    {formatDateTime(event.startAt)}
+                    {event.endAt ? ` → ${formatDateTime(event.endAt)}` : ""}
                   </span>
-                  {event.location && (
+                  {(event.location || event.venue) && (
                     <span className="text-xs text-gray-400 flex items-center gap-1">
                       <MapPin className="h-3 w-3" />
-                      {event.location}
+                      {[event.location, event.venue].filter(Boolean).join(" — ")}
                     </span>
                   )}
                   <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-md">
