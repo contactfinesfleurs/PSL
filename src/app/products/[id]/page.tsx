@@ -14,34 +14,23 @@ export default async function ProductPage({
   const { id } = await params;
   const { tab } = await searchParams;
 
-  // Base product query (always works)
-  const baseProduct = await prisma.product.findUnique({
-    where: { id },
-    include: {
-      samples: true,
-      campaigns: { include: { campaign: true } },
-      events: { include: { event: true } },
-    },
-  });
+  const [product, allCampaigns] = await Promise.all([
+    prisma.product.findUnique({
+      where: { id },
+      include: {
+        samples: true,
+        loans: { orderBy: { sentAt: "desc" } },
+        placements: { orderBy: { publishedAt: "desc" } },
+        campaigns: { include: { campaign: true } },
+        events: { include: { event: true } },
+      },
+    }),
+    prisma.campaign.findMany({ orderBy: { createdAt: "desc" } }),
+  ]);
 
-  if (!baseProduct) {
+  if (!product) {
     notFound();
   }
-
-  // Optional tables — may not exist if DB migration hasn't run yet
-  const loans = await prisma.sampleLoan
-    .findMany({ where: { productId: id }, orderBy: { sentAt: "desc" } })
-    .catch(() => []);
-
-  const placements = await prisma.mediaPlacement
-    .findMany({ where: { productId: id }, orderBy: { publishedAt: "desc" } })
-    .catch(() => []);
-
-  const allCampaigns = await prisma.campaign
-    .findMany({ orderBy: { createdAt: "desc" } })
-    .catch(() => []);
-
-  const product = { ...baseProduct, loans, placements };
 
   return (
     <ProductTabs
