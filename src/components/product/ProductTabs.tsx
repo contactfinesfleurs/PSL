@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Clipboard } from "lucide-react";
+import { ArrowLeft, Check, Clipboard, Lock } from "lucide-react";
 import { cn, PRODUCT_FAMILIES, SEASONS } from "@/lib/utils";
 import { TechPackTab } from "./TechPackTab";
 import { SampleTab } from "./SampleTab";
@@ -69,13 +69,88 @@ type Product = {
   }[];
 };
 
-const TABS = [
-  { id: "techpack", label: "Tech Pack" },
-  { id: "sample", label: "Prototype" },
-  { id: "loans", label: "Prêts presse" },
-  { id: "placements", label: "Retombées" },
-  { id: "launch", label: "Lancement" },
-];
+type StepId = "techpack" | "sample" | "loans" | "placements" | "launch";
+type StepState = "completed" | "active" | "available" | "locked";
+
+function buildSteps(product: Product, activeTab: string) {
+  const hasSample = product.samples.length > 0;
+  const isValidated = product.sampleStatus === "VALIDATED";
+
+  const steps: { id: StepId; label: string; sublabel: string; state: StepState }[] = [
+    {
+      id: "techpack",
+      label: "Tech Pack",
+      sublabel: product.techPackPath ? "Fichier joint" : "À compléter",
+      state:
+        activeTab === "techpack"
+          ? "active"
+          : product.techPackPath
+            ? "completed"
+            : "available",
+    },
+    {
+      id: "sample",
+      label: "Prototype",
+      sublabel: isValidated ? "Validé" : hasSample ? "En cours" : "À créer",
+      state:
+        activeTab === "sample"
+          ? "active"
+          : isValidated
+            ? "completed"
+            : "available",
+    },
+    {
+      id: "loans",
+      label: "Prêts presse",
+      sublabel: !hasSample
+        ? "Prototype requis"
+        : product.loans.length > 0
+          ? `${product.loans.length} prêt${product.loans.length > 1 ? "s" : ""}`
+          : "Aucun prêt",
+      state: !hasSample
+        ? "locked"
+        : activeTab === "loans"
+          ? "active"
+          : product.loans.length > 0
+            ? "completed"
+            : "available",
+    },
+    {
+      id: "placements",
+      label: "Retombées",
+      sublabel: !hasSample
+        ? "Prototype requis"
+        : product.placements.length > 0
+          ? `${product.placements.length} retombée${product.placements.length > 1 ? "s" : ""}`
+          : "Aucune retombée",
+      state: !hasSample
+        ? "locked"
+        : activeTab === "placements"
+          ? "active"
+          : product.placements.length > 0
+            ? "completed"
+            : "available",
+    },
+    {
+      id: "launch",
+      label: "Lancement",
+      sublabel: !isValidated
+        ? "Validation requise"
+        : product.campaigns.length > 0
+          ? `${product.campaigns.length} campagne${product.campaigns.length > 1 ? "s" : ""}`
+          : "À planifier",
+      state: !isValidated
+        ? "locked"
+        : activeTab === "launch"
+          ? "active"
+          : product.campaigns.length > 0
+            ? "completed"
+            : "available",
+    },
+  ];
+
+  return steps;
+}
 
 export function ProductTabs({
   product,
@@ -87,11 +162,10 @@ export function ProductTabs({
   activeTab: string;
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState(activeTab);
+  const [tab, setTab] = useState<StepId>((activeTab as StepId) || "techpack");
 
   const familyLabel =
-    PRODUCT_FAMILIES.find((f) => f.value === product.family)?.label ??
-    product.family;
+    PRODUCT_FAMILIES.find((f) => f.value === product.family)?.label ?? product.family;
   const seasonLabel =
     SEASONS.find((s) => s.value === product.season)?.label ?? product.season;
 
@@ -99,8 +173,16 @@ export function ProductTabs({
     navigator.clipboard.writeText(product.sku);
   }
 
+  function navigate(id: StepId, state: StepState) {
+    if (state === "locked") return;
+    setTab(id);
+    router.replace(`/products/${product.id}?tab=${id}`, { scroll: false });
+  }
+
+  const steps = buildSteps(product, tab);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
       <div>
         <Link
@@ -113,7 +195,7 @@ export function ProductTabs({
 
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{product.name}</h1>
+            <h1 className="text-2xl font-light text-gray-900">{product.name}</h1>
             <div className="flex items-center gap-2 mt-1">
               <button
                 onClick={copyToClipboard}
@@ -133,54 +215,109 @@ export function ProductTabs({
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="border-b border-gray-200">
-        <nav className="-mb-px flex gap-6">
-          {TABS.map(({ id, label }) => {
-            const locked =
-              (id === "launch" && product.sampleStatus !== "VALIDATED") ||
-              ((id === "loans" || id === "placements") && product.samples.length === 0);
+      {/* Stepper */}
+      <div className="relative">
+        {/* Connecting line */}
+        <div className="absolute top-5 left-0 right-0 flex" aria-hidden>
+          {steps.slice(0, -1).map((step, i) => {
+            const next = steps[i + 1];
+            const filled =
+              step.state === "completed" && next.state !== "locked";
+            return (
+              <div key={step.id} className="flex-1 flex items-center px-8">
+                <div
+                  className={cn(
+                    "h-px w-full transition-colors duration-300",
+                    filled ? "bg-gray-800" : "bg-gray-200"
+                  )}
+                />
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Steps */}
+        <div className="relative flex justify-between">
+          {steps.map((step, index) => {
+            const isActive = step.state === "active";
+            const isDone = step.state === "completed";
+            const isLocked = step.state === "locked";
+
             return (
               <button
-                key={id}
-                onClick={() => {
-                  if (!locked) {
-                    setTab(id);
-                    router.replace(`/products/${product.id}?tab=${id}`, { scroll: false });
-                  }
-                }}
-                disabled={locked}
+                key={step.id}
+                onClick={() => navigate(step.id, step.state)}
+                disabled={isLocked}
                 className={cn(
-                  "pb-3 text-sm font-medium border-b-2 transition-colors",
-                  tab === id
-                    ? "border-gray-900 text-gray-900"
-                    : locked
-                      ? "border-transparent text-gray-300 cursor-not-allowed"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  "flex flex-col items-center gap-2 group",
+                  isLocked ? "cursor-not-allowed" : "cursor-pointer"
                 )}
               >
-                {label}
-                {locked && (
-                  <span className="ml-1.5 text-xs bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded">
-                    verrou
+                {/* Circle */}
+                <div
+                  className={cn(
+                    "relative z-10 h-10 w-10 rounded-full flex items-center justify-center border-2 transition-all duration-200",
+                    isActive &&
+                      "bg-gray-900 border-gray-900 shadow-sm ring-4 ring-gray-900/10",
+                    isDone && "bg-gray-900 border-gray-900",
+                    !isActive &&
+                      !isDone &&
+                      !isLocked &&
+                      "bg-white border-gray-300 group-hover:border-gray-500",
+                    isLocked && "bg-gray-50 border-gray-200"
+                  )}
+                >
+                  {isDone && !isActive && (
+                    <Check className="h-4 w-4 text-white" strokeWidth={2.5} />
+                  )}
+                  {isActive && (
+                    <span className="text-sm font-semibold text-white">
+                      {index + 1}
+                    </span>
+                  )}
+                  {!isDone && !isActive && !isLocked && (
+                    <span className="text-sm font-medium text-gray-400 group-hover:text-gray-600">
+                      {index + 1}
+                    </span>
+                  )}
+                  {isLocked && (
+                    <Lock className="h-3.5 w-3.5 text-gray-300" />
+                  )}
+                </div>
+
+                {/* Labels */}
+                <div className="flex flex-col items-center gap-0.5 text-center min-w-[80px]">
+                  <span
+                    className={cn(
+                      "text-xs font-semibold leading-tight transition-colors",
+                      isActive && "text-gray-900",
+                      isDone && "text-gray-700",
+                      !isActive && !isDone && !isLocked && "text-gray-500 group-hover:text-gray-700",
+                      isLocked && "text-gray-300"
+                    )}
+                  >
+                    {step.label}
                   </span>
-                )}
+                  <span
+                    className={cn(
+                      "text-[10px] leading-tight",
+                      isLocked ? "text-gray-300" : "text-gray-400"
+                    )}
+                  >
+                    {step.sublabel}
+                  </span>
+                </div>
               </button>
             );
           })}
-        </nav>
+        </div>
       </div>
 
-      {/* Tab Content */}
-      <div>
-        {tab === "techpack" && (
-          <TechPackTab product={product} />
-        )}
+      {/* Content */}
+      <div className="pt-2">
+        {tab === "techpack" && <TechPackTab product={product} />}
         {tab === "sample" && (
-          <SampleTab
-            product={product}
-            sample={product.samples[0] ?? null}
-          />
+          <SampleTab product={product} sample={product.samples[0] ?? null} />
         )}
         {tab === "loans" && (
           <SampleLoansSection
@@ -204,10 +341,7 @@ export function ProductTabs({
           />
         )}
         {tab === "launch" && product.sampleStatus === "VALIDATED" && (
-          <LaunchTab
-            product={product}
-            allCampaigns={allCampaigns}
-          />
+          <LaunchTab product={product} allCampaigns={allCampaigns} />
         )}
       </div>
     </div>
