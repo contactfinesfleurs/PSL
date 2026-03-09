@@ -13,26 +13,23 @@ export default async function ProductPage({
 }) {
   const { id } = await params;
   const { tab } = await searchParams;
-  const product = await prisma.product.findUnique({
-    where: { id },
-    include: {
-      samples: true,
-      campaigns: {
-        include: { campaign: true },
+  const [product, allCampaigns] = await Promise.all([
+    prisma.product.findUnique({
+      where: { id },
+      include: {
+        samples: true,
+        loans: { orderBy: { sentAt: "desc" } },
+        placements: { orderBy: { publishedAt: "desc" } },
+        campaigns: { include: { campaign: true } },
+        events: { include: { event: true } },
       },
-      events: {
-        include: { event: true },
-      },
-    },
-  });
+    }),
+    prisma.campaign.findMany({ orderBy: { createdAt: "desc" } }),
+  ]);
 
   if (!product) {
     notFound();
   }
-
-  const allCampaigns = await prisma.campaign.findMany({
-    orderBy: { createdAt: "desc" },
-  });
 
   return (
     <ProductTabs

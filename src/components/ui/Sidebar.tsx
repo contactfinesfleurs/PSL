@@ -7,6 +7,7 @@ import {
   Package,
   Calendar,
   Megaphone,
+  BookOpen,
   ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -14,6 +15,7 @@ import { cn } from "@/lib/utils";
 const navigation = [
   { name: "Tableau de bord", href: "/", icon: LayoutDashboard },
   { name: "Produits", href: "/products", icon: Package },
+  { name: "Look Book", href: "/lookbook", icon: BookOpen },
   { name: "Événements", href: "/events", icon: Calendar },
   { name: "Campagnes", href: "/campaigns", icon: Megaphone },
 ];

@@ -8,6 +8,8 @@ import { cn, PRODUCT_FAMILIES, SEASONS } from "@/lib/utils";
 import { TechPackTab } from "./TechPackTab";
 import { SampleTab } from "./SampleTab";
 import { LaunchTab } from "./LaunchTab";
+import { SampleLoansSection } from "./SampleLoansSection";
+import { MediaPlacementsSection } from "./MediaPlacementsSection";
 
 type Product = {
   id: string;
@@ -38,6 +40,27 @@ type Product = {
     definitiveColors: string | null;
     definitiveMaterials: string | null;
   }[];
+  loans: {
+    id: string;
+    contactName: string;
+    contactRole: string | null;
+    publication: string | null;
+    purpose: string;
+    sentAt: Date;
+    dueAt: Date | null;
+    returnedAt: Date | null;
+    status: string;
+    notes: string | null;
+  }[];
+  placements: {
+    id: string;
+    publication: string;
+    type: string;
+    publishedAt: Date;
+    url: string | null;
+    reach: number | null;
+    notes: string | null;
+  }[];
   campaigns: {
     campaign: { id: string; name: string; type: string; status: string };
   }[];
@@ -49,6 +72,8 @@ type Product = {
 const TABS = [
   { id: "techpack", label: "Tech Pack" },
   { id: "sample", label: "Prototype" },
+  { id: "loans", label: "Prêts presse" },
+  { id: "placements", label: "Retombées" },
   { id: "launch", label: "Lancement" },
 ];
 
@@ -112,7 +137,9 @@ export function ProductTabs({
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex gap-6">
           {TABS.map(({ id, label }) => {
-            const locked = id === "launch" && product.sampleStatus !== "VALIDATED";
+            const locked =
+              (id === "launch" && product.sampleStatus !== "VALIDATED") ||
+              ((id === "loans" || id === "placements") && product.samples.length === 0);
             return (
               <button
                 key={id}
@@ -153,6 +180,27 @@ export function ProductTabs({
           <SampleTab
             product={product}
             sample={product.samples[0] ?? null}
+          />
+        )}
+        {tab === "loans" && (
+          <SampleLoansSection
+            productId={product.id}
+            sampleId={product.samples[0]?.id ?? null}
+            initialLoans={product.loans.map((l) => ({
+              ...l,
+              sentAt: l.sentAt.toISOString(),
+              dueAt: l.dueAt?.toISOString() ?? null,
+              returnedAt: l.returnedAt?.toISOString() ?? null,
+            }))}
+          />
+        )}
+        {tab === "placements" && (
+          <MediaPlacementsSection
+            productId={product.id}
+            initialPlacements={product.placements.map((p) => ({
+              ...p,
+              publishedAt: p.publishedAt.toISOString(),
+            }))}
           />
         )}
         {tab === "launch" && product.sampleStatus === "VALIDATED" && (
