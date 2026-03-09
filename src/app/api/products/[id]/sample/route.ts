@@ -38,6 +38,11 @@ export async function PUT(
         ? JSON.stringify(body.reviewPhotoPaths)
         : null,
       reviewNotes: body.reviewNotes ?? null,
+      supplierName: body.supplierName ?? null,
+      supplierAddress: body.supplierAddress ?? null,
+      supplierCountry: body.supplierCountry ?? null,
+      shippingDate: body.shippingDate ? new Date(body.shippingDate) : null,
+      trackingNumber: body.trackingNumber ?? null,
       packshotPaths: body.packshotPaths
         ? JSON.stringify(body.packshotPaths)
         : null,
@@ -59,6 +64,13 @@ export async function PUT(
         reviewPhotoPaths: JSON.stringify(body.reviewPhotoPaths),
       }),
       ...(body.reviewNotes !== undefined && { reviewNotes: body.reviewNotes }),
+      ...(body.supplierName !== undefined && { supplierName: body.supplierName }),
+      ...(body.supplierAddress !== undefined && { supplierAddress: body.supplierAddress }),
+      ...(body.supplierCountry !== undefined && { supplierCountry: body.supplierCountry }),
+      ...(body.shippingDate !== undefined && {
+        shippingDate: body.shippingDate ? new Date(body.shippingDate) : null,
+      }),
+      ...(body.trackingNumber !== undefined && { trackingNumber: body.trackingNumber }),
       ...(body.packshotPaths !== undefined && {
         packshotPaths: JSON.stringify(body.packshotPaths),
       }),
@@ -102,6 +114,13 @@ export async function POST(
           reviewPhotoPaths: JSON.stringify(body.reviewPhotoPaths),
         }),
         ...(body.reviewNotes !== undefined && { reviewNotes: body.reviewNotes }),
+        ...(body.supplierName !== undefined && { supplierName: body.supplierName }),
+        ...(body.supplierAddress !== undefined && { supplierAddress: body.supplierAddress }),
+        ...(body.supplierCountry !== undefined && { supplierCountry: body.supplierCountry }),
+        ...(body.shippingDate !== undefined && {
+          shippingDate: body.shippingDate ? new Date(body.shippingDate) : null,
+        }),
+        ...(body.trackingNumber !== undefined && { trackingNumber: body.trackingNumber }),
         ...(body.packshotPaths !== undefined && {
           packshotPaths: JSON.stringify(body.packshotPaths),
         }),
@@ -129,6 +148,11 @@ export async function POST(
         ? JSON.stringify(body.reviewPhotoPaths)
         : null,
       reviewNotes: body.reviewNotes ?? null,
+      supplierName: body.supplierName ?? null,
+      supplierAddress: body.supplierAddress ?? null,
+      supplierCountry: body.supplierCountry ?? null,
+      shippingDate: body.shippingDate ? new Date(body.shippingDate) : null,
+      trackingNumber: body.trackingNumber ?? null,
     },
   });
 

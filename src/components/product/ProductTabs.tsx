@@ -39,6 +39,13 @@ type Product = {
     packshotPaths: string | null;
     definitiveColors: string | null;
     definitiveMaterials: string | null;
+    supplierName: string | null;
+    supplierAddress: string | null;
+    supplierCountry: string | null;
+    shippingDate: Date | null;
+    trackingNumber: string | null;
+    trackingStatus: string | null;
+    receivedAt: Date | null;
   }[];
   loans: {
     id: string;
