@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { EVENT_TYPES, formatDate } from "@/lib/utils";
+import { Badge } from "@/components/ui/Badge";
 
 type Product = { id: string; name: string; sku: string; family: string };
 type Campaign = {
@@ -249,11 +250,7 @@ export default function EventDetailPage({
                   <h1 className="text-2xl font-bold text-gray-900">
                     {event.name}
                   </h1>
-                  <span
-                    className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusStyle[event.status] ?? "bg-gray-100 text-gray-600"}`}
-                  >
-                    {statusLabel[event.status] ?? event.status}
-                  </span>
+                  <Badge status={event.status} />
                 </div>
                 <p className="text-sm text-gray-500 mt-1">{typeLabel}</p>
                 {event.description && (

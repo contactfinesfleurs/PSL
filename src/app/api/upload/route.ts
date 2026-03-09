@@ -19,6 +19,9 @@ const ALLOWED_MIME_TYPES = new Set([
   "application/pdf",
 ]);
 
+// Resolved once at module load — stable for the lifetime of the server process
+const UPLOADS_ROOT = path.resolve(process.cwd(), "public", "uploads");
+
 // ─── Handler ───────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
@@ -69,11 +72,10 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(bytes);
     const filename = `${timestamp}_${safeName}`;
 
-    // Resolve paths and guard against path traversal (e.g. folder = "../../etc")
-    const uploadsRoot = path.resolve(process.cwd(), "public", "uploads");
-    const uploadDir = path.resolve(uploadsRoot, folder);
+    // Guard against path traversal (e.g. folder = "../../etc")
+    const uploadDir = path.resolve(UPLOADS_ROOT, folder);
 
-    if (!uploadDir.startsWith(uploadsRoot + path.sep) && uploadDir !== uploadsRoot) {
+    if (!uploadDir.startsWith(UPLOADS_ROOT + path.sep) && uploadDir !== UPLOADS_ROOT) {
       return NextResponse.json({ error: "Chemin invalide." }, { status: 400 });
     }
 

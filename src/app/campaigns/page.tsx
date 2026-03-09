@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-
-export const dynamic = 'force-dynamic';
 import { CAMPAIGN_TYPES, formatDate } from "@/lib/utils";
+import { Badge } from "@/components/ui/Badge";
 import { Plus, Megaphone } from "lucide-react";
+
+export const dynamic = "force-dynamic";
 
 export default async function CampaignsPage() {
   const campaigns = await prisma.campaign.findMany({
@@ -13,21 +14,6 @@ export default async function CampaignsPage() {
 
   const typeLabel = (t: string) =>
     CAMPAIGN_TYPES.find((c) => c.value === t)?.label ?? t;
-
-  const statusStyle: Record<string, string> = {
-    DRAFT: "bg-gray-100 text-gray-600",
-    ACTIVE: "bg-blue-100 text-blue-700",
-    PAUSED: "bg-yellow-100 text-yellow-700",
-    COMPLETED: "bg-green-100 text-green-700",
-    CANCELLED: "bg-red-100 text-red-700",
-  };
-  const statusLabel: Record<string, string> = {
-    DRAFT: "Brouillon",
-    ACTIVE: "Active",
-    PAUSED: "En pause",
-    COMPLETED: "Terminée",
-    CANCELLED: "Annulée",
-  };
 
   return (
     <div className="space-y-6">
@@ -71,11 +57,7 @@ export default async function CampaignsPage() {
                 <p className="font-semibold text-gray-900 truncate">
                   {campaign.name}
                 </p>
-                <span
-                  className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${statusStyle[campaign.status] ?? "bg-gray-100 text-gray-600"}`}
-                >
-                  {statusLabel[campaign.status] ?? campaign.status}
-                </span>
+                <Badge status={campaign.status} className="shrink-0" />
               </div>
 
               <p className="text-xs text-gray-500 mt-1">

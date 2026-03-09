@@ -1,7 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { z } from "zod";
+import { parseBodyJson } from "@/lib/api-helpers";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
+
+const EventPatchSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  description: z.string().max(2000).nullable().optional(),
+  type: z.enum(["SHOW", "PRESENTATION", "LAUNCH", "PRESS", "TRADE-SHOW", "OTHER"]).optional(),
+  status: z.enum(["DRAFT", "CONFIRMED", "COMPLETED", "CANCELLED"]).optional(),
+  startAt: z.string().datetime().optional(),
+  endAt: z.string().datetime().nullable().optional(),
+  location: z.string().max(500).nullable().optional(),
+  venue: z.string().max(300).nullable().optional(),
+});
 
 export async function GET(
   _req: NextRequest,
@@ -28,7 +41,9 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const body = await req.json();
+  const result = await parseBodyJson(req, EventPatchSchema);
+  if (!result.success) return result.response;
+  const body = result.data;
 
   const event = await prisma.event.update({
     where: { id },

@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-
-export const dynamic = 'force-dynamic';
 import { formatDate } from "@/lib/utils";
+import { Badge } from "@/components/ui/Badge";
 import { Package, Calendar, Tag, CheckCircle, Clock, AlertTriangle } from "lucide-react";
+
+export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   try {
@@ -103,7 +104,7 @@ export default async function DashboardPage() {
                       </p>
                       <p className="text-xs text-gray-500">{product.sku}</p>
                     </div>
-                    <StatusBadge status={product.sampleStatus} />
+                    <Badge status={product.sampleStatus} />
                   </Link>
                 ))
               )}
@@ -146,7 +147,7 @@ export default async function DashboardPage() {
                         {event.location ? ` · ${event.location}` : ""}
                       </p>
                     </div>
-                    <EventStatusBadge status={event.status} />
+                    <Badge status={event.status} />
                   </Link>
                 ))
               )}
@@ -267,44 +268,3 @@ function StatCard({
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    PENDING: "bg-yellow-100 text-yellow-700",
-    VALIDATED: "bg-green-100 text-green-700",
-    NOT_VALIDATED: "bg-red-100 text-red-700",
-  };
-  const labels: Record<string, string> = {
-    PENDING: "En attente",
-    VALIDATED: "Validé",
-    NOT_VALIDATED: "Non validé",
-  };
-  return (
-    <span
-      className={`text-xs font-medium px-2 py-0.5 rounded-full ${styles[status] ?? "bg-gray-100 text-gray-600"}`}
-    >
-      {labels[status] ?? status}
-    </span>
-  );
-}
-
-function EventStatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    DRAFT: "bg-gray-100 text-gray-600",
-    CONFIRMED: "bg-blue-100 text-blue-700",
-    COMPLETED: "bg-green-100 text-green-700",
-    CANCELLED: "bg-red-100 text-red-700",
-  };
-  const labels: Record<string, string> = {
-    DRAFT: "Brouillon",
-    CONFIRMED: "Confirmé",
-    COMPLETED: "Terminé",
-    CANCELLED: "Annulé",
-  };
-  return (
-    <span
-      className={`text-xs font-medium px-2 py-0.5 rounded-full ${styles[status] ?? "bg-gray-100 text-gray-600"}`}
-    >
-      {labels[status] ?? status}
-    </span>
-  );
-}

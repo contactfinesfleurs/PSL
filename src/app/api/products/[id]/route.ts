@@ -1,7 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { z } from "zod";
+import { parseBodyJson } from "@/lib/api-helpers";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
+
+const ProductPatchSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  family: z.string().min(1).max(100).optional(),
+  season: z.string().min(1).max(100).optional(),
+  year: z.number().int().min(2000).max(2100).optional(),
+  sizeRange: z.string().min(1).max(100).optional(),
+  sizes: z.array(z.string().max(20)).optional(),
+  measurements: z.record(z.string(), z.unknown()).nullable().optional(),
+  materials: z.array(z.string().max(200)).nullable().optional(),
+  colors: z.array(z.string().max(100)).nullable().optional(),
+  sketchPaths: z.array(z.string()).nullable().optional(),
+  techPackPath: z.string().max(500).nullable().optional(),
+  sampleStatus: z.enum(["PENDING", "VALIDATED", "NOT_VALIDATED"]).optional(),
+  description: z.string().max(5000).nullable().optional(),
+  metaTags: z.array(z.string().max(100)).nullable().optional(),
+  plannedLaunchAt: z.string().datetime().nullable().optional(),
+  reference: z.string().max(200).nullable().optional(),
+});
 
 export async function GET(
   _req: NextRequest,
@@ -33,7 +54,9 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const body = await req.json();
+  const result = await parseBodyJson(req, ProductPatchSchema);
+  if (!result.success) return result.response;
+  const body = result.data;
 
   const product = await prisma.product.update({
     where: { id },

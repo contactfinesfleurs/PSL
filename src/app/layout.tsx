@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/ui/Sidebar";
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
   title: "PSL — Product & Event Management",
@@ -13,8 +16,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr">
-      <body>
+    <html lang="fr" className={inter.variable}>
+      <body className="font-sans">
         <div className="flex h-screen bg-gray-50">
           <Sidebar />
           <main className="flex-1 overflow-auto">

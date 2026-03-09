@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { parseBodyJson, validateEnum } from "@/lib/api-helpers";
 
 export const dynamic = "force-dynamic";
 
-// ─── Validation schemas ────────────────────────────────────────────────────
+// ─── Enums (must match Prisma schema comments) ────────────────────────────
 
-const CAMPAIGN_STATUSES = ["DRAFT", "ACTIVE", "COMPLETED", "CANCELLED"] as const;
-const CAMPAIGN_TYPES = ["DIGITAL", "PRINT", "OOH", "SOCIAL", "INFLUENCER"] as const;
+// Schema: DRAFT | ACTIVE | PAUSED | COMPLETED | CANCELLED
+const CAMPAIGN_STATUSES = ["DRAFT", "ACTIVE", "PAUSED", "COMPLETED", "CANCELLED"] as const;
+// Schema: DIGITAL | PRINT | OOH | SOCIAL | INFLUENCER | OTHER
+const CAMPAIGN_TYPES = ["DIGITAL", "PRINT", "OOH", "SOCIAL", "INFLUENCER", "OTHER"] as const;
+
+// ─── Schemas ───────────────────────────────────────────────────────────────
 
 const CampaignCreateSchema = z.object({
   name: z.string().min(1).max(200),
@@ -25,18 +30,8 @@ const CampaignCreateSchema = z.object({
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const rawStatus = searchParams.get("status");
-  const rawType = searchParams.get("type");
-
-  // Validate enum query params — reject unknown values instead of using unsafe cast
-  const status =
-    rawStatus && (CAMPAIGN_STATUSES as readonly string[]).includes(rawStatus)
-      ? (rawStatus as (typeof CAMPAIGN_STATUSES)[number])
-      : undefined;
-  const type =
-    rawType && (CAMPAIGN_TYPES as readonly string[]).includes(rawType)
-      ? (rawType as (typeof CAMPAIGN_TYPES)[number])
-      : undefined;
+  const status = validateEnum(searchParams.get("status"), CAMPAIGN_STATUSES);
+  const type = validateEnum(searchParams.get("type"), CAMPAIGN_TYPES);
 
   const campaigns = await prisma.campaign.findMany({
     where: {
@@ -54,22 +49,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Corps de requête JSON invalide." }, { status: 400 });
-  }
-
-  const parsed = CampaignCreateSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Données invalides.", details: parsed.error.flatten().fieldErrors },
-      { status: 422 }
-    );
-  }
-
-  const data = parsed.data;
+  const result = await parseBodyJson(req, CampaignCreateSchema);
+  if (!result.success) return result.response;
+  const data = result.data;
 
   const campaign = await prisma.campaign.create({
     data: {
