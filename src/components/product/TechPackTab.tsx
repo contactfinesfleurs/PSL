@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Save } from "lucide-react";
-import { PRODUCT_FAMILIES, SEASONS, SIZE_RANGES, COLOR_CODES } from "@/lib/utils";
+import { Save, RefreshCw } from "lucide-react";
+import { PRODUCT_FAMILIES, SEASONS, SIZE_RANGES, COLOR_CODES, generateReference } from "@/lib/utils";
 import { TagInput } from "@/components/ui/TagInput";
 import { FileUpload } from "@/components/ui/FileUpload";
 
@@ -56,6 +56,18 @@ export function TechPackTab({ product }: { product: Product }) {
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
+  const generatedReference = useMemo(
+    () =>
+      generateReference({
+        name: form.name,
+        season: form.season,
+        year: form.year,
+        material: form.materials[0] ?? null,
+        colorPrimary: form.colorPrimary || null,
+      }),
+    [form.name, form.season, form.year, form.materials, form.colorPrimary]
+  );
+
   async function handleSave() {
     setSaving(true);
     await fetch(`/api/products/${product.id}`, {
@@ -103,12 +115,23 @@ export function TechPackTab({ product }: { product: Product }) {
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Référence interne
         </label>
-        <input
-          type="text"
-          value={form.reference}
-          onChange={(e) => set("reference", e.target.value)}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
-        />
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={form.reference}
+            onChange={(e) => set("reference", e.target.value)}
+            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-gray-300"
+          />
+          <button
+            type="button"
+            onClick={() => set("reference", generatedReference)}
+            title={`Régénérer : ${generatedReference}`}
+            className="inline-flex items-center gap-1.5 border border-gray-300 text-gray-500 hover:border-gray-400 hover:text-gray-700 text-xs font-medium px-3 py-2 rounded-lg transition-colors whitespace-nowrap"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            {generatedReference}
+          </button>
+        </div>
       </div>
 
       {/* Family + Season + Year */}
