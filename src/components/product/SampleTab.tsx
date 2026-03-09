@@ -233,7 +233,7 @@ export function SampleTab({
             onChange={(e) => set("reviewNotes", e.target.value)}
             rows={5}
             placeholder="Décrivez précisément les corrections à apporter…"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 resize-none"
           />
         </div>
       </section>
@@ -300,7 +300,7 @@ export function SampleTab({
               onChange={(e) => set("description", e.target.value)}
               rows={4}
               placeholder="Description commerciale du produit…"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 resize-none"
             />
           </div>
 
@@ -325,7 +325,7 @@ export function SampleTab({
               type="date"
               value={form.plannedLaunchAt}
               onChange={(e) => set("plannedLaunchAt", e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
             />
           </div>
         </section>

@@ -36,7 +36,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 const CATEGORY_STYLES: Record<string, string> = {
-  VIP: "bg-purple-100 text-purple-700",
+  VIP: "bg-indigo-100 text-indigo-700",
   PRESS: "bg-blue-100 text-blue-700",
   BUYER: "bg-green-100 text-green-700",
   INFLUENCER: "bg-pink-100 text-pink-700",
@@ -237,14 +237,14 @@ export function EventGuestSection({ eventId, initialGuests }: Props) {
       <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
         <div>
           <h2 className="text-base font-semibold text-gray-800 flex items-center gap-2">
-            <Users className="h-4 w-4 text-purple-700" />
+            <Users className="h-4 w-4 text-gray-600" />
             Liste des invités
           </h2>
           <p className="text-xs text-gray-500 mt-0.5">
             {totalInvited} invité{totalInvited !== 1 ? "s" : ""} ·{" "}
             <span className="text-green-600">{totalConfirmed} confirmé{totalConfirmed !== 1 ? "s" : ""}</span> ·{" "}
             <span className="text-red-500">{totalDeclined} décliné{totalDeclined !== 1 ? "s" : ""}</span> ·{" "}
-            <span className="text-purple-600">{totalPresent} présent{totalPresent !== 1 ? "s" : ""}</span>
+            <span className="text-indigo-600">{totalPresent} présent{totalPresent !== 1 ? "s" : ""}</span>
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -262,7 +262,7 @@ export function EventGuestSection({ eventId, initialGuests }: Props) {
               "inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors",
               showForm
                 ? "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                : "bg-purple-700 hover:bg-purple-800 text-white"
+                : "bg-gray-900 hover:bg-gray-800 text-white"
             )}
           >
             <Plus className="h-4 w-4" />
@@ -288,7 +288,7 @@ export function EventGuestSection({ eventId, initialGuests }: Props) {
                 value={form.firstName}
                 onChange={(e) => setField("firstName", e.target.value)}
                 placeholder="Marie"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
               />
             </div>
             <div>
@@ -301,7 +301,7 @@ export function EventGuestSection({ eventId, initialGuests }: Props) {
                 value={form.lastName}
                 onChange={(e) => setField("lastName", e.target.value)}
                 placeholder="Dupont"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
               />
             </div>
           </div>
@@ -315,7 +315,7 @@ export function EventGuestSection({ eventId, initialGuests }: Props) {
               value={form.email}
               onChange={(e) => setField("email", e.target.value)}
               placeholder="marie.dupont@exemple.com"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
             />
           </div>
 
@@ -329,7 +329,7 @@ export function EventGuestSection({ eventId, initialGuests }: Props) {
                 value={form.company}
                 onChange={(e) => setField("company", e.target.value)}
                 placeholder="Vogue France"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
               />
             </div>
             <div>
@@ -341,7 +341,7 @@ export function EventGuestSection({ eventId, initialGuests }: Props) {
                 value={form.title}
                 onChange={(e) => setField("title", e.target.value)}
                 placeholder="Rédactrice en chef"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
               />
             </div>
           </div>
@@ -354,7 +354,7 @@ export function EventGuestSection({ eventId, initialGuests }: Props) {
               <select
                 value={form.category}
                 onChange={(e) => setField("category", e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 bg-white"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white"
               >
                 {Object.entries(CATEGORY_LABELS).map(([val, label]) => (
                   <option key={val} value={val}>
@@ -370,7 +370,7 @@ export function EventGuestSection({ eventId, initialGuests }: Props) {
               <select
                 value={form.rsvpStatus}
                 onChange={(e) => setField("rsvpStatus", e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 bg-white"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white"
               >
                 {Object.entries(RSVP_LABELS).map(([val, label]) => (
                   <option key={val} value={val}>
@@ -391,7 +391,7 @@ export function EventGuestSection({ eventId, initialGuests }: Props) {
                 value={form.tableNumber}
                 onChange={(e) => setField("tableNumber", e.target.value)}
                 placeholder="T1"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
               />
             </div>
             <div>
@@ -403,7 +403,7 @@ export function EventGuestSection({ eventId, initialGuests }: Props) {
                 value={form.seatNumber}
                 onChange={(e) => setField("seatNumber", e.target.value)}
                 placeholder="A3"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
               />
             </div>
           </div>
@@ -417,7 +417,7 @@ export function EventGuestSection({ eventId, initialGuests }: Props) {
               onChange={(e) => setField("notes", e.target.value)}
               rows={2}
               placeholder="Informations complémentaires…"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 resize-none"
             />
           </div>
 
@@ -425,7 +425,7 @@ export function EventGuestSection({ eventId, initialGuests }: Props) {
             <button
               type="submit"
               disabled={submitting}
-              className="inline-flex items-center gap-2 bg-purple-700 hover:bg-purple-800 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+              className="inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-800 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
             >
               <Plus className="h-4 w-4" />
               {submitting ? "Enregistrement…" : "Ajouter l'invité"}
@@ -443,7 +443,7 @@ export function EventGuestSection({ eventId, initialGuests }: Props) {
             className={cn(
               "shrink-0 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors",
               filterTab === tab.key
-                ? "bg-purple-700 text-white"
+                ? "bg-gray-900 text-white"
                 : "text-gray-500 hover:bg-gray-100"
             )}
           >
@@ -496,7 +496,7 @@ export function EventGuestSection({ eventId, initialGuests }: Props) {
                 disabled={rsvpLoading === guest.id}
                 onChange={(e) => handleRsvpChange(guest.id, e.target.value)}
                 className={cn(
-                  "shrink-0 text-xs font-medium px-2 py-1 rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-400 transition-colors disabled:opacity-50",
+                  "shrink-0 text-xs font-medium px-2 py-1 rounded-lg border focus:outline-none focus:ring-2 focus:ring-gray-300 transition-colors disabled:opacity-50",
                   RSVP_STYLES[guest.rsvpStatus] ?? "bg-gray-100 text-gray-600",
                   "border-transparent"
                 )}

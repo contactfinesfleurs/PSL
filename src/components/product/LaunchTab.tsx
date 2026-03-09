@@ -193,7 +193,7 @@ export function LaunchTab({
               <select
                 value={selectedCampaign}
                 onChange={(e) => setSelectedCampaign(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
               >
                 <option value="">— Choisir une campagne —</option>
                 {availableCampaigns.map((c) => (
@@ -207,12 +207,12 @@ export function LaunchTab({
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Notes (optionnel)"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
               />
               <button
                 onClick={addCampaign}
                 disabled={!selectedCampaign || adding}
-                className="inline-flex items-center gap-2 bg-purple-700 hover:bg-purple-800 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                className="inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-800 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
               >
                 <Plus className="h-4 w-4" />
                 {adding ? "Ajout…" : "Ajouter à la campagne"}

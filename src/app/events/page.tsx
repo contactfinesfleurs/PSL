@@ -16,19 +16,19 @@ export default async function EventsPage() {
     EVENT_TYPES.find((e) => e.value === t)?.label ?? t;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8">
+      <div className="flex items-end justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">
+          <h1 className="text-5xl font-light text-gray-900 tracking-tight">
             Événements
           </h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <p className="text-sm text-gray-500 mt-2">
             {events.length} événement{events.length !== 1 ? "s" : ""}
           </p>
         </div>
         <Link
           href="/events/new"
-          className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors shadow-sm"
+          className="inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
         >
           <Plus className="h-4 w-4" />
           Nouvel événement
@@ -36,12 +36,12 @@ export default async function EventsPage() {
       </div>
 
       {events.length === 0 ? (
-        <div className="text-center py-24 bg-white rounded-2xl border border-gray-200/80">
+        <div className="text-center py-24 bg-white rounded-2xl border border-gray-200">
           <Calendar className="mx-auto h-10 w-10 text-gray-300 mb-4" />
-          <p className="text-gray-500 font-medium text-sm">Aucun événement</p>
+          <p className="text-gray-500 text-sm">Aucun événement</p>
           <Link
             href="/events/new"
-            className="mt-4 inline-flex items-center gap-1 text-sm text-purple-600 hover:underline"
+            className="mt-4 inline-flex items-center gap-1 text-sm text-indigo-600 hover:underline"
           >
             <Plus className="h-3 w-3" />
             Créer un événement
@@ -53,11 +53,11 @@ export default async function EventsPage() {
             <Link
               key={event.id}
               href={`/events/${event.id}`}
-              className="flex items-center justify-between bg-white border border-gray-200/80 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 p-5"
+              className="flex items-center justify-between bg-white border border-gray-200 rounded-2xl hover:border-gray-300 transition-colors p-5"
             >
               <div className="min-w-0">
                 <div className="flex items-center gap-2.5">
-                  <p className="font-semibold text-gray-900 text-sm">
+                  <p className="font-medium text-gray-900 text-sm">
                     {event.name}
                   </p>
                   <Badge status={event.status} />
@@ -74,7 +74,7 @@ export default async function EventsPage() {
                       {event.location}
                     </span>
                   )}
-                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md">
+                  <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-md">
                     {typeLabel(event.type)}
                   </span>
                 </div>

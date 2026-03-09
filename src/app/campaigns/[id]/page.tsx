@@ -164,7 +164,7 @@ export default function CampaignDetailPage({
               onChange={(e) =>
                 setEditForm({ ...editForm, name: e.target.value })
               }
-              className="w-full text-xl font-bold border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400"
+              className="w-full text-xl font-bold border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-300"
             />
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -177,7 +177,7 @@ export default function CampaignDetailPage({
                   onChange={(e) =>
                     setEditForm({ ...editForm, startAt: e.target.value || null })
                   }
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
                 />
               </div>
               <div>
@@ -190,7 +190,7 @@ export default function CampaignDetailPage({
                   onChange={(e) =>
                     setEditForm({ ...editForm, endAt: e.target.value || null })
                   }
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
                 />
               </div>
               <div>
@@ -206,7 +206,7 @@ export default function CampaignDetailPage({
                         : null,
                     })
                   }
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
                 />
               </div>
             </div>
@@ -217,13 +217,13 @@ export default function CampaignDetailPage({
               }
               rows={2}
               placeholder="Description"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"
+              className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 resize-none"
             />
             <div className="flex gap-2">
               <button
                 onClick={saveEdit}
                 disabled={saving}
-                className="inline-flex items-center gap-1.5 bg-purple-700 hover:bg-purple-800 text-white text-sm font-medium px-4 py-2 rounded-lg"
+                className="inline-flex items-center gap-1.5 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium px-4 py-2 rounded-lg"
               >
                 <Save className="h-4 w-4" />
                 Enregistrer
@@ -242,7 +242,7 @@ export default function CampaignDetailPage({
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <h1 className="text-2xl font-bold text-gray-900">
+                  <h1 className="text-2xl font-light text-gray-900">
                     {campaign.name}
                   </h1>
                   <Badge status={campaign.status} />
@@ -287,7 +287,7 @@ export default function CampaignDetailPage({
               {campaign.event && (
                 <Link
                   href={`/events/${campaign.event.id}`}
-                  className="text-purple-600 hover:underline text-sm"
+                  className="text-indigo-600 hover:underline text-sm"
                 >
                   Événement : {campaign.event.name}
                 </Link>
@@ -367,7 +367,7 @@ export default function CampaignDetailPage({
           <select
             value={selectedProduct}
             onChange={(e) => setSelectedProduct(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+            className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
           >
             <option value="">— Ajouter un produit —</option>
             {availableProducts.map((p) => (
@@ -382,12 +382,12 @@ export default function CampaignDetailPage({
               value={productNotes}
               onChange={(e) => setProductNotes(e.target.value)}
               placeholder="Notes (optionnel)"
-              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+              className="flex-1 border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
             />
             <button
               onClick={addProduct}
               disabled={!selectedProduct || addingProduct}
-              className="inline-flex items-center gap-1 bg-purple-700 hover:bg-purple-800 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+              className="inline-flex items-center gap-1 bg-gray-900 hover:bg-gray-800 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
             >
               <Plus className="h-4 w-4" />
             </button>

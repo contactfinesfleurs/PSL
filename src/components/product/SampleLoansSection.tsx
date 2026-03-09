@@ -171,7 +171,7 @@ export function SampleLoansSection({ productId, sampleId, initialLoans }: Props)
             "inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors",
             showForm
               ? "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              : "bg-purple-700 hover:bg-purple-800 text-white"
+              : "bg-gray-900 hover:bg-gray-800 text-white"
           )}
         >
           <Plus className="h-4 w-4" />
@@ -196,7 +196,7 @@ export function SampleLoansSection({ productId, sampleId, initialLoans }: Props)
                 value={form.contactName}
                 onChange={(e) => setField("contactName", e.target.value)}
                 placeholder="Marie Dupont"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
               />
             </div>
             <div>
@@ -208,7 +208,7 @@ export function SampleLoansSection({ productId, sampleId, initialLoans }: Props)
                 value={form.contactRole}
                 onChange={(e) => setField("contactRole", e.target.value)}
                 placeholder="Rédactrice mode"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
               />
             </div>
           </div>
@@ -223,7 +223,7 @@ export function SampleLoansSection({ productId, sampleId, initialLoans }: Props)
                 value={form.publication}
                 onChange={(e) => setField("publication", e.target.value)}
                 placeholder="Vogue, Elle, WWD..."
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
               />
             </div>
             <div>
@@ -233,7 +233,7 @@ export function SampleLoansSection({ productId, sampleId, initialLoans }: Props)
               <select
                 value={form.purpose}
                 onChange={(e) => setField("purpose", e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 bg-white"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white"
               >
                 {Object.entries(PURPOSE_LABELS).map(([val, label]) => (
                   <option key={val} value={val}>
@@ -254,7 +254,7 @@ export function SampleLoansSection({ productId, sampleId, initialLoans }: Props)
                 required
                 value={form.sentAt}
                 onChange={(e) => setField("sentAt", e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
               />
             </div>
             <div>
@@ -265,7 +265,7 @@ export function SampleLoansSection({ productId, sampleId, initialLoans }: Props)
                 type="date"
                 value={form.dueAt}
                 onChange={(e) => setField("dueAt", e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
               />
             </div>
           </div>
@@ -279,7 +279,7 @@ export function SampleLoansSection({ productId, sampleId, initialLoans }: Props)
               onChange={(e) => setField("notes", e.target.value)}
               rows={2}
               placeholder="Informations complémentaires…"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 resize-none"
             />
           </div>
 
@@ -287,7 +287,7 @@ export function SampleLoansSection({ productId, sampleId, initialLoans }: Props)
             <button
               type="submit"
               disabled={submitting}
-              className="inline-flex items-center gap-2 bg-purple-700 hover:bg-purple-800 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+              className="inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-800 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
             >
               {submitting ? "Enregistrement…" : "Enregistrer le prêt"}
             </button>
