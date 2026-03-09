@@ -30,6 +30,8 @@ type EventGuest = {
   firstName: string;
   lastName: string;
   email: string | null;
+  phone: string | null;
+  instagram: string | null;
   company: string | null;
   title: string | null;
   category: string;

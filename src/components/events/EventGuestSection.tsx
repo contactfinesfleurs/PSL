@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, Check, Download, Users } from "lucide-react";
+import { Plus, Trash2, Check, Download, Users, Instagram, Phone } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
 
 type EventGuest = {
@@ -10,6 +10,8 @@ type EventGuest = {
   firstName: string;
   lastName: string;
   email: string | null;
+  phone: string | null;
+  instagram: string | null;
   company: string | null;
   title: string | null;
   category: string;
@@ -64,6 +66,8 @@ const defaultForm = {
   firstName: "",
   lastName: "",
   email: "",
+  phone: "",
+  instagram: "",
   company: "",
   title: "",
   category: "GUEST",
@@ -116,6 +120,8 @@ export function EventGuestSection({ eventId, initialGuests }: Props) {
       firstName: form.firstName,
       lastName: form.lastName,
       email: form.email || null,
+      phone: form.phone || null,
+      instagram: form.instagram ? form.instagram.replace(/^@/, "") : null,
       company: form.company || null,
       title: form.title || null,
       category: form.category,
@@ -198,10 +204,13 @@ export function EventGuestSection({ eventId, initialGuests }: Props) {
   }
 
   function handleExportCsv() {
-    const headers = ["Prénom", "Nom", "Société", "Titre", "Catégorie", "RSVP", "Présent", "Table", "Siège"];
+    const headers = ["Prénom", "Nom", "Email", "Téléphone", "Instagram", "Société", "Titre", "Catégorie", "RSVP", "Présent", "Table", "Siège"];
     const rows = guests.map((g) => [
       g.firstName,
       g.lastName,
+      g.email ?? "",
+      g.phone ?? "",
+      g.instagram ? `@${g.instagram}` : "",
       g.company ?? "",
       g.title ?? "",
       CATEGORY_LABELS[g.category] ?? g.category,
@@ -306,17 +315,46 @@ export function EventGuestSection({ eventId, initialGuests }: Props) {
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Email
-            </label>
-            <input
-              type="email"
-              value={form.email}
-              onChange={(e) => setField("email", e.target.value)}
-              placeholder="marie.dupont@exemple.com"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
-            />
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                Email
+              </label>
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => setField("email", e.target.value)}
+                placeholder="marie@exemple.com"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                Téléphone
+              </label>
+              <input
+                type="tel"
+                value={form.phone}
+                onChange={(e) => setField("phone", e.target.value)}
+                placeholder="+33 6 00 00 00 00"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                Instagram
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">@</span>
+                <input
+                  type="text"
+                  value={form.instagram}
+                  onChange={(e) => setField("instagram", e.target.value.replace(/^@/, ""))}
+                  placeholder="handle"
+                  className="w-full border border-gray-300 rounded-lg pl-7 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+                />
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -475,6 +513,37 @@ export function EventGuestSection({ eventId, initialGuests }: Props) {
                   >
                     {CATEGORY_LABELS[guest.category] ?? guest.category}
                   </span>
+                  {guest.email && (
+                    <a
+                      href={`mailto:${guest.email}`}
+                      className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                      title={guest.email}
+                    >
+                      {guest.email}
+                    </a>
+                  )}
+                  {guest.phone && (
+                    <a
+                      href={`tel:${guest.phone}`}
+                      className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                      title={guest.phone}
+                    >
+                      <Phone className="h-3 w-3" />
+                      {guest.phone}
+                    </a>
+                  )}
+                  {guest.instagram && (
+                    <a
+                      href={`https://instagram.com/${guest.instagram}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-pink-400 hover:text-pink-600 transition-colors"
+                      title={`@${guest.instagram}`}
+                    >
+                      <Instagram className="h-3 w-3" />
+                      @{guest.instagram}
+                    </a>
+                  )}
                 </div>
                 {(guest.company || guest.title) && (
                   <p className="text-xs text-gray-500 mt-0.5">

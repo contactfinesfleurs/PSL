@@ -198,6 +198,8 @@ model EventGuest {
   firstName String
   lastName  String
   email     String?
+  phone     String?
+  instagram String?
   company   String?
   title     String?
 
