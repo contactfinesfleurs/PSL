@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import { parseBodyJson } from "@/lib/api-helpers";
+import { parseBodyJson, getProfileId } from "@/lib/api-helpers";
+import { logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const profileId = getProfileId(req);
   const result = await parseBodyJson(req, LoanPatchSchema);
   if (!result.success) return result.response;
   const body = result.data;
@@ -40,6 +42,8 @@ export async function PATCH(
       ...(body.publication !== undefined && { publication: body.publication }),
     },
   });
+
+  logAudit("LOAN_PATCH", profileId, "sampleLoan", id, { fields: Object.keys(body) });
 
   return NextResponse.json(loan);
 }

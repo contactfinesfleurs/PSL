@@ -17,6 +17,14 @@ export function unauthorizedResponse() {
 }
 
 /**
+ * Returns a 403 Forbidden response — use when the authenticated user does not
+ * have access to the requested resource.
+ */
+export function forbiddenResponse(message = "Accès interdit") {
+  return NextResponse.json({ error: message }, { status: 403 });
+}
+
+/**
  * Parse the request body as JSON and validate with a Zod schema.
  * Returns the parsed data on success, or a ready-to-return NextResponse on failure.
  *
