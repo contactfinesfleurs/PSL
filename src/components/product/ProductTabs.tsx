@@ -69,12 +69,13 @@ type Product = {
   }[];
 };
 
-type StepId = "techpack" | "sample" | "loans" | "placements" | "launch";
+type StepId = "techpack" | "sample" | "presse" | "launch";
 type StepState = "completed" | "active" | "available" | "locked";
 
 function buildSteps(product: Product, activeTab: string) {
   const hasSample = product.samples.length > 0;
   const isValidated = product.sampleStatus === "VALIDATED";
+  const presseCount = product.loans.length + product.placements.length;
 
   const steps: { id: StepId; label: string; sublabel: string; state: StepState }[] = [
     {
@@ -100,34 +101,18 @@ function buildSteps(product: Product, activeTab: string) {
             : "available",
     },
     {
-      id: "loans",
-      label: "Prêts presse",
+      id: "presse",
+      label: "Presse",
       sublabel: !hasSample
         ? "Prototype requis"
-        : product.loans.length > 0
-          ? `${product.loans.length} prêt${product.loans.length > 1 ? "s" : ""}`
-          : "Aucun prêt",
+        : presseCount > 0
+          ? `${presseCount} entrée${presseCount > 1 ? "s" : ""}`
+          : "Prêts & retombées",
       state: !hasSample
         ? "locked"
-        : activeTab === "loans"
+        : activeTab === "presse"
           ? "active"
-          : product.loans.length > 0
-            ? "completed"
-            : "available",
-    },
-    {
-      id: "placements",
-      label: "Retombées",
-      sublabel: !hasSample
-        ? "Prototype requis"
-        : product.placements.length > 0
-          ? `${product.placements.length} retombée${product.placements.length > 1 ? "s" : ""}`
-          : "Aucune retombée",
-      state: !hasSample
-        ? "locked"
-        : activeTab === "placements"
-          ? "active"
-          : product.placements.length > 0
+          : presseCount > 0
             ? "completed"
             : "available",
     },
@@ -162,7 +147,9 @@ export function ProductTabs({
   activeTab: string;
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<StepId>((activeTab as StepId) || "techpack");
+  // Redirect legacy "loans"/"placements" tab params to "presse"
+  const resolvedTab = (activeTab === "loans" || activeTab === "placements") ? "presse" : activeTab;
+  const [tab, setTab] = useState<StepId>((resolvedTab as StepId) || "techpack");
 
   const familyLabel =
     PRODUCT_FAMILIES.find((f) => f.value === product.family)?.label ?? product.family;
@@ -319,26 +306,28 @@ export function ProductTabs({
         {tab === "sample" && (
           <SampleTab product={product} sample={product.samples[0] ?? null} />
         )}
-        {tab === "loans" && (
-          <SampleLoansSection
-            productId={product.id}
-            sampleId={product.samples[0]?.id ?? null}
-            initialLoans={product.loans.map((l) => ({
-              ...l,
-              sentAt: l.sentAt.toISOString(),
-              dueAt: l.dueAt?.toISOString() ?? null,
-              returnedAt: l.returnedAt?.toISOString() ?? null,
-            }))}
-          />
-        )}
-        {tab === "placements" && (
-          <MediaPlacementsSection
-            productId={product.id}
-            initialPlacements={product.placements.map((p) => ({
-              ...p,
-              publishedAt: p.publishedAt.toISOString(),
-            }))}
-          />
+        {tab === "presse" && (
+          <div className="space-y-10">
+            <SampleLoansSection
+              productId={product.id}
+              sampleId={product.samples[0]?.id ?? null}
+              initialLoans={product.loans.map((l) => ({
+                ...l,
+                sentAt: l.sentAt.toISOString(),
+                dueAt: l.dueAt?.toISOString() ?? null,
+                returnedAt: l.returnedAt?.toISOString() ?? null,
+              }))}
+            />
+            <div className="border-t border-gray-100 pt-10">
+              <MediaPlacementsSection
+                productId={product.id}
+                initialPlacements={product.placements.map((p) => ({
+                  ...p,
+                  publishedAt: p.publishedAt.toISOString(),
+                }))}
+              />
+            </div>
+          </div>
         )}
         {tab === "launch" && product.sampleStatus === "VALIDATED" && (
           <LaunchTab product={product} allCampaigns={allCampaigns} />
