@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { EVENT_TYPES, formatDate } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
+import { EventGuestSection } from "@/components/events/EventGuestSection";
 
 type Product = { id: string; name: string; sku: string; family: string };
 type Campaign = {
@@ -24,6 +25,22 @@ type Campaign = {
   type: string;
   status: string;
 };
+type EventGuest = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string | null;
+  company: string | null;
+  title: string | null;
+  category: string;
+  rsvpStatus: string;
+  checkedIn: boolean;
+  checkedInAt: string | null;
+  tableNumber: string | null;
+  seatNumber: string | null;
+  notes: string | null;
+};
+
 type Event = {
   id: string;
   name: string;
@@ -45,6 +62,7 @@ export default function EventDetailPage({
 }) {
   const { id } = use(params);
   const [event, setEvent] = useState<Event | null>(null);
+  const [guests, setGuests] = useState<EventGuest[]>([]);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<Partial<Event>>({});
@@ -60,6 +78,9 @@ export default function EventDetailPage({
     fetch("/api/products")
       .then((r) => r.json())
       .then(setAllProducts);
+    fetch(`/api/events/${id}/guests`)
+      .then((r) => r.json())
+      .then((data: EventGuest[]) => setGuests(Array.isArray(data) ? data : []));
   }, [id]);
 
   if (!event) {
@@ -418,6 +439,9 @@ export default function EventDetailPage({
           </div>
         )}
       </div>
+
+      {/* Guest list */}
+      <EventGuestSection eventId={id} initialGuests={guests} />
     </div>
   );
 }

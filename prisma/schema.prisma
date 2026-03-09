@@ -48,6 +48,8 @@ model Product {
   samples   Sample[]
   campaigns CampaignProduct[]
   events    EventProduct[]
+  loans     SampleLoan[]
+  placements MediaPlacement[]
 }
 
 // ─── SAMPLE ──────────────────────────────────────────────────────────────────
@@ -72,6 +74,8 @@ model Sample {
   packshotPaths       String?  // JSON array - official packshots
   definitiveColors    String?  // JSON array
   definitiveMaterials String?  // JSON array
+
+  loans SampleLoan[]
 }
 
 // ─── EVENT ───────────────────────────────────────────────────────────────────
@@ -95,6 +99,7 @@ model Event {
   // Relations
   campaigns   Campaign[]
   products    EventProduct[]
+  guests      EventGuest[]
 }
 
 // ─── CAMPAIGN ────────────────────────────────────────────────────────────────
@@ -120,6 +125,98 @@ model Campaign {
 
   // Relations
   products    CampaignProduct[]
+}
+
+// ─── SAMPLE LOAN ─────────────────────────────────────────────────────────────
+// Track physical sample circulation to press, stylists, influencers, etc.
+
+model SampleLoan {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  sampleId  String
+  sample    Sample  @relation(fields: [sampleId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // Recipient
+  contactName String
+  contactRole String?  // Styliste | Rédactrice | Influenceur | Showroom | Presse | Célébrité
+  publication String?  // Magazine or media name if editorial/press
+
+  // Purpose: EDITORIAL | PRESS | EVENT | SHOWROOM | INFLUENCER | CELEBRITY
+  purpose String
+
+  // Timeline
+  sentAt     DateTime @default(now())
+  dueAt      DateTime?
+  returnedAt DateTime?
+
+  // Status: SENT | RETURNED | LOST
+  status String @default("SENT")
+  notes  String?
+
+  placements MediaPlacement[]
+}
+
+// ─── MEDIA PLACEMENT ─────────────────────────────────────────────────────────
+// Track press/editorial/social coverage generated from sample loans
+
+model MediaPlacement {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  sampleLoanId String?
+  sampleLoan   SampleLoan? @relation(fields: [sampleLoanId], references: [id])
+
+  publication    String
+  // Type: PRINT | DIGITAL | SOCIAL | TV | PODCAST
+  type           String
+  publishedAt    DateTime
+  url            String?
+  screenshotPath String?
+  notes          String?
+  // Estimated audience reach
+  reach          Int?
+}
+
+// ─── EVENT GUEST ─────────────────────────────────────────────────────────────
+// Guest list management with RSVP and check-in for fashion events
+
+model EventGuest {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  firstName String
+  lastName  String
+  email     String?
+  company   String?
+  title     String?
+
+  // Category: VIP | PRESS | BUYER | INFLUENCER | INDUSTRY | GUEST
+  category  String @default("GUEST")
+  invitedBy String?
+
+  // RSVP: INVITED | CONFIRMED | DECLINED | WAITLIST
+  rsvpStatus String @default("INVITED")
+
+  // Check-in on the day of the event
+  checkedIn   Boolean   @default(false)
+  checkedInAt DateTime?
+
+  // Seating
+  tableNumber String?
+  seatNumber  String?
+
+  notes String?
 }
 
 // ─── JUNCTION TABLES ─────────────────────────────────────────────────────────

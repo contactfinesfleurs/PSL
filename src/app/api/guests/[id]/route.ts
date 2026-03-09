@@ -1,0 +1,63 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { z } from "zod";
+import { parseBodyJson } from "@/lib/api-helpers";
+
+export const dynamic = "force-dynamic";
+
+const GuestPatchSchema = z.object({
+  firstName: z.string().min(1).max(100).optional(),
+  lastName: z.string().min(1).max(100).optional(),
+  email: z.string().email().nullable().optional(),
+  company: z.string().max(200).nullable().optional(),
+  title: z.string().max(200).nullable().optional(),
+  category: z.enum(["VIP", "PRESS", "BUYER", "INFLUENCER", "INDUSTRY", "GUEST"]).optional(),
+  rsvpStatus: z.enum(["INVITED", "CONFIRMED", "DECLINED", "WAITLIST"]).optional(),
+  checkedIn: z.boolean().optional(),
+  tableNumber: z.string().max(20).nullable().optional(),
+  seatNumber: z.string().max(20).nullable().optional(),
+  notes: z.string().max(500).nullable().optional(),
+});
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const result = await parseBodyJson(req, GuestPatchSchema);
+  if (!result.success) return result.response;
+  const body = result.data;
+
+  const now = new Date();
+  const guest = await prisma.eventGuest.update({
+    where: { id },
+    data: {
+      ...(body.firstName !== undefined && { firstName: body.firstName }),
+      ...(body.lastName !== undefined && { lastName: body.lastName }),
+      ...(body.email !== undefined && { email: body.email }),
+      ...(body.company !== undefined && { company: body.company }),
+      ...(body.title !== undefined && { title: body.title }),
+      ...(body.category !== undefined && { category: body.category }),
+      ...(body.rsvpStatus !== undefined && { rsvpStatus: body.rsvpStatus }),
+      ...(body.tableNumber !== undefined && { tableNumber: body.tableNumber }),
+      ...(body.seatNumber !== undefined && { seatNumber: body.seatNumber }),
+      ...(body.notes !== undefined && { notes: body.notes }),
+      // Track check-in timestamp automatically
+      ...(body.checkedIn !== undefined && {
+        checkedIn: body.checkedIn,
+        checkedInAt: body.checkedIn ? now : null,
+      }),
+    },
+  });
+
+  return NextResponse.json(guest);
+}
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  await prisma.eventGuest.delete({ where: { id } });
+  return NextResponse.json({ success: true });
+}
