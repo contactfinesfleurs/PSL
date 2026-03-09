@@ -18,6 +18,7 @@ const ProductPatchSchema = z.object({
   colorPrimary: z.string().max(10).nullable().optional(),
   colorSecondary: z.string().max(10).nullable().optional(),
   sketchPaths: z.array(z.string()).nullable().optional(),
+  // Note: colorPrimary/colorSecondary are merged into colors[] at update time
   techPackPath: z.string().max(500).nullable().optional(),
   sampleStatus: z.enum(["PENDING", "VALIDATED", "NOT_VALIDATED"]).optional(),
   description: z.string().max(5000).nullable().optional(),
@@ -75,9 +76,16 @@ export async function PATCH(
       ...(body.materials !== undefined && {
         materials: JSON.stringify(body.materials),
       }),
-      ...(body.colors !== undefined && { colors: JSON.stringify(body.colors) }),
-      ...(body.colorPrimary !== undefined && { colorPrimary: body.colorPrimary }),
-      ...(body.colorSecondary !== undefined && { colorSecondary: body.colorSecondary }),
+      // Merge colorPrimary/colorSecondary into colors JSON array
+      ...((body.colorPrimary !== undefined || body.colorSecondary !== undefined || body.colors !== undefined) && {
+        colors: (() => {
+          if (body.colorPrimary !== undefined || body.colorSecondary !== undefined) {
+            const codes = [body.colorPrimary, body.colorSecondary].filter(Boolean) as string[];
+            return JSON.stringify(codes.length > 0 ? codes : null);
+          }
+          return body.colors !== undefined ? JSON.stringify(body.colors) : undefined;
+        })(),
+      }),
       ...(body.sketchPaths !== undefined && {
         sketchPaths: JSON.stringify(body.sketchPaths),
       }),

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Save } from "lucide-react";
-import { PRODUCT_FAMILIES, SEASONS, SIZE_RANGES } from "@/lib/utils";
+import { PRODUCT_FAMILIES, SEASONS, SIZE_RANGES, COLOR_CODES } from "@/lib/utils";
 import { TagInput } from "@/components/ui/TagInput";
 import { FileUpload } from "@/components/ui/FileUpload";
 
@@ -45,7 +45,8 @@ export function TechPackTab({ product }: { product: Product }) {
     sizeRange: product.sizeRange,
     sizes: parse(product.sizes),
     materials: parse(product.materials),
-    colors: parse(product.colors),
+    colorPrimary: parse(product.colors)[0] ?? "",
+    colorSecondary: parse(product.colors)[1] ?? "",
     measurements: product.measurements ?? "",
     reference: product.reference ?? "",
     sketchPaths: parse(product.sketchPaths),
@@ -68,7 +69,8 @@ export function TechPackTab({ product }: { product: Product }) {
         sizeRange: form.sizeRange,
         sizes: form.sizes,
         materials: form.materials,
-        colors: form.colors,
+        colorPrimary: form.colorPrimary || null,
+        colorSecondary: form.colorSecondary || null,
         measurements: form.measurements,
         reference: form.reference,
         sketchPaths: form.sketchPaths,
@@ -203,16 +205,37 @@ export function TechPackTab({ product }: { product: Product }) {
       </div>
 
       {/* Colors */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Coloris
-        </label>
-        <TagInput
-          value={form.colors}
-          onChange={(v) => set("colors", v)}
-          placeholder="ex. Noir, Ivoire"
-          colorMode
-        />
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Couleur principale
+          </label>
+          <select
+            value={form.colorPrimary}
+            onChange={(e) => set("colorPrimary", e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+          >
+            <option value="">— Sélectionner</option>
+            {COLOR_CODES.map((c) => (
+              <option key={c.code} value={c.code}>{c.code} — {c.label}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Couleur secondaire
+          </label>
+          <select
+            value={form.colorSecondary}
+            onChange={(e) => set("colorSecondary", e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+          >
+            <option value="">— Optionnel</option>
+            {COLOR_CODES.map((c) => (
+              <option key={c.code} value={c.code}>{c.code} — {c.label}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Measurements */}

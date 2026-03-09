@@ -29,14 +29,10 @@ model Product {
   sizeRange String   // S-XL | 30-44 | 35-46 | ONE-SIZE | etc.
   sizes     String   // JSON array stored as string
 
-  // Colors (coded)
-  colorPrimary   String?  // color code e.g. "02"
-  colorSecondary String?  // color code e.g. "01"
-
   // Tech Pack
   measurements  String?  // JSON
   materials     String?  // JSON array
-  colors        String?  // JSON array (legacy)
+  colors        String?  // JSON array — codes couleur e.g. ["02","01"] (primary, secondary)
   sketchPaths   String?  // JSON array of file paths
   techPackPath  String?  // path to tech pack file
 
