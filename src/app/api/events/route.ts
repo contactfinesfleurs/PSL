@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import { parseBodyJson, validateEnum, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
+import { parseBodyJson, validateEnum, getProfileId, unauthorizedResponse, parsePagination } from "@/lib/api-helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -26,21 +26,32 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const status = validateEnum(searchParams.get("status"), EVENT_STATUSES);
   const type = validateEnum(searchParams.get("type"), EVENT_TYPES);
+  const { skip, take, page, limit } = parsePagination(searchParams);
 
-  const events = await prisma.event.findMany({
-    where: {
-      profileId,
-      ...(status ? { status } : {}),
-      ...(type ? { type } : {}),
-    },
-    include: {
-      campaigns: true,
-      products: { include: { product: true } },
-    },
-    orderBy: { startAt: "asc" },
+  const where = {
+    profileId,
+    ...(status ? { status } : {}),
+    ...(type ? { type } : {}),
+  };
+
+  const [events, total] = await Promise.all([
+    prisma.event.findMany({
+      where,
+      include: {
+        campaigns: true,
+        products: { include: { product: true } },
+      },
+      orderBy: { startAt: "asc" },
+      skip,
+      take,
+    }),
+    prisma.event.count({ where }),
+  ]);
+
+  return NextResponse.json({
+    data: events,
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
   });
-
-  return NextResponse.json(events);
 }
 
 export async function POST(req: NextRequest) {
