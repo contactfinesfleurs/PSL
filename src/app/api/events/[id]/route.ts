@@ -26,7 +26,7 @@ export async function GET(
 
   const { id } = await params;
   const event = await prisma.event.findUnique({
-    where: { id, profileId },
+    where: { id, profileId, deletedAt: null },
     include: {
       campaigns: { include: { products: { include: { product: true } } } },
       products: { include: { product: true } },
@@ -93,7 +93,7 @@ export async function DELETE(
     return NextResponse.json({ error: "Événement introuvable" }, { status: 404 });
   }
 
-  await prisma.event.delete({ where: { id } });
+  await prisma.event.update({ where: { id }, data: { deletedAt: new Date() } });
   logAudit("EVENT_DELETE", profileId, "event", id);
   return NextResponse.json({ success: true });
 }

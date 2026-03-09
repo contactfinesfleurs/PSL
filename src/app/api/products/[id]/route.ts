@@ -36,7 +36,7 @@ export async function GET(
 
   const { id } = await params;
   const product = await prisma.product.findUnique({
-    where: { id, profileId },
+    where: { id, profileId, deletedAt: null },
     include: {
       samples: true,
       campaigns: { include: { campaign: true } },
@@ -123,7 +123,7 @@ export async function DELETE(
     return NextResponse.json({ error: "Produit introuvable" }, { status: 404 });
   }
 
-  await prisma.product.delete({ where: { id } });
+  await prisma.product.update({ where: { id }, data: { deletedAt: new Date() } });
   logAudit("PRODUCT_DELETE", profileId, "product", id);
   return NextResponse.json({ success: true });
 }
