@@ -11,17 +11,17 @@ datasource db {
 // ─── PROFILE (AUTH) ───────────────────────────────────────────────────────────
 
 model Profile {
-  id           String   @id @default(cuid())
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   name         String
-  email        String   @unique
+  email        String @unique
   passwordHash String
 
-  products     Product[]
-  events       Event[]
-  campaigns    Campaign[]
+  products  Product[]
+  events    Event[]
+  campaigns Campaign[]
 }
 
 // ─── PRODUCT ─────────────────────────────────────────────────────────────────
@@ -33,43 +33,48 @@ model Product {
 
   // Profile isolation
   profileId String
-  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
   // Identity
   name      String
-  sku       String   @unique
+  sku       String  @unique
   reference String?
 
   // Classification
-  family    String   // accessories | pret-a-porter | shoes | leather-goods | small-leather-goods | other
-  season    String   // FALL-WINTER | PRE-FALL | SPRING-SUMMER | CRUISE
-  year      Int
+  family String // accessories | pret-a-porter | shoes | leather-goods | small-leather-goods | other
+  season String // FALL-WINTER | PRE-FALL | SPRING-SUMMER | CRUISE
+  year   Int
 
   // Sizing
-  sizeRange String   // S-XL | 30-44 | 35-46 | ONE-SIZE | etc.
-  sizes     String   // JSON array stored as string
+  sizeRange String // S-XL | 30-44 | 35-46 | ONE-SIZE | etc.
+  sizes     String // JSON array stored as string
 
   // Tech Pack
-  measurements  String?  // free text notes
-  materials     String?  // JSON array
-  colors        String?  // JSON array — codes couleur e.g. ["02","01"] (primary, secondary)
-  sketchPaths   String?  // JSON array of file paths
-  techPackPath  String?  // path to tech pack file
+  measurements String? // free text notes
+  materials    String? // JSON array
+  colors       String? // JSON array — codes couleur e.g. ["02","01"] (primary, secondary)
+  sketchPaths  String? // JSON array of file paths
+  techPackPath String? // path to tech pack file
 
   // Descriptions (filled after validation)
-  description   String?
-  metaTags      String?  // JSON array
+  description String?
+  metaTags    String? // JSON array
 
   // Status: PENDING | VALIDATED | NOT_VALIDATED
-  sampleStatus    String   @default("PENDING")
+  sampleStatus    String    @default("PENDING")
   plannedLaunchAt DateTime?
 
   // Relations
-  samples   Sample[]
-  campaigns CampaignProduct[]
-  events    EventProduct[]
-  loans     SampleLoan[]
+  samples    Sample[]
+  campaigns  CampaignProduct[]
+  events     EventProduct[]
+  loans      SampleLoan[]
   placements MediaPlacement[]
+
+  @@index([profileId])
+  @@index([profileId, season, year])
+  @@index([profileId, family])
+  @@index([sampleStatus])
 }
 
 // ─── SAMPLE ──────────────────────────────────────────────────────────────────
@@ -80,12 +85,12 @@ model Sample {
   updatedAt DateTime @updatedAt
 
   productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   // Photos
-  samplePhotoPaths    String?  // JSON array - main sample photos
-  detailPhotoPaths    String?  // JSON array - important detail photos
-  reviewPhotoPaths    String?  // JSON array - details "to review"
+  samplePhotoPaths String? // JSON array - main sample photos
+  detailPhotoPaths String? // JSON array - important detail photos
+  reviewPhotoPaths String? // JSON array - details "to review"
 
   // Review notes
   reviewNotes String?
@@ -98,81 +103,83 @@ model Sample {
   // Logistics
   shippingDate   DateTime?
   trackingNumber String?
-  trackingStatus String?   // InTransit | Delivered | NotFound | etc.
+  trackingStatus String? // InTransit | Delivered | NotFound | etc.
   receivedAt     DateTime? // auto-filled when 17track marks as delivered
 
   // Final product (unlocked after validation)
-  packshotPaths       String?  // JSON array - official packshots
-  definitiveColors    String?  // JSON array
-  definitiveMaterials String?  // JSON array
+  packshotPaths       String? // JSON array - official packshots
+  definitiveColors    String? // JSON array
+  definitiveMaterials String? // JSON array
 
   loans SampleLoan[]
+
+  @@index([productId])
 }
 
 // ─── EVENT ───────────────────────────────────────────────────────────────────
 
 model Event {
-  id          String    @id @default(cuid())
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Profile isolation
-  profileId   String
-  profile     Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profileId String
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
   name        String
   description String?
-  type        String    // SHOW | PRESENTATION | LAUNCH | PRESS | TRADE-SHOW | OTHER
+  type        String // SHOW | PRESENTATION | LAUNCH | PRESS | TRADE-SHOW | OTHER
   // Status: DRAFT | CONFIRMED | COMPLETED | CANCELLED
-  status      String    @default("DRAFT")
+  status      String  @default("DRAFT")
 
-  startAt     DateTime
-  endAt       DateTime?
-  location    String?
-  venue       String?
+  startAt  DateTime
+  endAt    DateTime?
+  location String?
+  venue    String?
 
   // Relations
-  campaigns   Campaign[]
-  products    EventProduct[]
-  guests      EventGuest[]
+  campaigns Campaign[]
+  products  EventProduct[]
+  guests    EventGuest[]
 }
 
 // ─── CAMPAIGN ────────────────────────────────────────────────────────────────
 
 model Campaign {
-  id          String    @id @default(cuid())
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Profile isolation
-  profileId   String
-  profile     Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profileId String
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
   name        String
   description String?
-  type        String    // DIGITAL | PRINT | OOH | SOCIAL | INFLUENCER | OTHER
+  type        String // DIGITAL | PRINT | OOH | SOCIAL | INFLUENCER | OTHER
   // Status: DRAFT | ACTIVE | PAUSED | COMPLETED | CANCELLED
-  status      String    @default("DRAFT")
+  status      String  @default("DRAFT")
 
-  startAt     DateTime?
-  endAt       DateTime?
-  budget      Float?
-  currency    String?   @default("EUR")
+  startAt  DateTime?
+  endAt    DateTime?
+  budget   Float?
+  currency String?   @default("EUR")
 
-  eventId     String?
-  event       Event?    @relation(fields: [eventId], references: [id])
+  eventId String?
+  event   Event?  @relation(fields: [eventId], references: [id])
 
   // Relations
-  products    CampaignProduct[]
+  products CampaignProduct[]
 }
 
 // ─── SAMPLE LOAN ─────────────────────────────────────────────────────────────
 // Track physical sample circulation to press, stylists, influencers, etc.
 
 model SampleLoan {
-  id          String   @id @default(cuid())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   sampleId  String
   sample    Sample  @relation(fields: [sampleId], references: [id], onDelete: Cascade)
@@ -181,22 +188,26 @@ model SampleLoan {
 
   // Recipient
   contactName String
-  contactRole String?  // Styliste | Rédactrice | Influenceur | Showroom | Presse | Célébrité
-  publication String?  // Magazine or media name if editorial/press
+  contactRole String? // Styliste | Rédactrice | Influenceur | Showroom | Presse | Célébrité
+  publication String? // Magazine or media name if editorial/press
 
   // Purpose: EDITORIAL | PRESS | EVENT | SHOWROOM | INFLUENCER | CELEBRITY
   purpose String
 
   // Timeline
-  sentAt     DateTime @default(now())
+  sentAt     DateTime  @default(now())
   dueAt      DateTime?
   returnedAt DateTime?
 
   // Status: SENT | RETURNED | LOST
-  status String @default("SENT")
+  status String  @default("SENT")
   notes  String?
 
   placements MediaPlacement[]
+
+  @@index([sampleId])
+  @@index([productId])
+  @@index([status])
 }
 
 // ─── MEDIA PLACEMENT ─────────────────────────────────────────────────────────
@@ -221,6 +232,8 @@ model MediaPlacement {
   notes          String?
   // Estimated audience reach
   reach          Int?
+
+  @@index([productId])
 }
 
 // ─── EVENT GUEST ─────────────────────────────────────────────────────────────
@@ -243,7 +256,7 @@ model EventGuest {
   title     String?
 
   // Category: VIP | PRESS | BUYER | INFLUENCER | INDUSTRY | GUEST
-  category  String @default("GUEST")
+  category  String  @default("GUEST")
   invitedBy String?
 
   // RSVP: INVITED | CONFIRMED | DECLINED | WAITLIST
@@ -258,6 +271,9 @@ model EventGuest {
   seatNumber  String?
 
   notes String?
+
+  @@index([eventId])
+  @@index([rsvpStatus])
 }
 
 // ─── JUNCTION TABLES ─────────────────────────────────────────────────────────
@@ -269,8 +285,8 @@ model CampaignProduct {
   addedAt    DateTime @default(now())
   notes      String?
 
-  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([campaignId, productId])
 }
@@ -281,10 +297,10 @@ model EventProduct {
   productId String
   addedAt   DateTime @default(now())
   notes     String?
-  look      Int?     // look number for fashion shows
+  look      Int? // look number for fashion shows
 
-  event     Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  event   Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, productId])
 }
