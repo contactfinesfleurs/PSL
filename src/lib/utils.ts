@@ -166,6 +166,21 @@ export function formatDate(date: Date | string | null | undefined): string {
   });
 }
 
+export function formatDateTime(date: Date | string | null | undefined): string {
+  if (!date) return "—";
+  const d = new Date(date);
+  const hours = d.getHours();
+  const minutes = d.getMinutes();
+  const hasTime = hours !== 0 || minutes !== 0;
+  const datePart = d.toLocaleDateString("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+  if (!hasTime) return datePart;
+  return `${datePart} ${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
+
 /**
  * Escape HTML special characters to prevent XSS when interpolating
  * user-controlled data into HTML strings (e.g. server-rendered PDF reports).
