@@ -37,9 +37,10 @@ export async function GET(req: NextRequest) {
   const [events, total] = await Promise.all([
     prisma.event.findMany({
       where,
+      // Only include lightweight counts/ids needed for list display.
+      // Deep relations (campaigns, products) are loaded on the detail route to avoid N+1.
       include: {
-        campaigns: true,
-        products: { include: { product: true } },
+        _count: { select: { campaigns: true, products: true } },
       },
       orderBy: { startAt: "asc" },
       skip,
