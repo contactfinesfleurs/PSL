@@ -2,16 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { generateSKU } from "@/lib/utils";
 import { z } from "zod";
+import { parseBodyJson, validateEnum } from "@/lib/api-helpers";
 
 export const dynamic = "force-dynamic";
 
-// ─── Validation schemas ────────────────────────────────────────────────────
+// ─── Enums (must match Prisma schema comments) ────────────────────────────
 
-const SAMPLE_STATUSES = ["PENDING", "IN_PROGRESS", "VALIDATED", "REJECTED"] as const;
-const PRODUCT_FAMILIES = [
-  "ACCESSORIES", "PRET_A_PORTER", "SHOES", "LEATHER_GOODS", "JEWELRY", "FRAGRANCE",
-] as const;
-const SEASONS = ["FALL_WINTER", "PRE_COLLECTION", "SPRING_SUMMER", "CRUISE", "RESORT"] as const;
+// Schema: PENDING | VALIDATED | NOT_VALIDATED
+const SAMPLE_STATUSES = ["PENDING", "VALIDATED", "NOT_VALIDATED"] as const;
+
+// ─── Schemas ───────────────────────────────────────────────────────────────
 
 const ProductCreateSchema = z.object({
   name: z.string().min(1).max(200),
@@ -30,15 +30,9 @@ const ProductCreateSchema = z.object({
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const rawStatus = searchParams.get("status");
+  const sampleStatus = validateEnum(searchParams.get("status"), SAMPLE_STATUSES);
   const family = searchParams.get("family");
   const season = searchParams.get("season");
-
-  // Validate enum query param — reject unknown values instead of unsafe cast
-  const sampleStatus =
-    rawStatus && (SAMPLE_STATUSES as readonly string[]).includes(rawStatus)
-      ? (rawStatus as (typeof SAMPLE_STATUSES)[number])
-      : undefined;
 
   const products = await prisma.product.findMany({
     where: {
@@ -54,22 +48,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Corps de requête JSON invalide." }, { status: 400 });
-  }
-
-  const parsed = ProductCreateSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Données invalides.", details: parsed.error.flatten().fieldErrors },
-      { status: 422 }
-    );
-  }
-
-  const data = parsed.data;
+  const result = await parseBodyJson(req, ProductCreateSchema);
+  if (!result.success) return result.response;
+  const data = result.data;
 
   // Count existing products in this family+season+year to generate index
   const count = await prisma.product.count({

@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { parseBodyJson, validateEnum } from "@/lib/api-helpers";
 
 export const dynamic = "force-dynamic";
 
-// ─── Validation schemas ────────────────────────────────────────────────────
+// ─── Enums (must match Prisma schema comments) ────────────────────────────
 
-const EVENT_STATUSES = ["DRAFT", "CONFIRMED", "CANCELLED", "COMPLETED"] as const;
-const EVENT_TYPES = ["SHOW", "PRESENTATION", "LAUNCH", "PRESS", "TRADE_SHOW"] as const;
+// Schema: DRAFT | CONFIRMED | COMPLETED | CANCELLED
+const EVENT_STATUSES = ["DRAFT", "CONFIRMED", "COMPLETED", "CANCELLED"] as const;
+// Schema: SHOW | PRESENTATION | LAUNCH | PRESS | TRADE-SHOW | OTHER
+const EVENT_TYPES = ["SHOW", "PRESENTATION", "LAUNCH", "PRESS", "TRADE-SHOW", "OTHER"] as const;
+
+// ─── Schemas ───────────────────────────────────────────────────────────────
 
 const EventCreateSchema = z.object({
   name: z.string().min(1).max(200),
@@ -24,18 +29,8 @@ const EventCreateSchema = z.object({
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const rawStatus = searchParams.get("status");
-  const rawType = searchParams.get("type");
-
-  // Validate enum query params — reject unknown values instead of unsafe cast
-  const status =
-    rawStatus && (EVENT_STATUSES as readonly string[]).includes(rawStatus)
-      ? (rawStatus as (typeof EVENT_STATUSES)[number])
-      : undefined;
-  const type =
-    rawType && (EVENT_TYPES as readonly string[]).includes(rawType)
-      ? (rawType as (typeof EVENT_TYPES)[number])
-      : undefined;
+  const status = validateEnum(searchParams.get("status"), EVENT_STATUSES);
+  const type = validateEnum(searchParams.get("type"), EVENT_TYPES);
 
   const events = await prisma.event.findMany({
     where: {
@@ -53,22 +48,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Corps de requête JSON invalide." }, { status: 400 });
-  }
-
-  const parsed = EventCreateSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Données invalides.", details: parsed.error.flatten().fieldErrors },
-      { status: 422 }
-    );
-  }
-
-  const data = parsed.data;
+  const result = await parseBodyJson(req, EventCreateSchema);
+  if (!result.success) return result.response;
+  const data = result.data;
 
   const event = await prisma.event.create({
     data: {

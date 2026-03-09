@@ -1,42 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { escapeHtml, safeParseArray, isTrustedImageUrl } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-/** Escape HTML special characters to prevent XSS when interpolating user data into HTML. */
-function esc(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#x27;");
-}
-
-/** Safely parse a JSON array stored in DB — returns [] on corrupt data. */
-function safeParseArray(raw: string | null): string[] {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as unknown[]).filter((v) => typeof v === "string") as string[] : [];
-  } catch {
-    return [];
-  }
-}
-
-/** Only allow image URLs from trusted origins to prevent SSRF / XSS via img src. */
-function isTrustedImageUrl(url: string): boolean {
-  if (url.startsWith("/uploads/")) return true;
-  try {
-    const { protocol, hostname } = new URL(url);
-    return protocol === "https:" && (
-      hostname.endsWith(".vercel-storage.com") ||
-      hostname.endsWith(".blob.vercel-storage.com")
-    );
-  } catch {
-    return false;
-  }
-}
+// Alias so the template literals stay terse
+const esc = escapeHtml;
 
 export async function GET(
   _req: NextRequest,
@@ -59,10 +28,11 @@ export async function GET(
   }
 
   const sample = product.samples[0];
+  const now = new Date();
 
   // Escape user-controlled text; safely parse JSON arrays; filter untrusted URLs
   const reviewNotes = esc(sample?.reviewNotes ?? "");
-  const reviewPhotos = safeParseArray(sample?.reviewPhotoPaths ?? null).filter(isTrustedImageUrl);
+  const reviewPhotos = safeParseArray(sample?.reviewPhotoPaths).filter(isTrustedImageUrl);
 
   const html = `<!DOCTYPE html>
 <html lang="fr">
@@ -96,7 +66,7 @@ export async function GET(
 <body>
   <div class="header">
     <h1>Rapport de Non-Validation — Prototypage</h1>
-    <p>Document généré le ${new Date().toLocaleDateString("fr-FR")} à ${new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</p>
+    <p>Document généré le ${now.toLocaleDateString("fr-FR")} à ${now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</p>
     <span class="badge">NON VALIDÉ</span>
   </div>
 

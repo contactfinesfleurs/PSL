@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-
-export const dynamic = 'force-dynamic';
 import { PRODUCT_FAMILIES, SEASONS, formatDate } from "@/lib/utils";
+import { Badge } from "@/components/ui/Badge";
 import { Plus, Package } from "lucide-react";
+
+export const dynamic = "force-dynamic";
 
 export default async function ProductsPage({
   searchParams,
@@ -101,7 +102,7 @@ export default async function ProductsPage({
                     {product.sku}
                   </p>
                 </div>
-                <StatusBadge status={product.sampleStatus} />
+                <Badge status={product.sampleStatus} className="shrink-0" />
               </div>
 
               <div className="mt-3 flex flex-wrap gap-1.5">
@@ -156,22 +157,3 @@ function Chip({ children }: { children: React.ReactNode }) {
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    PENDING: "bg-yellow-100 text-yellow-700",
-    VALIDATED: "bg-green-100 text-green-700",
-    NOT_VALIDATED: "bg-red-100 text-red-700",
-  };
-  const labels: Record<string, string> = {
-    PENDING: "En attente",
-    VALIDATED: "Validé",
-    NOT_VALIDATED: "Non validé",
-  };
-  return (
-    <span
-      className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${styles[status] ?? "bg-gray-100 text-gray-600"}`}
-    >
-      {labels[status] ?? status}
-    </span>
-  );
-}

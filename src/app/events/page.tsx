@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-
-export const dynamic = 'force-dynamic';
 import { EVENT_TYPES, formatDate } from "@/lib/utils";
+import { Badge } from "@/components/ui/Badge";
 import { Plus, Calendar } from "lucide-react";
+
+export const dynamic = "force-dynamic";
 
 export default async function EventsPage() {
   const events = await prisma.event.findMany({
@@ -13,19 +14,6 @@ export default async function EventsPage() {
 
   const typeLabel = (t: string) =>
     EVENT_TYPES.find((e) => e.value === t)?.label ?? t;
-
-  const statusStyle: Record<string, string> = {
-    DRAFT: "bg-gray-100 text-gray-600",
-    CONFIRMED: "bg-blue-100 text-blue-700",
-    COMPLETED: "bg-green-100 text-green-700",
-    CANCELLED: "bg-red-100 text-red-700",
-  };
-  const statusLabel: Record<string, string> = {
-    DRAFT: "Brouillon",
-    CONFIRMED: "Confirmé",
-    COMPLETED: "Terminé",
-    CANCELLED: "Annulé",
-  };
 
   return (
     <div className="space-y-6">
@@ -68,11 +56,7 @@ export default async function EventsPage() {
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="font-semibold text-gray-900">{event.name}</p>
-                  <span
-                    className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusStyle[event.status] ?? "bg-gray-100 text-gray-600"}`}
-                  >
-                    {statusLabel[event.status] ?? event.status}
-                  </span>
+                  <Badge status={event.status} />
                 </div>
                 <div className="flex items-center gap-3 mt-1">
                   <span className="text-xs text-gray-500">
