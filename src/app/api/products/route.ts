@@ -39,6 +39,7 @@ export async function GET(req: NextRequest) {
 
   const where = {
     profileId,
+    deletedAt: null,
     ...(sampleStatus ? { sampleStatus } : {}),
     ...(family ? { family } : {}),
     ...(season ? { season } : {}),

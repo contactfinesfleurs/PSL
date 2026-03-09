@@ -27,7 +27,7 @@ export async function GET(
 
   const { id } = await params;
   const campaign = await prisma.campaign.findUnique({
-    where: { id, profileId },
+    where: { id, profileId, deletedAt: null },
     include: {
       products: { include: { product: true } },
       event: true,
@@ -97,7 +97,7 @@ export async function DELETE(
     return NextResponse.json({ error: "Campagne introuvable" }, { status: 404 });
   }
 
-  await prisma.campaign.delete({ where: { id } });
+  await prisma.campaign.update({ where: { id }, data: { deletedAt: new Date() } });
   logAudit("CAMPAIGN_DELETE", profileId, "campaign", id);
   return NextResponse.json({ success: true });
 }

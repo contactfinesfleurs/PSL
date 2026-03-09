@@ -30,6 +30,7 @@ export async function GET(req: NextRequest) {
 
   const where = {
     profileId,
+    deletedAt: null,
     ...(status ? { status } : {}),
     ...(type ? { type } : {}),
   };
