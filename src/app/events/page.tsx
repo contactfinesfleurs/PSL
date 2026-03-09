@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/auth";
 import { EVENT_TYPES, formatDateTime } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
 import { Plus, Calendar, MapPin } from "lucide-react";
@@ -7,7 +8,11 @@ import { Plus, Calendar, MapPin } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function EventsPage() {
+  const session = await getSession();
+  const profileId = session?.profileId ?? "";
+
   const events = await prisma.event.findMany({
+    where: { profileId },
     include: { products: true, campaigns: true },
     orderBy: { startAt: "asc" },
   });

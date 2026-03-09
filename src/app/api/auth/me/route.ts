@@ -1,0 +1,16 @@
+import { NextResponse } from "next/server";
+import { getSession } from "@/lib/auth";
+
+export const dynamic = "force-dynamic";
+
+export async function GET() {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+  }
+  return NextResponse.json({
+    profileId: session.profileId,
+    name: session.name,
+    email: session.email,
+  });
+}

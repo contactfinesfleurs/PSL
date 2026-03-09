@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/auth";
 import { CAMPAIGN_TYPES, formatDate } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
 import { Plus, Megaphone } from "lucide-react";
@@ -7,7 +8,11 @@ import { Plus, Megaphone } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function CampaignsPage() {
+  const session = await getSession();
+  const profileId = session?.profileId ?? "";
+
   const campaigns = await prisma.campaign.findMany({
+    where: { profileId },
     include: { products: true, event: true },
     orderBy: { createdAt: "desc" },
   });

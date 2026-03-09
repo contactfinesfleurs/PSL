@@ -8,12 +8,32 @@ datasource db {
   directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
+// ─── PROFILE (AUTH) ───────────────────────────────────────────────────────────
+
+model Profile {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  name         String
+  email        String   @unique
+  passwordHash String
+
+  products     Product[]
+  events       Event[]
+  campaigns    Campaign[]
+}
+
 // ─── PRODUCT ─────────────────────────────────────────────────────────────────
 
 model Product {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Profile isolation
+  profileId String
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
   // Identity
   name      String
@@ -30,7 +50,7 @@ model Product {
   sizes     String   // JSON array stored as string
 
   // Tech Pack
-  measurements  String?  // JSON
+  measurements  String?  // free text notes
   materials     String?  // JSON array
   colors        String?  // JSON array — codes couleur e.g. ["02","01"] (primary, secondary)
   sketchPaths   String?  // JSON array of file paths
@@ -96,6 +116,10 @@ model Event {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
+  // Profile isolation
+  profileId   String
+  profile     Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
   name        String
   description String?
   type        String    // SHOW | PRESENTATION | LAUNCH | PRESS | TRADE-SHOW | OTHER
@@ -119,6 +143,10 @@ model Campaign {
   id          String    @id @default(cuid())
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
+  // Profile isolation
+  profileId   String
+  profile     Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
   name        String
   description String?

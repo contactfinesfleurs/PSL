@@ -1,5 +1,20 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+
+/**
+ * Extract the authenticated profileId from request headers injected by middleware.
+ * Returns null if not present (should never happen behind middleware).
+ */
+export function getProfileId(req: NextRequest): string | null {
+  return req.headers.get("x-profile-id");
+}
+
+/**
+ * Returns a 401 response — use when getProfileId returns null.
+ */
+export function unauthorizedResponse() {
+  return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+}
 
 /**
  * Parse the request body as JSON and validate with a Zod schema.

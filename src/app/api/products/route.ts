@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { generateSKU, generateReference } from "@/lib/utils";
+import { generateSKU, generateReference } from "@/lib/generators";
 import { z } from "zod";
-import { parseBodyJson, validateEnum } from "@/lib/api-helpers";
+import { parseBodyJson, validateEnum, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 
 export const dynamic = "force-dynamic";
 
-// ─── Enums (must match Prisma schema comments) ────────────────────────────
+// ─── Enums ────────────────────────────────────────────────────────────────────
 
-// Schema: PENDING | VALIDATED | NOT_VALIDATED
 const SAMPLE_STATUSES = ["PENDING", "VALIDATED", "NOT_VALIDATED"] as const;
 
-// ─── Schemas ───────────────────────────────────────────────────────────────
+// ─── Schemas ──────────────────────────────────────────────────────────────────
 
 const ProductCreateSchema = z.object({
   name: z.string().min(1).max(200),
@@ -20,15 +19,18 @@ const ProductCreateSchema = z.object({
   year: z.number().int().min(2000).max(2100),
   sizeRange: z.string().min(1).max(100),
   sizes: z.array(z.string().max(20)).optional().default([]),
-  measurements: z.record(z.string(), z.unknown()).optional().nullable(),
+  measurements: z.string().nullable().optional(),
   materials: z.array(z.string().max(200)).optional().nullable(),
   colorPrimary: z.string().max(10).optional().nullable(),
   colorSecondary: z.string().max(10).optional().nullable(),
 });
 
-// ─── Handlers ─────────────────────────────────────────────────────────────
+// ─── Handlers ─────────────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
+  const profileId = getProfileId(req);
+  if (!profileId) return unauthorizedResponse();
+
   const { searchParams } = new URL(req.url);
   const sampleStatus = validateEnum(searchParams.get("status"), SAMPLE_STATUSES);
   const family = searchParams.get("family");
@@ -36,6 +38,7 @@ export async function GET(req: NextRequest) {
 
   const products = await prisma.product.findMany({
     where: {
+      profileId,
       ...(sampleStatus ? { sampleStatus } : {}),
       ...(family ? { family } : {}),
       ...(season ? { season } : {}),
@@ -48,13 +51,16 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const profileId = getProfileId(req);
+  if (!profileId) return unauthorizedResponse();
+
   const result = await parseBodyJson(req, ProductCreateSchema);
   if (!result.success) return result.response;
   const data = result.data;
 
   // Count existing products in this family+season+year to generate index
   const count = await prisma.product.count({
-    where: { family: data.family, season: data.season, year: data.year },
+    where: { profileId, family: data.family, season: data.season, year: data.year },
   });
 
   const sku = generateSKU({
@@ -64,7 +70,6 @@ export async function POST(req: NextRequest) {
     index: count + 1,
   });
 
-  // Pack color codes into the colors JSON array: [primary, secondary?]
   const colorCodes = [data.colorPrimary, data.colorSecondary].filter(Boolean) as string[];
 
   const reference = generateReference({
@@ -77,6 +82,7 @@ export async function POST(req: NextRequest) {
 
   const product = await prisma.product.create({
     data: {
+      profileId,
       name: data.name,
       sku,
       reference,
@@ -85,7 +91,7 @@ export async function POST(req: NextRequest) {
       year: data.year,
       sizeRange: data.sizeRange,
       sizes: JSON.stringify(data.sizes),
-      measurements: data.measurements ? JSON.stringify(data.measurements) : null,
+      measurements: data.measurements ?? null,
       materials: data.materials ? JSON.stringify(data.materials) : null,
       colors: colorCodes.length > 0 ? JSON.stringify(colorCodes) : null,
     },

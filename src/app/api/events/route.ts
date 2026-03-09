@@ -1,18 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import { parseBodyJson, validateEnum } from "@/lib/api-helpers";
+import { parseBodyJson, validateEnum, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 
 export const dynamic = "force-dynamic";
 
-// ─── Enums (must match Prisma schema comments) ────────────────────────────
-
-// Schema: DRAFT | CONFIRMED | COMPLETED | CANCELLED
 const EVENT_STATUSES = ["DRAFT", "CONFIRMED", "COMPLETED", "CANCELLED"] as const;
-// Schema: SHOW | PRESENTATION | LAUNCH | PRESS | TRADE-SHOW | OTHER
 const EVENT_TYPES = ["SHOW", "PRESENTATION", "LAUNCH", "PRESS", "TRADE-SHOW", "OTHER"] as const;
-
-// ─── Schemas ───────────────────────────────────────────────────────────────
 
 const EventCreateSchema = z.object({
   name: z.string().min(1).max(200),
@@ -25,15 +19,17 @@ const EventCreateSchema = z.object({
   venue: z.string().max(300).optional().nullable(),
 });
 
-// ─── Handlers ─────────────────────────────────────────────────────────────
-
 export async function GET(req: NextRequest) {
+  const profileId = getProfileId(req);
+  if (!profileId) return unauthorizedResponse();
+
   const { searchParams } = new URL(req.url);
   const status = validateEnum(searchParams.get("status"), EVENT_STATUSES);
   const type = validateEnum(searchParams.get("type"), EVENT_TYPES);
 
   const events = await prisma.event.findMany({
     where: {
+      profileId,
       ...(status ? { status } : {}),
       ...(type ? { type } : {}),
     },
@@ -48,12 +44,16 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const profileId = getProfileId(req);
+  if (!profileId) return unauthorizedResponse();
+
   const result = await parseBodyJson(req, EventCreateSchema);
   if (!result.success) return result.response;
   const data = result.data;
 
   const event = await prisma.event.create({
     data: {
+      profileId,
       name: data.name,
       description: data.description ?? null,
       type: data.type,

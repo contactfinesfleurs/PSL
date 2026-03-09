@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/auth";
 import { PRODUCT_FAMILIES, SEASONS, formatDate } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
 import { Plus, Package } from "lucide-react";
@@ -11,9 +12,13 @@ export default async function ProductsPage({
 }: {
   searchParams: Promise<{ status?: string; family?: string; season?: string }>;
 }) {
+  const session = await getSession();
+  const profileId = session?.profileId ?? "";
+
   const sp = await searchParams;
   const products = await prisma.product.findMany({
     where: {
+      profileId,
       ...(sp.status ? { sampleStatus: sp.status as never } : {}),
       ...(sp.family ? { family: sp.family } : {}),
       ...(sp.season ? { season: sp.season } : {}),
