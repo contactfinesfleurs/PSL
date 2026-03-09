@@ -70,6 +70,17 @@ model Sample {
   // Review notes
   reviewNotes String?
 
+  // Supplier info
+  supplierName    String?
+  supplierAddress String?
+  supplierCountry String?
+
+  // Logistics
+  shippingDate   DateTime?
+  trackingNumber String?
+  trackingStatus String?   // InTransit | Delivered | NotFound | etc.
+  receivedAt     DateTime? // auto-filled when 17track marks as delivered
+
   // Final product (unlocked after validation)
   packshotPaths       String?  // JSON array - official packshots
   definitiveColors    String?  // JSON array

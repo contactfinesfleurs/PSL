@@ -1,0 +1,77 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+
+// 17track status tag → human-readable status
+const TAG_LABELS: Record<number, string> = {
+  0:  "NotFound",
+  10: "InTransit",
+  20: "Expired",
+  30: "PickUp",
+  35: "Undelivered",
+  40: "Delivered",
+  50: "Alert",
+};
+
+export async function POST(req: NextRequest) {
+  const { trackingNumber, sampleId } = await req.json() as {
+    trackingNumber: string;
+    sampleId: string;
+  };
+
+  const apiKey = process.env.SEVENTEEN_TRACK_API_KEY;
+  if (!apiKey) {
+    return NextResponse.json({ error: "17track API key not configured" }, { status: 500 });
+  }
+
+  // Call 17track API
+  const res = await fetch("https://api.17track.net/track/v2.2/gettracklist", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "17token": apiKey,
+    },
+    body: JSON.stringify({ data: [{ number: trackingNumber }] }),
+  });
+
+  if (!res.ok) {
+    return NextResponse.json({ error: "17track API error" }, { status: 502 });
+  }
+
+  const json = await res.json() as {
+    data?: {
+      accepted?: Array<{
+        number: string;
+        track: {
+          z0?: { z: number };            // status tag
+          z1?: Array<{ a: string; z: string }>; // events: a=location, z=datetime
+        };
+      }>;
+    };
+  };
+
+  const item = json.data?.accepted?.[0];
+  if (!item) {
+    return NextResponse.json({ trackingStatus: "NotFound", receivedAt: null });
+  }
+
+  const tag = item.track?.z0?.z ?? 0;
+  const trackingStatus = TAG_LABELS[tag] ?? "Unknown";
+
+  // Extract delivery date from last event when delivered
+  let receivedAt: string | null = null;
+  if (tag === 40 && item.track?.z1?.length) {
+    const lastEvent = item.track.z1[item.track.z1.length - 1];
+    if (lastEvent?.z) receivedAt = lastEvent.z;
+  }
+
+  // Persist to DB
+  await prisma.sample.update({
+    where: { id: sampleId },
+    data: {
+      trackingStatus,
+      ...(receivedAt ? { receivedAt: new Date(receivedAt) } : {}),
+    },
+  });
+
+  return NextResponse.json({ trackingStatus, receivedAt });
+}
