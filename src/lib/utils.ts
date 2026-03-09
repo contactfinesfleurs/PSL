@@ -52,6 +52,78 @@ export const CAMPAIGN_TYPES = [
   { value: "OTHER", label: "Autre" },
 ] as const;
 
+// ─── Color codes ──────────────────────────────────────────────────────────────
+
+export const COLOR_CODES = [
+  { code: "01", label: "Blanc" },
+  { code: "02", label: "Noir" },
+  { code: "03", label: "Écru / Ivoire" },
+  { code: "04", label: "Beige / Camel" },
+  { code: "05", label: "Gris clair" },
+  { code: "06", label: "Gris foncé" },
+  { code: "07", label: "Marine" },
+  { code: "08", label: "Bleu ciel" },
+  { code: "09", label: "Bleu royal" },
+  { code: "10", label: "Rouge" },
+  { code: "11", label: "Bordeaux" },
+  { code: "12", label: "Rose" },
+  { code: "13", label: "Vert" },
+  { code: "14", label: "Kaki / Olive" },
+  { code: "15", label: "Jaune / Doré" },
+  { code: "16", label: "Orange / Terracotta" },
+  { code: "17", label: "Marron / Chocolat" },
+  { code: "18", label: "Violet / Prune" },
+  { code: "19", label: "Or (métal)" },
+  { code: "20", label: "Argent (métal)" },
+  { code: "21", label: "Multicolore" },
+  { code: "22", label: "Imprimé" },
+] as const;
+
+// ─── Reference generator ──────────────────────────────────────────────────────
+
+function stripAccents(str: string): string {
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+export function generateReference(params: {
+  name: string;
+  season: string;
+  year: number;
+  material?: string | null;
+  colorPrimary?: string | null;
+}): string {
+  const seasonCode: Record<string, string> = {
+    "FALL-WINTER": "FW",
+    "PRE-FALL": "PF",
+    "SPRING-SUMMER": "SS",
+    CRUISE: "CR",
+    RESORT: "RS",
+  };
+
+  // Initials: first letter of each word (max 4)
+  const initials = params.name
+    .split(/\s+/)
+    .map((w) => stripAccents(w[0] ?? "").toUpperCase())
+    .filter((c) => /[A-Z]/.test(c))
+    .slice(0, 4)
+    .join("");
+
+  const sea = (seasonCode[params.season] ?? "XX") + String(params.year).slice(-2);
+
+  // Material: first 3 letters of first material, no accents
+  const mat = params.material
+    ? stripAccents(params.material).replace(/[^a-zA-Z]/g, "").slice(0, 3).toUpperCase()
+    : null;
+
+  const parts: string[] = [initials, sea];
+  if (mat) parts.push(mat);
+  if (params.colorPrimary) parts.push(params.colorPrimary);
+
+  return parts.join("-");
+}
+
+// ─── SKU generator ────────────────────────────────────────────────────────────
+
 export function generateSKU(params: {
   family: string;
   season: string;

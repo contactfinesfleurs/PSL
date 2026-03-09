@@ -15,6 +15,8 @@ const ProductPatchSchema = z.object({
   measurements: z.record(z.string(), z.unknown()).nullable().optional(),
   materials: z.array(z.string().max(200)).nullable().optional(),
   colors: z.array(z.string().max(100)).nullable().optional(),
+  colorPrimary: z.string().max(10).nullable().optional(),
+  colorSecondary: z.string().max(10).nullable().optional(),
   sketchPaths: z.array(z.string()).nullable().optional(),
   techPackPath: z.string().max(500).nullable().optional(),
   sampleStatus: z.enum(["PENDING", "VALIDATED", "NOT_VALIDATED"]).optional(),
@@ -74,6 +76,8 @@ export async function PATCH(
         materials: JSON.stringify(body.materials),
       }),
       ...(body.colors !== undefined && { colors: JSON.stringify(body.colors) }),
+      ...(body.colorPrimary !== undefined && { colorPrimary: body.colorPrimary }),
+      ...(body.colorSecondary !== undefined && { colorSecondary: body.colorSecondary }),
       ...(body.sketchPaths !== undefined && {
         sketchPaths: JSON.stringify(body.sketchPaths),
       }),
