@@ -19,14 +19,16 @@ export default async function CampaignsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Campagnes</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">
+            Campagnes
+          </h1>
+          <p className="text-sm text-gray-500 mt-0.5">
             {campaigns.length} campagne{campaigns.length !== 1 ? "s" : ""}
           </p>
         </div>
         <Link
           href="/campaigns/new"
-          className="inline-flex items-center gap-2 bg-purple-700 hover:bg-purple-800 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+          className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors shadow-sm"
         >
           <Plus className="h-4 w-4" />
           Nouvelle campagne
@@ -34,9 +36,9 @@ export default async function CampaignsPage() {
       </div>
 
       {campaigns.length === 0 ? (
-        <div className="text-center py-24 bg-white rounded-xl border border-gray-200">
-          <Megaphone className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-          <p className="text-gray-500 font-medium">Aucune campagne</p>
+        <div className="text-center py-24 bg-white rounded-2xl border border-gray-200/80">
+          <Megaphone className="mx-auto h-10 w-10 text-gray-300 mb-4" />
+          <p className="text-gray-500 font-medium text-sm">Aucune campagne</p>
           <Link
             href="/campaigns/new"
             className="mt-4 inline-flex items-center gap-1 text-sm text-purple-600 hover:underline"
@@ -51,10 +53,10 @@ export default async function CampaignsPage() {
             <Link
               key={campaign.id}
               href={`/campaigns/${campaign.id}`}
-              className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow p-5"
+              className="bg-white border border-gray-200/80 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 p-5 block"
             >
               <div className="flex items-start justify-between gap-2">
-                <p className="font-semibold text-gray-900 truncate">
+                <p className="font-semibold text-gray-900 truncate text-sm">
                   {campaign.name}
                 </p>
                 <Badge status={campaign.status} className="shrink-0" />
@@ -65,17 +67,15 @@ export default async function CampaignsPage() {
               </p>
 
               {(campaign.startAt || campaign.endAt) && (
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="text-xs text-gray-400 mt-2">
                   {campaign.startAt ? formatDate(campaign.startAt) : "?"}
                   {campaign.endAt ? ` → ${formatDate(campaign.endAt)}` : ""}
                 </p>
               )}
 
-              <div className="mt-3 flex gap-3 text-xs text-gray-400">
+              <div className="mt-3 flex flex-wrap gap-3 text-xs text-gray-400">
                 <span>{campaign.products.length} produit(s)</span>
-                {campaign.event && (
-                  <span>· {campaign.event.name}</span>
-                )}
+                {campaign.event && <span>· {campaign.event.name}</span>}
                 {campaign.budget && (
                   <span>
                     ·{" "}

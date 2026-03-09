@@ -11,7 +11,7 @@
     --border: 240 5.9% 90%;
     --input: 240 5.9% 90%;
     --ring: 270 50% 40%;
-    --radius: 0.5rem;
+    --radius: 0.75rem;
   }
 }
 
@@ -20,12 +20,12 @@
     border-color: rgb(229 231 235);
   }
   body {
-    @apply bg-gray-50 text-gray-900 antialiased;
+    @apply bg-[#f8f8fa] text-gray-900 antialiased;
   }
 }
 
 .tab-active {
-  @apply border-b-2 border-purple-700 text-purple-700 font-semibold;
+  @apply border-b-2 border-purple-600 text-purple-700 font-semibold;
 }
 
 .tab-inactive {
