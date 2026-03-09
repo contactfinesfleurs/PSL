@@ -67,7 +67,7 @@ export default async function LookBookPage({
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Look Book</h1>
+          <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Look Book</h1>
           <p className="text-sm text-gray-500 mt-1">
             Vue collection — {products.length} pièce{products.length !== 1 ? "s" : ""}
           </p>
@@ -86,9 +86,9 @@ export default async function LookBookPage({
               <Link
                 key={`${c.season}-${c.year}`}
                 href={`/lookbook?${params}`}
-                className={`text-sm font-medium px-3 py-1.5 rounded-lg border transition-colors ${
+                className={`text-sm font-medium px-3 py-1.5 rounded-xl border transition-colors ${
                   isActive
-                    ? "bg-purple-700 text-white border-purple-700"
+                    ? "bg-purple-600 text-white border-purple-600"
                     : "border-gray-200 text-gray-600 hover:bg-gray-50"
                 }`}
               >
@@ -152,7 +152,7 @@ export default async function LookBookPage({
 
       {/* Grid */}
       {products.length === 0 ? (
-        <div className="text-center py-24 bg-white rounded-xl border border-gray-200">
+        <div className="text-center py-24 bg-white rounded-2xl border border-gray-200/80">
           <Package className="mx-auto h-12 w-12 text-gray-300 mb-4" />
           <p className="text-gray-500 font-medium">Aucun produit dans cette collection</p>
           <Link
@@ -181,7 +181,7 @@ export default async function LookBookPage({
               <Link
                 key={product.id}
                 href={`/products/${product.id}?tab=sample`}
-                className="group bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow"
+                className="group bg-white border border-gray-200/80 rounded-2xl overflow-hidden hover:shadow-md transition-all duration-200"
               >
                 {/* Photo */}
                 <div className="relative aspect-[3/4] bg-gray-100">

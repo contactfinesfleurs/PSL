@@ -2,7 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { EVENT_TYPES, formatDate } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
-import { Plus, Calendar } from "lucide-react";
+import { Plus, Calendar, MapPin } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -19,14 +19,16 @@ export default async function EventsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Événements</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">
+            Événements
+          </h1>
+          <p className="text-sm text-gray-500 mt-0.5">
             {events.length} événement{events.length !== 1 ? "s" : ""}
           </p>
         </div>
         <Link
           href="/events/new"
-          className="inline-flex items-center gap-2 bg-purple-700 hover:bg-purple-800 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+          className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors shadow-sm"
         >
           <Plus className="h-4 w-4" />
           Nouvel événement
@@ -34,9 +36,9 @@ export default async function EventsPage() {
       </div>
 
       {events.length === 0 ? (
-        <div className="text-center py-24 bg-white rounded-xl border border-gray-200">
-          <Calendar className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-          <p className="text-gray-500 font-medium">Aucun événement</p>
+        <div className="text-center py-24 bg-white rounded-2xl border border-gray-200/80">
+          <Calendar className="mx-auto h-10 w-10 text-gray-300 mb-4" />
+          <p className="text-gray-500 font-medium text-sm">Aucun événement</p>
           <Link
             href="/events/new"
             className="mt-4 inline-flex items-center gap-1 text-sm text-purple-600 hover:underline"
@@ -51,30 +53,33 @@ export default async function EventsPage() {
             <Link
               key={event.id}
               href={`/events/${event.id}`}
-              className="flex items-center justify-between bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow p-5"
+              className="flex items-center justify-between bg-white border border-gray-200/80 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 p-5"
             >
               <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-semibold text-gray-900">{event.name}</p>
+                <div className="flex items-center gap-2.5">
+                  <p className="font-semibold text-gray-900 text-sm">
+                    {event.name}
+                  </p>
                   <Badge status={event.status} />
                 </div>
-                <div className="flex items-center gap-3 mt-1">
-                  <span className="text-xs text-gray-500">
-                    <Calendar className="inline h-3 w-3 mr-1" />
+                <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                  <span className="text-xs text-gray-400 flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
                     {formatDate(event.startAt)}
                     {event.endAt ? ` → ${formatDate(event.endAt)}` : ""}
                   </span>
                   {event.location && (
-                    <span className="text-xs text-gray-500">
-                      · {event.location}
+                    <span className="text-xs text-gray-400 flex items-center gap-1">
+                      <MapPin className="h-3 w-3" />
+                      {event.location}
                     </span>
                   )}
-                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md">
                     {typeLabel(event.type)}
                   </span>
                 </div>
               </div>
-              <div className="flex items-center gap-4 ml-4 shrink-0 text-xs text-gray-500">
+              <div className="flex items-center gap-4 ml-4 shrink-0 text-xs text-gray-400">
                 <span>{event.products.length} produit(s)</span>
                 <span>{event.campaigns.length} campagne(s)</span>
               </div>

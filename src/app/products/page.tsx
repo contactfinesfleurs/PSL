@@ -14,9 +14,7 @@ export default async function ProductsPage({
   const sp = await searchParams;
   const products = await prisma.product.findMany({
     where: {
-      ...(sp.status
-        ? { sampleStatus: sp.status as never }
-        : {}),
+      ...(sp.status ? { sampleStatus: sp.status as never } : {}),
       ...(sp.family ? { family: sp.family } : {}),
       ...(sp.season ? { season: sp.season } : {}),
     },
@@ -35,14 +33,16 @@ export default async function ProductsPage({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Produits</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">
+            Produits
+          </h1>
+          <p className="text-sm text-gray-500 mt-0.5">
             {products.length} produit{products.length !== 1 ? "s" : ""}
           </p>
         </div>
         <Link
           href="/products/new"
-          className="inline-flex items-center gap-2 bg-purple-700 hover:bg-purple-800 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+          className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors shadow-sm"
         >
           <Plus className="h-4 w-4" />
           Nouveau produit
@@ -74,9 +74,11 @@ export default async function ProductsPage({
 
       {/* Products Grid */}
       {products.length === 0 ? (
-        <div className="text-center py-24 bg-white rounded-xl border border-gray-200">
-          <Package className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-          <p className="text-gray-500 font-medium">Aucun produit trouvé</p>
+        <div className="text-center py-24 bg-white rounded-2xl border border-gray-200/80">
+          <Package className="mx-auto h-10 w-10 text-gray-300 mb-4" />
+          <p className="text-gray-500 font-medium text-sm">
+            Aucun produit trouvé
+          </p>
           <Link
             href="/products/new"
             className="mt-4 inline-flex items-center gap-1 text-sm text-purple-600 hover:underline"
@@ -91,14 +93,14 @@ export default async function ProductsPage({
             <Link
               key={product.id}
               href={`/products/${product.id}`}
-              className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-5"
+              className="bg-white rounded-2xl border border-gray-200/80 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 p-5 block"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="font-semibold text-gray-900 truncate">
+                  <p className="font-semibold text-gray-900 truncate text-sm">
                     {product.name}
                   </p>
-                  <p className="text-xs text-gray-500 mt-0.5 font-mono">
+                  <p className="text-xs text-gray-400 mt-0.5 font-mono">
                     {product.sku}
                   </p>
                 </div>
@@ -114,8 +116,8 @@ export default async function ProductsPage({
               </div>
 
               {product.plannedLaunchAt && (
-                <p className="mt-3 text-xs text-gray-500">
-                  Lancement prévu : {formatDate(product.plannedLaunchAt)}
+                <p className="mt-3 text-xs text-gray-400">
+                  Lancement : {formatDate(product.plannedLaunchAt)}
                 </p>
               )}
             </Link>
@@ -141,7 +143,7 @@ function FilterLink({
       className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
         active
           ? "bg-purple-100 text-purple-700"
-          : "bg-white border border-gray-200 text-gray-600 hover:border-gray-300"
+          : "bg-white border border-gray-200 text-gray-600 hover:border-gray-300 hover:text-gray-900"
       }`}
     >
       {label}
@@ -151,9 +153,8 @@ function FilterLink({
 
 function Chip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-block bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded">
+    <span className="inline-block bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-md">
       {children}
     </span>
   );
 }
-
