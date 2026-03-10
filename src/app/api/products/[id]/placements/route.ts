@@ -22,62 +22,72 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const profileId = getProfileId(req);
-  if (!profileId) return unauthorizedResponse();
+  try {
+    const profileId = getProfileId(req);
+    if (!profileId) return unauthorizedResponse();
 
-  const { id } = await params;
-  if (!id || typeof id !== 'string' || id.trim() === '') {
-    return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+    const { id } = await params;
+    if (!id || typeof id !== 'string' || id.trim() === '') {
+      return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+    }
+
+    // Verify product ownership
+    const product = await prisma.product.findFirst({
+      where: { id, profileId, deletedAt: null },
+    });
+    if (!product) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const placements = await prisma.mediaPlacement.findMany({
+      where: { productId: id },
+      orderBy: { publishedAt: "desc" },
+    });
+    return NextResponse.json(placements);
+  } catch (error) {
+    console.error('[GET /api/products/[id]/placements]', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-
-  // Verify product ownership
-  const product = await prisma.product.findFirst({
-    where: { id, profileId, deletedAt: null },
-  });
-  if (!product) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-  const placements = await prisma.mediaPlacement.findMany({
-    where: { productId: id },
-    orderBy: { publishedAt: "desc" },
-  });
-  return NextResponse.json(placements);
 }
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const profileId = getProfileId(req);
-  if (!profileId) return unauthorizedResponse();
+  try {
+    const profileId = getProfileId(req);
+    if (!profileId) return unauthorizedResponse();
 
-  const { id } = await params;
-  if (!id || typeof id !== 'string' || id.trim() === '') {
-    return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+    const { id } = await params;
+    if (!id || typeof id !== 'string' || id.trim() === '') {
+      return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+    }
+
+    // Verify product ownership
+    const product = await prisma.product.findFirst({
+      where: { id, profileId, deletedAt: null },
+    });
+    if (!product) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const result = await parseBodyJson(req, PlacementCreateSchema);
+    if (!result.success) return result.response;
+    const data = result.data;
+
+    const placement = await prisma.mediaPlacement.create({
+      data: {
+        productId: id,
+        publication: data.publication,
+        type: data.type,
+        publishedAt: new Date(data.publishedAt),
+        url: data.url ?? null,
+        screenshotPath: data.screenshotPath ?? null,
+        notes: data.notes ?? null,
+        reach: data.reach ?? null,
+        sampleLoanId: data.sampleLoanId ?? null,
+      },
+    });
+
+    return NextResponse.json(placement, { status: 201 });
+  } catch (error) {
+    console.error('[POST /api/products/[id]/placements]', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-
-  // Verify product ownership
-  const product = await prisma.product.findFirst({
-    where: { id, profileId, deletedAt: null },
-  });
-  if (!product) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-  const result = await parseBodyJson(req, PlacementCreateSchema);
-  if (!result.success) return result.response;
-  const data = result.data;
-
-  const placement = await prisma.mediaPlacement.create({
-    data: {
-      productId: id,
-      publication: data.publication,
-      type: data.type,
-      publishedAt: new Date(data.publishedAt),
-      url: data.url ?? null,
-      screenshotPath: data.screenshotPath ?? null,
-      notes: data.notes ?? null,
-      reach: data.reach ?? null,
-      sampleLoanId: data.sampleLoanId ?? null,
-    },
-  });
-
-  return NextResponse.json(placement, { status: 201 });
 }

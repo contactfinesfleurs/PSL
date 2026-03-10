@@ -22,62 +22,72 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const profileId = getProfileId(req);
-  if (!profileId) return unauthorizedResponse();
+  try {
+    const profileId = getProfileId(req);
+    if (!profileId) return unauthorizedResponse();
 
-  const { id } = await params;
-  if (!id || typeof id !== 'string' || id.trim() === '') {
-    return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+    const { id } = await params;
+    if (!id || typeof id !== 'string' || id.trim() === '') {
+      return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+    }
+
+    // Verify product ownership
+    const product = await prisma.product.findFirst({
+      where: { id, profileId, deletedAt: null },
+    });
+    if (!product) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const loans = await prisma.sampleLoan.findMany({
+      where: { productId: id },
+      orderBy: { sentAt: "desc" },
+    });
+    return NextResponse.json(loans);
+  } catch (error) {
+    console.error('[GET /api/products/[id]/loans]', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-
-  // Verify product ownership
-  const product = await prisma.product.findFirst({
-    where: { id, profileId, deletedAt: null },
-  });
-  if (!product) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-  const loans = await prisma.sampleLoan.findMany({
-    where: { productId: id },
-    orderBy: { sentAt: "desc" },
-  });
-  return NextResponse.json(loans);
 }
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const profileId = getProfileId(req);
-  if (!profileId) return unauthorizedResponse();
+  try {
+    const profileId = getProfileId(req);
+    if (!profileId) return unauthorizedResponse();
 
-  const { id } = await params;
-  if (!id || typeof id !== 'string' || id.trim() === '') {
-    return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+    const { id } = await params;
+    if (!id || typeof id !== 'string' || id.trim() === '') {
+      return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+    }
+
+    // Verify product ownership
+    const product = await prisma.product.findFirst({
+      where: { id, profileId, deletedAt: null },
+    });
+    if (!product) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const result = await parseBodyJson(req, LoanCreateSchema);
+    if (!result.success) return result.response;
+    const data = result.data;
+
+    const loan = await prisma.sampleLoan.create({
+      data: {
+        productId: id,
+        sampleId: data.sampleId,
+        contactName: data.contactName,
+        contactRole: data.contactRole ?? null,
+        publication: data.publication ?? null,
+        purpose: data.purpose,
+        sentAt: data.sentAt ? new Date(data.sentAt) : new Date(),
+        dueAt: data.dueAt ? new Date(data.dueAt) : null,
+        notes: data.notes ?? null,
+      },
+    });
+
+    return NextResponse.json(loan, { status: 201 });
+  } catch (error) {
+    console.error('[POST /api/products/[id]/loans]', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-
-  // Verify product ownership
-  const product = await prisma.product.findFirst({
-    where: { id, profileId, deletedAt: null },
-  });
-  if (!product) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-  const result = await parseBodyJson(req, LoanCreateSchema);
-  if (!result.success) return result.response;
-  const data = result.data;
-
-  const loan = await prisma.sampleLoan.create({
-    data: {
-      productId: id,
-      sampleId: data.sampleId,
-      contactName: data.contactName,
-      contactRole: data.contactRole ?? null,
-      publication: data.publication ?? null,
-      purpose: data.purpose,
-      sentAt: data.sentAt ? new Date(data.sentAt) : new Date(),
-      dueAt: data.dueAt ? new Date(data.dueAt) : null,
-      notes: data.notes ?? null,
-    },
-  });
-
-  return NextResponse.json(loan, { status: 201 });
 }
