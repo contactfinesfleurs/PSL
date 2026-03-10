@@ -40,7 +40,12 @@ export default function LoginPage() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data?.error ?? "Une erreur est survenue");
+        // Extract first field-level validation detail if present
+        const firstDetail =
+          data?.details && typeof data.details === "object"
+            ? Object.values(data.details as Record<string, string[]>)[0]?.[0]
+            : null;
+        setError(firstDetail ?? data?.error ?? "Une erreur est survenue");
         return;
       }
 
@@ -114,6 +119,11 @@ export default function LoginPage() {
               placeholder={mode === "register" ? "Minimum 8 caractères" : "••••••••"}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
             />
+            {mode === "register" && (
+              <p className="text-xs text-gray-400 mt-1">
+                Majuscule, chiffre et caractère spécial requis (ex&nbsp;: Abc1@xyz)
+              </p>
+            )}
           </div>
 
           {error && (

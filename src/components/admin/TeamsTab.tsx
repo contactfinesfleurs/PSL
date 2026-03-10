@@ -61,7 +61,11 @@ export function TeamsTab({ actingRole }: Props) {
 
   async function handleDelete(id: string, name: string) {
     if (!confirm(`Supprimer l'équipe "${name}" ? Les membres ne seront pas supprimés.`)) return;
-    await fetch(`/api/admin/teams/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/admin/teams/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "Erreur lors de la suppression.");
+    }
     load();
   }
 

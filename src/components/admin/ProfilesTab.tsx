@@ -97,20 +97,28 @@ export function ProfilesTab({ actingRole, actingTeamId }: Props) {
   }
 
   async function handleRoleChange(profileId: string, role: string) {
-    await fetch(`/api/admin/profiles/${profileId}`, {
+    const res = await fetch(`/api/admin/profiles/${profileId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ role }),
     });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "Erreur lors de la mise à jour du rôle.");
+    }
     load();
   }
 
   async function handleTeamChange(profileId: string, teamId: string) {
-    await fetch(`/api/admin/profiles/${profileId}`, {
+    const res = await fetch(`/api/admin/profiles/${profileId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ teamId: teamId || null }),
     });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "Erreur lors de la mise à jour de l'équipe.");
+    }
     load();
   }
 
