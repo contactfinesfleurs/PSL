@@ -11,7 +11,7 @@ const JWT_SECRET = new TextEncoder().encode(
 );
 
 const COOKIE_NAME = "psl_session";
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
 // ─── Token payload ────────────────────────────────────────────────────────────
 
@@ -27,7 +27,7 @@ export async function signToken(payload: SessionPayload): Promise<string> {
   return new SignJWT(payload as Record<string, unknown>)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime("30d")
+    .setExpirationTime("7d")
     .sign(JWT_SECRET);
 }
 
