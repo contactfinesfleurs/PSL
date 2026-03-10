@@ -2,14 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { parseBodyJson, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
+import { PLACEMENT_TYPE_VALUES } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
-const PLACEMENT_TYPES = ["PRINT", "DIGITAL", "SOCIAL", "TV", "PODCAST"] as const;
-
 const PlacementCreateSchema = z.object({
   publication: z.string().min(1).max(200),
-  type: z.enum(PLACEMENT_TYPES),
+  type: z.enum(PLACEMENT_TYPE_VALUES),
   publishedAt: z.string().datetime(),
   url: z.string().url().optional().nullable(),
   screenshotPath: z.string().optional().nullable(),

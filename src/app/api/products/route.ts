@@ -3,12 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { generateSKU, generateReference } from "@/lib/generators";
 import { z } from "zod";
 import { parseBodyJson, validateEnum, getProfileId, unauthorizedResponse, parsePagination } from "@/lib/api-helpers";
+import { SAMPLE_STATUS_VALUES } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
-
-// ─── Enums ────────────────────────────────────────────────────────────────────
-
-const SAMPLE_STATUSES = ["PENDING", "VALIDATED", "NOT_VALIDATED"] as const;
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
@@ -33,7 +30,7 @@ export async function GET(req: NextRequest) {
     if (!profileId) return unauthorizedResponse();
 
     const { searchParams } = new URL(req.url);
-    const sampleStatus = validateEnum(searchParams.get("status"), SAMPLE_STATUSES);
+    const sampleStatus = validateEnum(searchParams.get("status"), SAMPLE_STATUS_VALUES);
     // Sanitize free-text filters: trim whitespace and enforce a max length
     // consistent with the schema (100 chars). This prevents unexpectedly large
     // strings reaching the database layer even though Prisma uses parameterized queries.

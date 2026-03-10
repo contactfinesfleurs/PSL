@@ -55,6 +55,18 @@ export const CAMPAIGN_TYPES = [
   { value: "OTHER", label: "Autre" },
 ] as const;
 
+// ─── Status / type value arrays (for API enum validation with z.enum / validateEnum) ──
+
+export const SAMPLE_STATUS_VALUES = ["PENDING", "VALIDATED", "NOT_VALIDATED"] as const;
+export const CAMPAIGN_STATUS_VALUES = ["DRAFT", "ACTIVE", "PAUSED", "COMPLETED", "CANCELLED"] as const;
+export const CAMPAIGN_TYPE_VALUES = ["DIGITAL", "PRINT", "OOH", "SOCIAL", "INFLUENCER", "OTHER"] as const;
+export const EVENT_STATUS_VALUES = ["DRAFT", "CONFIRMED", "COMPLETED", "CANCELLED"] as const;
+export const EVENT_TYPE_VALUES = ["SHOW", "PRESENTATION", "LAUNCH", "PRESS", "TRADE-SHOW", "OTHER"] as const;
+export const GUEST_CATEGORY_VALUES = ["VIP", "PRESS", "BUYER", "INFLUENCER", "INDUSTRY", "GUEST"] as const;
+export const RSVP_STATUS_VALUES = ["INVITED", "CONFIRMED", "DECLINED", "WAITLIST"] as const;
+export const LOAN_PURPOSE_VALUES = ["EDITORIAL", "PRESS", "EVENT", "SHOWROOM", "INFLUENCER", "CELEBRITY"] as const;
+export const PLACEMENT_TYPE_VALUES = ["PRINT", "DIGITAL", "SOCIAL", "TV", "PODCAST"] as const;
+
 // ─── Color codes ──────────────────────────────────────────────────────────────
 
 export const COLOR_CODES = [

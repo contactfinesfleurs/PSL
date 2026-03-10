@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 import { logAudit } from "@/lib/audit";
+import { deleteStoredFile } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,10 @@ export async function DELETE(
     });
     if (!placement || placement.product.profileId !== profileId) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    if (placement.screenshotPath) {
+      await deleteStoredFile(placement.screenshotPath);
     }
 
     await prisma.mediaPlacement.delete({ where: { id } });

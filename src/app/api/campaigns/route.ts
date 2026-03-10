@@ -2,17 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { parseBodyJson, validateEnum, getProfileId, unauthorizedResponse, parsePagination } from "@/lib/api-helpers";
+import { CAMPAIGN_STATUS_VALUES, CAMPAIGN_TYPE_VALUES } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
-
-const CAMPAIGN_STATUSES = ["DRAFT", "ACTIVE", "PAUSED", "COMPLETED", "CANCELLED"] as const;
-const CAMPAIGN_TYPES = ["DIGITAL", "PRINT", "OOH", "SOCIAL", "INFLUENCER", "OTHER"] as const;
 
 const CampaignCreateSchema = z.object({
   name: z.string().min(1).max(200),
   description: z.string().max(2000).optional().nullable(),
-  type: z.enum(CAMPAIGN_TYPES),
-  status: z.enum(CAMPAIGN_STATUSES).default("DRAFT"),
+  type: z.enum(CAMPAIGN_TYPE_VALUES),
+  status: z.enum(CAMPAIGN_STATUS_VALUES).default("DRAFT"),
   startAt: z.string().datetime().optional().nullable(),
   endAt: z.string().datetime().optional().nullable(),
   budget: z.number().positive().optional().nullable(),
@@ -26,8 +24,8 @@ export async function GET(req: NextRequest) {
     if (!profileId) return unauthorizedResponse();
 
     const { searchParams } = new URL(req.url);
-    const status = validateEnum(searchParams.get("status"), CAMPAIGN_STATUSES);
-    const type = validateEnum(searchParams.get("type"), CAMPAIGN_TYPES);
+    const status = validateEnum(searchParams.get("status"), CAMPAIGN_STATUS_VALUES);
+    const type = validateEnum(searchParams.get("type"), CAMPAIGN_TYPE_VALUES);
     const { skip, take, page, limit } = parsePagination(searchParams);
 
     const where = {

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { parseBodyJson, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
+import { deleteStoredFile } from "@/lib/storage";
+import { safeParseArray } from "@/lib/formatters";
 
 export const dynamic = 'force-dynamic';
 
@@ -72,6 +74,24 @@ export async function PUT(
     const result = await parseBodyJson(req, SampleUpsertSchema);
     if (!result.success) return result.response;
     const body = result.data;
+
+    // Delete orphaned photo files when path arrays are replaced
+    const existingSample = body.sampleId
+      ? await prisma.sample.findUnique({ where: { id: body.sampleId } })
+      : null;
+    if (existingSample) {
+      const photoFields = [
+        [existingSample.samplePhotoPaths, body.samplePhotoPaths],
+        [existingSample.detailPhotoPaths, body.detailPhotoPaths],
+        [existingSample.reviewPhotoPaths, body.reviewPhotoPaths],
+        [existingSample.packshotPaths, body.packshotPaths],
+      ] as const;
+      for (const [oldRaw, newPaths] of photoFields) {
+        if (newPaths === undefined) continue;
+        const newSet = new Set(newPaths ?? []);
+        await Promise.all(safeParseArray(oldRaw).filter((p) => !newSet.has(p)).map(deleteStoredFile));
+      }
+    }
 
     const sample = await prisma.sample.upsert({
       where: {
@@ -171,6 +191,19 @@ export async function POST(
     });
 
     if (existing) {
+      // Delete orphaned photo files before updating
+      const photoFields = [
+        [existing.samplePhotoPaths, body.samplePhotoPaths],
+        [existing.detailPhotoPaths, body.detailPhotoPaths],
+        [existing.reviewPhotoPaths, body.reviewPhotoPaths],
+        [existing.packshotPaths, body.packshotPaths],
+      ] as const;
+      for (const [oldRaw, newPaths] of photoFields) {
+        if (newPaths === undefined) continue;
+        const newSet = new Set(newPaths ?? []);
+        await Promise.all(safeParseArray(oldRaw).filter((p) => !newSet.has(p)).map(deleteStoredFile));
+      }
+
       // Update instead
       const updated = await prisma.sample.update({
         where: { id: existing.id },
