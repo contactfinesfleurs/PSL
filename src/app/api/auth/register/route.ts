@@ -11,7 +11,13 @@ export const dynamic = "force-dynamic";
 const RegisterSchema = z.object({
   name: z.string().min(1).max(100),
   email: z.string().email(),
-  password: z.string().min(8).max(100),
+  password: z
+    .string()
+    .min(8)
+    .max(100)
+    .regex(/[A-Z]/, "Le mot de passe doit contenir au moins une majuscule")
+    .regex(/[0-9]/, "Le mot de passe doit contenir au moins un chiffre")
+    .regex(/[^A-Za-z0-9]/, "Le mot de passe doit contenir au moins un caractère spécial"),
 });
 
 export async function POST(req: NextRequest) {
@@ -27,8 +33,9 @@ export async function POST(req: NextRequest) {
 
     const existing = await prisma.profile.findUnique({ where: { email } });
     if (existing) {
+      // Message volontairement vague pour éviter l'énumération d'emails
       return NextResponse.json(
-        { error: "Un compte avec cet email existe déjà" },
+        { error: "Impossible de créer le compte avec ces informations" },
         { status: 409 }
       );
     }
