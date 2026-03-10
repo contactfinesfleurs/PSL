@@ -1,6 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getProfileId, unauthorizedResponse, forbiddenResponse } from "@/lib/api-helpers";
+
+const TrackEventSchema = z.object({
+  a: z.string().optional(),
+  z: z.string().optional(),
+});
+
+const TrackItemSchema = z.object({
+  number: z.string(),
+  track: z
+    .object({
+      z0: z.object({ z: z.number() }).optional(),
+      z1: z.array(TrackEventSchema).optional(),
+    })
+    .optional(),
+});
+
+const TrackResponseSchema = z.object({
+  data: z
+    .object({
+      accepted: z.array(TrackItemSchema).optional(),
+    })
+    .optional(),
+});
 
 // 17track status tag → human-readable status
 const TAG_LABELS: Record<number, string> = {
@@ -20,10 +44,13 @@ export async function POST(req: NextRequest) {
     return unauthorizedResponse();
   }
 
-  const { trackingNumber, sampleId } = await req.json() as {
-    trackingNumber: string;
-    sampleId: string;
-  };
+  const bodyRaw: unknown = await req.json();
+  const bodySchema = z.object({ trackingNumber: z.string(), sampleId: z.string() });
+  const bodyParsed = bodySchema.safeParse(bodyRaw);
+  if (!bodyParsed.success) {
+    return NextResponse.json({ error: "trackingNumber and sampleId are required" }, { status: 400 });
+  }
+  const { trackingNumber, sampleId } = bodyParsed.data;
 
   // 2. Verify the sample exists and that its product belongs to the authenticated profile
   const sample = await prisma.sample.findUnique({
@@ -58,19 +85,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "17track API error" }, { status: 502 });
   }
 
-  const json = await res.json() as {
-    data?: {
-      accepted?: Array<{
-        number: string;
-        track: {
-          z0?: { z: number };            // status tag
-          z1?: Array<{ a: string; z: string }>; // events: a=location, z=datetime
-        };
-      }>;
-    };
-  };
+  const rawJson: unknown = await res.json();
+  const parsed = TrackResponseSchema.safeParse(rawJson);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Unexpected response from 17track API" }, { status: 502 });
+  }
 
-  const item = json.data?.accepted?.[0];
+  const item = parsed.data.data?.accepted?.[0];
   if (!item) {
     return NextResponse.json({ trackingStatus: "NotFound", receivedAt: null });
   }
