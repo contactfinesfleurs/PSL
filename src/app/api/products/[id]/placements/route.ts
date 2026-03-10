@@ -70,6 +70,14 @@ export async function POST(
     if (!result.success) return result.response;
     const data = result.data;
 
+    // Verify the referenced sampleLoan belongs to this product (prevents cross-tenant linking)
+    if (data.sampleLoanId) {
+      const loan = await prisma.sampleLoan.findFirst({
+        where: { id: data.sampleLoanId, productId: id },
+      });
+      if (!loan) return NextResponse.json({ error: "Loan introuvable" }, { status: 404 });
+    }
+
     const placement = await prisma.mediaPlacement.create({
       data: {
         productId: id,

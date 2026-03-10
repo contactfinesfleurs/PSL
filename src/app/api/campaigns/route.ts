@@ -70,6 +70,14 @@ export async function POST(req: NextRequest) {
     if (!result.success) return result.response;
     const data = result.data;
 
+    // Verify the referenced event belongs to the same profile (prevents cross-tenant linking)
+    if (data.eventId) {
+      const event = await prisma.event.findFirst({
+        where: { id: data.eventId, profileId, deletedAt: null },
+      });
+      if (!event) return NextResponse.json({ error: "Événement introuvable" }, { status: 404 });
+    }
+
     const campaign = await prisma.campaign.create({
       data: {
         profileId,

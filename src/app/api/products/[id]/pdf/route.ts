@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { escapeHtml, safeParseArray, isTrustedImageUrl } from "@/lib/utils";
+import { getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -8,9 +9,12 @@ export const dynamic = "force-dynamic";
 const esc = escapeHtml;
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const profileId = getProfileId(req);
+  if (!profileId) return unauthorizedResponse();
+
   const { id } = await params;
   if (!id || typeof id !== 'string' || id.trim() === '') {
     return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
@@ -19,7 +23,7 @@ export async function GET(
   let product;
   try {
     product = await prisma.product.findUnique({
-      where: { id },
+      where: { id, profileId, deletedAt: null },
       include: { samples: true },
     });
   } catch {
