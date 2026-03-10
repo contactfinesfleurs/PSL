@@ -36,7 +36,7 @@ export default async function RootLayout({
             <Sidebar userName={session.name} userEmail={session.email} userRole={userRole} />
           )}
           <main className="flex-1 overflow-auto">
-            <div className="px-10 py-10 max-w-7xl mx-auto">{children}</div>
+            {children}
           </main>
         </div>
       </body>
