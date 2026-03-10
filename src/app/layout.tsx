@@ -1,24 +1,39 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Sidebar } from "@/components/ui/Sidebar";
+import { getSession } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
   title: "PSL — Product & Event Management",
   description: "Gestion des produits et événements mode",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await getSession();
+
+  let userRole: string | null = null;
+  if (session) {
+    const profile = await prisma.profile.findUnique({
+      where: { id: session.profileId },
+      select: { role: true },
+    });
+    userRole = profile?.role ?? null;
+  }
+
   return (
     <html lang="fr">
-      <body>
-        <div className="flex h-screen bg-gray-50">
-          <Sidebar />
+      <body className="font-sans bg-[#f4f4f6]">
+        <div className="flex h-screen">
+          {session && (
+            <Sidebar userName={session.name} userEmail={session.email} userRole={userRole} />
+          )}
           <main className="flex-1 overflow-auto">
-            <div className="p-6 max-w-7xl mx-auto">{children}</div>
+            <div className="px-10 py-10 max-w-7xl mx-auto">{children}</div>
           </main>
         </div>
       </body>

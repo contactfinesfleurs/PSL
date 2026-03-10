@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { put } from "@vercel/blob";
+import { MAX_FILE_SIZE, ALLOWED_MIME_TYPES, storeFile } from "@/lib/storage";
+import { getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 
-export const dynamic = 'force-dynamic';
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
+export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
+  // Defense-in-depth: middleware already enforces auth, but we check here too
+  // so a future middleware misconfiguration doesn't silently expose this endpoint.
+  const profileId = getProfileId(req);
+  if (!profileId) return unauthorizedResponse();
+
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
   const folder = (formData.get("folder") as string) || "general";
@@ -14,32 +18,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Aucun fichier fourni" }, { status: 400 });
   }
 
-  // Use Vercel Blob in production, local filesystem in development
-  if (process.env.BLOB_READ_WRITE_TOKEN) {
-    const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
-    const timestamp = Date.now();
-    const filename = `${folder}/${timestamp}_${safeName}`;
-
-    const blob = await put(filename, file, { access: "public" });
-
-    return NextResponse.json({ path: blob.url, filename: blob.pathname });
+  if (!ALLOWED_MIME_TYPES.has(file.type)) {
+    return NextResponse.json(
+      { error: "Type de fichier non autorisé. Formats acceptés : JPEG, PNG, WebP, GIF, PDF." },
+      { status: 415 }
+    );
   }
 
-  // Local development fallback
-  const bytes = await file.arrayBuffer();
-  const buffer = Buffer.from(bytes);
+  if (file.size > MAX_FILE_SIZE) {
+    return NextResponse.json(
+      { error: "Fichier trop volumineux. Taille maximale : 10 Mo." },
+      { status: 413 }
+    );
+  }
 
-  const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
-  const timestamp = Date.now();
-  const filename = `${timestamp}_${safeName}`;
-
-  const uploadDir = path.join(process.cwd(), "public", "uploads", folder);
-  await mkdir(uploadDir, { recursive: true });
-
-  const filePath = path.join(uploadDir, filename);
-  await writeFile(filePath, buffer);
-
-  const publicPath = `/uploads/${folder}/${filename}`;
-
-  return NextResponse.json({ path: publicPath, filename });
+  try {
+    const stored = await storeFile(file, folder);
+    return NextResponse.json(stored);
+  } catch {
+    return NextResponse.json({ error: "Erreur lors de l'upload." }, { status: 500 });
+  }
 }

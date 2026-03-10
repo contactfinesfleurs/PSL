@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/auth";
 
 export const dynamic = 'force-dynamic';
 import { ProductTabs } from "@/components/product/ProductTabs";
@@ -13,26 +14,48 @@ export default async function ProductPage({
 }) {
   const { id } = await params;
   const { tab } = await searchParams;
-  const product = await prisma.product.findUnique({
-    where: { id },
-    include: {
-      samples: true,
-      campaigns: {
-        include: { campaign: true },
-      },
-      events: {
-        include: { event: true },
-      },
-    },
-  });
 
-  if (!product) {
+  const session = await getSession();
+  const profileId = session?.profileId ?? "";
+
+  // Core query — always works (samples, campaigns, events tables always exist)
+  const [baseProduct, allCampaigns] = await Promise.all([
+    prisma.product.findUnique({
+      where: { id, profileId },
+      include: {
+        samples: true,
+        campaigns: { include: { campaign: true } },
+        events: { include: { event: true } },
+      },
+    }),
+    prisma.campaign.findMany({ where: { profileId }, orderBy: { createdAt: "desc" } }),
+  ]);
+
+  if (!baseProduct) {
     notFound();
   }
 
-  const allCampaigns = await prisma.campaign.findMany({
-    orderBy: { createdAt: "desc" },
-  });
+  // Optional tables (SampleLoan, MediaPlacement) — wrapped in try/catch
+  // because they may not exist yet if the DB migration hasn't been run
+  let loans: Awaited<ReturnType<typeof prisma.sampleLoan.findMany>> = [];
+  let placements: Awaited<ReturnType<typeof prisma.mediaPlacement.findMany>> = [];
+
+  try {
+    [loans, placements] = await Promise.all([
+      prisma.sampleLoan.findMany({
+        where: { productId: id },
+        orderBy: { sentAt: "desc" },
+      }),
+      prisma.mediaPlacement.findMany({
+        where: { productId: id },
+        orderBy: { publishedAt: "desc" },
+      }),
+    ]);
+  } catch {
+    // Tables may not exist yet — silently fall back to empty arrays
+  }
+
+  const product = { ...baseProduct, loans, placements };
 
   return (
     <ProductTabs

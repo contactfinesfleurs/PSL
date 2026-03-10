@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   PRODUCT_FAMILIES,
   SEASONS,
   SIZE_RANGES,
+  COLOR_CODES,
+  generateReference,
 } from "@/lib/utils";
 import { TagInput } from "@/components/ui/TagInput";
 import { FileUpload } from "@/components/ui/FileUpload";
@@ -24,12 +26,24 @@ export default function NewProductPage() {
     sizeRange: "S-XL",
     sizes: [] as string[],
     materials: [] as string[],
-    colors: [] as string[],
+    colorPrimary: "",
+    colorSecondary: "",
     measurements: "",
-    reference: "",
     sketchPaths: [] as string[],
     techPackPath: null as string | null,
   });
+
+  // Live reference preview
+  const referencePreview = useMemo(() => {
+    if (!form.name.trim()) return null;
+    return generateReference({
+      name: form.name,
+      season: form.season,
+      year: form.year,
+      material: form.materials[0] ?? null,
+      colorPrimary: form.colorPrimary || null,
+    });
+  }, [form.name, form.season, form.year, form.materials, form.colorPrimary]);
 
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -51,9 +65,9 @@ export default function NewProductPage() {
         sizeRange: form.sizeRange,
         sizes: form.sizes,
         materials: form.materials,
-        colors: form.colors,
+        colorPrimary: form.colorPrimary || null,
+        colorSecondary: form.colorSecondary || null,
         measurements: form.measurements || null,
-        reference: form.reference || null,
         sketchPaths: form.sketchPaths,
         techPackPath: form.techPackPath,
       }),
@@ -69,19 +83,19 @@ export default function NewProductPage() {
   }
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="max-w-2xl space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Nouveau produit</h1>
+        <h1 className="text-3xl font-light text-gray-900">Nouveau produit</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Remplissez les informations de base. La référence SKU sera générée automatiquement.
+          Remplissez les informations de base. La référence et le SKU seront générés automatiquement.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6 bg-white rounded-2xl border border-gray-200 p-6">
         {/* Name */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Nom du produit <span className="text-red-500">*</span>
+          <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">
+            Nom du produit <span className="text-red-400">*</span>
           </label>
           <input
             type="text"
@@ -89,34 +103,37 @@ export default function NewProductPage() {
             value={form.name}
             onChange={(e) => set("name", e.target.value)}
             placeholder="ex. Veste Structurée Noire"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 bg-gray-50"
           />
         </div>
 
-        {/* Reference interne */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Référence interne (optionnel)
-          </label>
-          <input
-            type="text"
-            value={form.reference}
-            onChange={(e) => set("reference", e.target.value)}
-            placeholder="ex. REF-001"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-          />
-        </div>
+        {/* Reference preview */}
+        {referencePreview && (
+          <div className="flex items-center gap-4 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
+            <div>
+              <p className="text-[10px] uppercase tracking-wide text-gray-400 font-medium mb-0.5">
+                Référence générée
+              </p>
+              <p className="text-sm font-mono font-semibold text-gray-900">
+                {referencePreview}
+              </p>
+            </div>
+            <p className="text-xs text-gray-400 ml-auto text-right leading-tight">
+              Initiales · Saison · Matière · Couleur
+            </p>
+          </div>
+        )}
 
         {/* Family + Season + Year */}
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Famille <span className="text-red-500">*</span>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">
+              Famille <span className="text-red-400">*</span>
             </label>
             <select
               value={form.family}
               onChange={(e) => set("family", e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 bg-gray-50"
             >
               {PRODUCT_FAMILIES.map((f) => (
                 <option key={f.value} value={f.value}>
@@ -127,13 +144,13 @@ export default function NewProductPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Saison <span className="text-red-500">*</span>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">
+              Saison <span className="text-red-400">*</span>
             </label>
             <select
               value={form.season}
               onChange={(e) => set("season", e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 bg-gray-50"
             >
               {SEASONS.map((s) => (
                 <option key={s.value} value={s.value}>
@@ -144,8 +161,8 @@ export default function NewProductPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Année <span className="text-red-500">*</span>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">
+              Année <span className="text-red-400">*</span>
             </label>
             <input
               type="number"
@@ -153,20 +170,20 @@ export default function NewProductPage() {
               onChange={(e) => set("year", parseInt(e.target.value))}
               min={2020}
               max={2040}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 bg-gray-50"
             />
           </div>
         </div>
 
         {/* Size Range */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Gamme de tailles <span className="text-red-500">*</span>
+          <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">
+            Gamme de tailles <span className="text-red-400">*</span>
           </label>
           <select
             value={form.sizeRange}
             onChange={(e) => set("sizeRange", e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 bg-gray-50"
           >
             {SIZE_RANGES.map((s) => (
               <option key={s.value} value={s.value}>
@@ -178,7 +195,7 @@ export default function NewProductPage() {
 
         {/* Sizes */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">
             Tailles disponibles
           </label>
           <TagInput
@@ -193,7 +210,7 @@ export default function NewProductPage() {
 
         {/* Materials */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">
             Matières
           </label>
           <TagInput
@@ -201,24 +218,52 @@ export default function NewProductPage() {
             onChange={(v) => set("materials", v)}
             placeholder="ex. Soie, Laine, Cachemire"
           />
+          <p className="text-xs text-gray-400 mt-1">
+            La première matière est utilisée dans la référence
+          </p>
         </div>
 
         {/* Colors */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Coloris
-          </label>
-          <TagInput
-            value={form.colors}
-            onChange={(v) => set("colors", v)}
-            placeholder="ex. Noir, Ivoire, Rouge Sang"
-            colorMode
-          />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">
+              Couleur principale
+            </label>
+            <select
+              value={form.colorPrimary}
+              onChange={(e) => set("colorPrimary", e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 bg-gray-50"
+            >
+              <option value="">— Sélectionner</option>
+              {COLOR_CODES.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.code} — {c.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">
+              Couleur secondaire
+            </label>
+            <select
+              value={form.colorSecondary}
+              onChange={(e) => set("colorSecondary", e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 bg-gray-50"
+            >
+              <option value="">— Optionnel</option>
+              {COLOR_CODES.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.code} — {c.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Measurements */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">
             Mensurations / Notes techniques
           </label>
           <textarea
@@ -226,13 +271,13 @@ export default function NewProductPage() {
             onChange={(e) => set("measurements", e.target.value)}
             rows={3}
             placeholder="ex. Tour de poitrine : 86-92cm, Longueur dos : 68cm…"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"
+            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 bg-gray-50 resize-none"
           />
         </div>
 
         {/* Sketches */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">
             Croquis / Dessins techniques
           </label>
           <FileUpload
@@ -248,7 +293,7 @@ export default function NewProductPage() {
 
         {/* Tech Pack */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">
             Fiche technique (tech pack)
           </label>
           <FileUpload
@@ -263,18 +308,18 @@ export default function NewProductPage() {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-3 pt-2">
+        <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
           <button
             type="submit"
             disabled={saving || !form.name.trim()}
-            className="bg-purple-700 hover:bg-purple-800 disabled:opacity-50 text-white text-sm font-medium px-6 py-2 rounded-lg transition-colors"
+            className="bg-gray-900 hover:bg-gray-800 disabled:opacity-50 text-white text-sm font-medium px-6 py-2 rounded-xl transition-colors"
           >
             {saving ? "Création…" : "Créer le produit"}
           </button>
           <button
             type="button"
             onClick={() => router.back()}
-            className="text-sm text-gray-600 hover:text-gray-800"
+            className="text-sm text-gray-500 hover:text-gray-800"
           >
             Annuler
           </button>

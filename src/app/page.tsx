@@ -1,92 +1,108 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-
-export const dynamic = 'force-dynamic';
+import { getSession } from "@/lib/auth";
 import { formatDate } from "@/lib/utils";
-import { Package, Calendar, Tag, CheckCircle, Clock, AlertTriangle } from "lucide-react";
+import { Badge } from "@/components/ui/Badge";
+import {
+  Package,
+  Calendar,
+  Tag,
+  CheckCircle,
+  Clock,
+  AlertTriangle,
+} from "lucide-react";
+
+export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
+  const session = await getSession();
+  const profileId = session?.profileId ?? "";
+
   try {
     const [productCount, eventCount, campaignCount, validatedCount] =
       await Promise.all([
-        prisma.product.count(),
-        prisma.event.count(),
-        prisma.campaign.count(),
-        prisma.product.count({ where: { sampleStatus: "VALIDATED" } }),
+        prisma.product.count({ where: { profileId } }),
+        prisma.event.count({ where: { profileId } }),
+        prisma.campaign.count({ where: { profileId } }),
+        prisma.product.count({ where: { profileId, sampleStatus: "VALIDATED" } }),
       ]);
 
     const recentProducts = await prisma.product.findMany({
       take: 5,
       orderBy: { createdAt: "desc" },
+      where: { profileId },
       include: { samples: true },
     });
 
     const upcomingEvents = await prisma.event.findMany({
       take: 5,
       orderBy: { startAt: "asc" },
-      where: { startAt: { gte: new Date() }, status: { not: "CANCELLED" } },
+      where: { profileId, startAt: { gte: new Date() }, status: { not: "CANCELLED" } },
     });
 
     return (
-      <div className="space-y-8">
+      <div className="space-y-10">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Tableau de bord</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Vue d&apos;ensemble de vos produits et événements
+          <h1 className="text-5xl font-light text-gray-900 tracking-tight">
+            Vue d&apos;ensemble
+          </h1>
+          <p className="mt-2 text-sm text-gray-500">
+            Bienvenue sur PSL Studio
           </p>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-5 sm:grid-cols-4">
           <StatCard
             label="Produits"
             value={productCount}
-            icon={<Package className="h-5 w-5 text-purple-600" />}
+            icon={<Package className="h-5 w-5 text-gray-400" />}
             href="/products"
-            color="purple"
           />
           <StatCard
             label="Événements"
             value={eventCount}
-            icon={<Calendar className="h-5 w-5 text-blue-600" />}
+            icon={<Calendar className="h-5 w-5 text-gray-400" />}
             href="/events"
-            color="blue"
           />
           <StatCard
             label="Campagnes"
             value={campaignCount}
-            icon={<Tag className="h-5 w-5 text-pink-600" />}
+            icon={<Tag className="h-5 w-5 text-gray-400" />}
             href="/campaigns"
-            color="pink"
           />
           <StatCard
             label="Validés"
             value={validatedCount}
-            icon={<CheckCircle className="h-5 w-5 text-green-600" />}
+            icon={<CheckCircle className="h-5 w-5 text-gray-400" />}
             href="/products?status=VALIDATED"
-            color="green"
           />
         </div>
 
         {/* Recent Products & Upcoming Events */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Recent Products */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-              <h2 className="font-semibold text-gray-800">Produits récents</h2>
+          <div className="bg-white rounded-2xl border border-gray-200">
+            <div className="flex items-center justify-between px-6 py-4">
+              <h2 className="text-sm font-medium text-gray-900">
+                Produits récents
+              </h2>
               <Link
                 href="/products"
-                className="text-sm text-purple-600 hover:underline"
+                className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
               >
                 Voir tout
               </Link>
             </div>
-            <div className="divide-y divide-gray-50">
+            <div className="border-t border-gray-100 divide-y divide-gray-100">
               {recentProducts.length === 0 ? (
-                <p className="px-5 py-6 text-sm text-gray-400 text-center">
+                <p className="px-6 py-8 text-sm text-gray-400 text-center">
                   Aucun produit encore.{" "}
-                  <Link href="/products/new" className="text-purple-600 hover:underline">
+                  <Link
+                    href="/products/new"
+                    className="text-indigo-600 hover:underline"
+                  >
                     Créer le premier
                   </Link>
                 </p>
@@ -95,15 +111,17 @@ export default async function DashboardPage() {
                   <Link
                     key={product.id}
                     href={`/products/${product.id}`}
-                    className="flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors"
+                    className="flex items-center justify-between px-6 py-3.5 hover:bg-gray-50 transition-colors"
                   >
                     <div>
                       <p className="text-sm font-medium text-gray-900">
                         {product.name}
                       </p>
-                      <p className="text-xs text-gray-500">{product.sku}</p>
+                      <p className="text-xs text-gray-400 font-mono mt-0.5">
+                        {product.sku}
+                      </p>
                     </div>
-                    <StatusBadge status={product.sampleStatus} />
+                    <Badge status={product.sampleStatus} />
                   </Link>
                 ))
               )}
@@ -111,21 +129,26 @@ export default async function DashboardPage() {
           </div>
 
           {/* Upcoming Events */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-              <h2 className="font-semibold text-gray-800">Événements à venir</h2>
+          <div className="bg-white rounded-2xl border border-gray-200">
+            <div className="flex items-center justify-between px-6 py-4">
+              <h2 className="text-sm font-medium text-gray-900">
+                Événements à venir
+              </h2>
               <Link
                 href="/events"
-                className="text-sm text-purple-600 hover:underline"
+                className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
               >
                 Voir tout
               </Link>
             </div>
-            <div className="divide-y divide-gray-50">
+            <div className="border-t border-gray-100 divide-y divide-gray-100">
               {upcomingEvents.length === 0 ? (
-                <p className="px-5 py-6 text-sm text-gray-400 text-center">
+                <p className="px-6 py-8 text-sm text-gray-400 text-center">
                   Aucun événement à venir.{" "}
-                  <Link href="/events/new" className="text-purple-600 hover:underline">
+                  <Link
+                    href="/events/new"
+                    className="text-indigo-600 hover:underline"
+                  >
                     Créer un événement
                   </Link>
                 </p>
@@ -134,19 +157,19 @@ export default async function DashboardPage() {
                   <Link
                     key={event.id}
                     href={`/events/${event.id}`}
-                    className="flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors"
+                    className="flex items-center justify-between px-6 py-3.5 hover:bg-gray-50 transition-colors"
                   >
                     <div>
                       <p className="text-sm font-medium text-gray-900">
                         {event.name}
                       </p>
-                      <p className="text-xs text-gray-500">
-                        <Clock className="inline h-3 w-3 mr-1" />
+                      <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                        <Clock className="inline h-3 w-3" />
                         {formatDate(event.startAt)}
                         {event.location ? ` · ${event.location}` : ""}
                       </p>
                     </div>
-                    <EventStatusBadge status={event.status} />
+                    <Badge status={event.status} />
                   </Link>
                 ))
               )}
@@ -160,73 +183,58 @@ export default async function DashboardPage() {
     const missingEnv =
       !process.env.DATABASE_URL || !process.env.DATABASE_URL_UNPOOLED;
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Tableau de bord</h1>
+          <h1 className="text-5xl font-light text-gray-900 tracking-tight">
+            Vue d&apos;ensemble
+          </h1>
         </div>
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 flex gap-4">
-          <AlertTriangle className="h-6 w-6 text-yellow-500 flex-shrink-0 mt-0.5" />
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex gap-4">
+          <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
           <div>
-            <h2 className="font-semibold text-yellow-800 mb-1">
+            <h2 className="font-semibold text-amber-800 mb-1 text-sm">
               Connexion à la base de données impossible
             </h2>
             {missingEnv ? (
-              <p className="text-sm text-yellow-700">
-                Les variables d&apos;environnement{" "}
-                <code className="bg-yellow-100 px-1 rounded">DATABASE_URL</code> et{" "}
-                <code className="bg-yellow-100 px-1 rounded">DATABASE_URL_UNPOOLED</code>{" "}
-                ne sont pas configurées dans Vercel.
+              <p className="text-sm text-amber-700">
+                Les variables{" "}
+                <code className="bg-amber-100 px-1 rounded font-mono text-xs">
+                  DATABASE_URL
+                </code>{" "}
+                et{" "}
+                <code className="bg-amber-100 px-1 rounded font-mono text-xs">
+                  DATABASE_URL_UNPOOLED
+                </code>{" "}
+                ne sont pas configurées.
                 <br />
                 Allez dans{" "}
-                <strong>Vercel → Project Settings → Environment Variables</strong>{" "}
-                et ajoutez vos identifiants Neon PostgreSQL.
+                <strong>Vercel → Project Settings → Environment Variables</strong>.
               </p>
             ) : (
-              <p className="text-sm text-yellow-700">
-                La connexion à la base de données a échoué. Vérifiez vos
-                variables d&apos;environnement dans Vercel et que votre base Neon est
-                accessible.
+              <p className="text-sm text-amber-700">
+                La connexion à la base de données a échoué.
               </p>
             )}
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 opacity-40 pointer-events-none select-none">
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-            <div className="inline-flex p-2 rounded-lg bg-purple-50">
-              <Package className="h-5 w-5 text-purple-600" />
+        <div className="grid grid-cols-2 gap-5 sm:grid-cols-4 opacity-40 pointer-events-none select-none">
+          {[
+            { label: "Produits", icon: Package },
+            { label: "Événements", icon: Calendar },
+            { label: "Campagnes", icon: Tag },
+            { label: "Validés", icon: CheckCircle },
+          ].map(({ label, icon: Icon }) => (
+            <div
+              key={label}
+              className="bg-white rounded-2xl border border-gray-200 p-6"
+            >
+              <Icon className="h-5 w-5 text-gray-400" />
+              <div className="mt-4">
+                <p className="text-4xl font-light text-gray-900">—</p>
+                <p className="text-sm text-gray-500 mt-1">{label}</p>
+              </div>
             </div>
-            <div className="mt-3">
-              <p className="text-2xl font-bold text-gray-900">—</p>
-              <p className="text-sm text-gray-500 mt-0.5">Produits</p>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-            <div className="inline-flex p-2 rounded-lg bg-blue-50">
-              <Calendar className="h-5 w-5 text-blue-600" />
-            </div>
-            <div className="mt-3">
-              <p className="text-2xl font-bold text-gray-900">—</p>
-              <p className="text-sm text-gray-500 mt-0.5">Événements</p>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-            <div className="inline-flex p-2 rounded-lg bg-pink-50">
-              <Tag className="h-5 w-5 text-pink-600" />
-            </div>
-            <div className="mt-3">
-              <p className="text-2xl font-bold text-gray-900">—</p>
-              <p className="text-sm text-gray-500 mt-0.5">Campagnes</p>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-            <div className="inline-flex p-2 rounded-lg bg-green-50">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-            </div>
-            <div className="mt-3">
-              <p className="text-2xl font-bold text-gray-900">—</p>
-              <p className="text-sm text-gray-500 mt-0.5">Validés</p>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
     );
@@ -238,73 +246,21 @@ function StatCard({
   value,
   icon,
   href,
-  color,
 }: {
   label: string;
   value: number;
   icon: React.ReactNode;
   href: string;
-  color: string;
 }) {
-  const colorMap: Record<string, string> = {
-    purple: "bg-purple-50",
-    blue: "bg-blue-50",
-    pink: "bg-pink-50",
-    green: "bg-green-50",
-  };
   return (
     <Link href={href}>
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 hover:shadow-md transition-shadow">
-        <div className={`inline-flex p-2 rounded-lg ${colorMap[color]}`}>
-          {icon}
-        </div>
-        <div className="mt-3">
-          <p className="text-2xl font-bold text-gray-900">{value}</p>
-          <p className="text-sm text-gray-500 mt-0.5">{label}</p>
+      <div className="bg-white rounded-2xl border border-gray-200 p-6 hover:border-gray-300 transition-colors">
+        {icon}
+        <div className="mt-4">
+          <p className="text-4xl font-light text-gray-900">{value}</p>
+          <p className="text-sm text-gray-500 mt-1">{label}</p>
         </div>
       </div>
     </Link>
-  );
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    PENDING: "bg-yellow-100 text-yellow-700",
-    VALIDATED: "bg-green-100 text-green-700",
-    NOT_VALIDATED: "bg-red-100 text-red-700",
-  };
-  const labels: Record<string, string> = {
-    PENDING: "En attente",
-    VALIDATED: "Validé",
-    NOT_VALIDATED: "Non validé",
-  };
-  return (
-    <span
-      className={`text-xs font-medium px-2 py-0.5 rounded-full ${styles[status] ?? "bg-gray-100 text-gray-600"}`}
-    >
-      {labels[status] ?? status}
-    </span>
-  );
-}
-
-function EventStatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    DRAFT: "bg-gray-100 text-gray-600",
-    CONFIRMED: "bg-blue-100 text-blue-700",
-    COMPLETED: "bg-green-100 text-green-700",
-    CANCELLED: "bg-red-100 text-red-700",
-  };
-  const labels: Record<string, string> = {
-    DRAFT: "Brouillon",
-    CONFIRMED: "Confirmé",
-    COMPLETED: "Terminé",
-    CANCELLED: "Annulé",
-  };
-  return (
-    <span
-      className={`text-xs font-medium px-2 py-0.5 rounded-full ${styles[status] ?? "bg-gray-100 text-gray-600"}`}
-    >
-      {labels[status] ?? status}
-    </span>
   );
 }

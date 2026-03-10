@@ -1,8 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle, XCircle, FileText, Save } from "lucide-react";
+import {
+  CheckCircle,
+  XCircle,
+  FileText,
+  Save,
+  RotateCcw,
+  Package,
+  Truck,
+  Search,
+} from "lucide-react";
 import { FileUpload } from "@/components/ui/FileUpload";
 import { TagInput } from "@/components/ui/TagInput";
 
@@ -15,6 +24,15 @@ type Sample = {
   packshotPaths: string | null;
   definitiveColors: string | null;
   definitiveMaterials: string | null;
+  // Supplier
+  supplierName: string | null;
+  supplierAddress: string | null;
+  supplierCountry: string | null;
+  // Logistics
+  shippingDate: Date | null;
+  trackingNumber: string | null;
+  trackingStatus: string | null;
+  receivedAt: Date | null;
 } | null;
 
 type Product = {
@@ -36,6 +54,19 @@ const parse = (s: string | null): string[] => {
   }
 };
 
+const toDateInput = (d: Date | null): string =>
+  d ? new Date(d).toISOString().split("T")[0] : "";
+
+const TRACKING_STATUS_STYLES: Record<string, { label: string; cls: string }> = {
+  InTransit:   { label: "En transit",      cls: "bg-blue-50 text-blue-700 border-blue-200" },
+  Delivered:   { label: "Livré",           cls: "bg-green-50 text-green-700 border-green-200" },
+  PickUp:      { label: "Prêt à retirer",  cls: "bg-indigo-50 text-indigo-700 border-indigo-200" },
+  Undelivered: { label: "Non livré",       cls: "bg-orange-50 text-orange-700 border-orange-200" },
+  Alert:       { label: "Alerte",          cls: "bg-orange-50 text-orange-700 border-orange-200" },
+  Expired:     { label: "Expiré",          cls: "bg-red-50 text-red-700 border-red-200" },
+  NotFound:    { label: "Introuvable",     cls: "bg-gray-100 text-gray-500 border-gray-200" },
+};
+
 export function SampleTab({
   product,
   sample,
@@ -46,18 +77,37 @@ export function SampleTab({
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [validating, setValidating] = useState(false);
+  const [tracking, setTracking] = useState(false);
+
+  const samplePhotoPaths = useMemo(() => parse(sample?.samplePhotoPaths ?? null), [sample?.samplePhotoPaths]);
+  const detailPhotoPaths = useMemo(() => parse(sample?.detailPhotoPaths ?? null), [sample?.detailPhotoPaths]);
+  const reviewPhotoPaths = useMemo(() => parse(sample?.reviewPhotoPaths ?? null), [sample?.reviewPhotoPaths]);
+  const packshotPaths = useMemo(() => parse(sample?.packshotPaths ?? null), [sample?.packshotPaths]);
+  const definitiveColors = useMemo(() => parse(sample?.definitiveColors ?? null), [sample?.definitiveColors]);
+  const definitiveMaterials = useMemo(() => parse(sample?.definitiveMaterials ?? null), [sample?.definitiveMaterials]);
+  const metaTags = useMemo(() => parse(product.metaTags), [product.metaTags]);
 
   const [form, setForm] = useState({
-    samplePhotoPaths: parse(sample?.samplePhotoPaths ?? null),
-    detailPhotoPaths: parse(sample?.detailPhotoPaths ?? null),
-    reviewPhotoPaths: parse(sample?.reviewPhotoPaths ?? null),
+    // Supplier
+    supplierName: sample?.supplierName ?? "",
+    supplierAddress: sample?.supplierAddress ?? "",
+    supplierCountry: sample?.supplierCountry ?? "",
+    // Logistics
+    shippingDate: toDateInput(sample?.shippingDate ?? null),
+    trackingNumber: sample?.trackingNumber ?? "",
+    trackingStatus: sample?.trackingStatus ?? "",
+    receivedAt: toDateInput(sample?.receivedAt ?? null),
+    // Sample photos & notes
+    samplePhotoPaths,
+    detailPhotoPaths,
+    reviewPhotoPaths,
     reviewNotes: sample?.reviewNotes ?? "",
     // Final product fields (shown after validation)
-    packshotPaths: parse(sample?.packshotPaths ?? null),
-    definitiveColors: parse(sample?.definitiveColors ?? null),
-    definitiveMaterials: parse(sample?.definitiveMaterials ?? null),
+    packshotPaths,
+    definitiveColors,
+    definitiveMaterials,
     description: product.description ?? "",
-    metaTags: parse(product.metaTags),
+    metaTags,
     plannedLaunchAt: product.plannedLaunchAt
       ? new Date(product.plannedLaunchAt).toISOString().split("T")[0]
       : "",
@@ -73,6 +123,11 @@ export function SampleTab({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         sampleId: sample?.id,
+        supplierName: form.supplierName || null,
+        supplierAddress: form.supplierAddress || null,
+        supplierCountry: form.supplierCountry || null,
+        shippingDate: form.shippingDate || null,
+        trackingNumber: form.trackingNumber || null,
         samplePhotoPaths: form.samplePhotoPaths,
         detailPhotoPaths: form.detailPhotoPaths,
         reviewPhotoPaths: form.reviewPhotoPaths,
@@ -101,9 +156,39 @@ export function SampleTab({
     router.refresh();
   }
 
-  async function validate(status: "VALIDATED" | "NOT_VALIDATED") {
+  async function checkTracking() {
+    if (!form.trackingNumber || !sample?.id) return;
+    setTracking(true);
+
+    // Save tracking number first so the API has the sampleId
+    await fetch(`/api/products/${product.id}/sample`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sampleId: sample.id,
+        trackingNumber: form.trackingNumber,
+      }),
+    });
+
+    const res = await fetch("/api/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ trackingNumber: form.trackingNumber, sampleId: sample.id }),
+    });
+
+    if (res.ok) {
+      const data = await res.json() as { trackingStatus: string; receivedAt: string | null };
+      set("trackingStatus", data.trackingStatus ?? "");
+      if (data.receivedAt) {
+        set("receivedAt", new Date(data.receivedAt).toISOString().split("T")[0]);
+      }
+    }
+
+    setTracking(false);
+  }
+
+  async function validate(status: "VALIDATED" | "NOT_VALIDATED" | "PENDING") {
     setValidating(true);
-    // Save sample first
     await fetch(`/api/products/${product.id}/sample`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -116,7 +201,6 @@ export function SampleTab({
       }),
     });
 
-    // Update product status
     await fetch(`/api/products/${product.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -132,6 +216,7 @@ export function SampleTab({
   }
 
   const isValidated = product.sampleStatus === "VALIDATED";
+  const statusInfo = TRACKING_STATUS_STYLES[form.trackingStatus] ?? null;
 
   return (
     <div className="max-w-2xl space-y-8">
@@ -170,6 +255,134 @@ export function SampleTab({
           )}
         </div>
       )}
+
+      {/* ── Fournisseur & Logistique ───────────────────────────────────────── */}
+      <section className="rounded-xl border border-gray-200 overflow-hidden">
+        {/* Supplier block */}
+        <div className="px-5 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-2 mb-4">
+            <Package className="h-4 w-4 text-gray-400" />
+            <h2 className="text-sm font-semibold text-gray-800 uppercase tracking-wide">
+              Fournisseur
+            </h2>
+          </div>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">
+                Nom
+              </label>
+              <input
+                type="text"
+                value={form.supplierName}
+                onChange={(e) => set("supplierName", e.target.value)}
+                placeholder="ex. Atelier Morandi"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">
+                Adresse
+              </label>
+              <input
+                type="text"
+                value={form.supplierAddress}
+                onChange={(e) => set("supplierAddress", e.target.value)}
+                placeholder="ex. Via Roma 14, 20121 Milano"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">
+                Pays
+              </label>
+              <input
+                type="text"
+                value={form.supplierCountry}
+                onChange={(e) => set("supplierCountry", e.target.value)}
+                placeholder="ex. Italie"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Logistics block */}
+        <div className="px-5 py-4 bg-gray-50">
+          <div className="flex items-center gap-2 mb-4">
+            <Truck className="h-4 w-4 text-gray-400" />
+            <h2 className="text-sm font-semibold text-gray-800 uppercase tracking-wide">
+              Logistique
+            </h2>
+          </div>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">
+                Date d&apos;expédition
+              </label>
+              <input
+                type="date"
+                value={form.shippingDate}
+                onChange={(e) => set("shippingDate", e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">
+                Numéro de suivi
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={form.trackingNumber}
+                  onChange={(e) => set("trackingNumber", e.target.value)}
+                  placeholder="ex. 1Z999AA10123456784"
+                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-gray-300"
+                />
+                <button
+                  type="button"
+                  onClick={checkTracking}
+                  disabled={tracking || !form.trackingNumber}
+                  className="inline-flex items-center gap-1.5 border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-40 text-gray-600 text-xs font-medium px-3 py-2 rounded-lg transition-colors whitespace-nowrap"
+                >
+                  <Search className="h-3.5 w-3.5" />
+                  {tracking ? "Vérification…" : "Vérifier"}
+                </button>
+              </div>
+
+              {/* Tracking status badge */}
+              {statusInfo && (
+                <div className={`mt-2 inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border ${statusInfo.cls}`}>
+                  <span className="h-1.5 w-1.5 rounded-full bg-current opacity-60" />
+                  {statusInfo.label}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">
+                Date de réception
+                {form.trackingStatus === "Delivered" && (
+                  <span className="ml-2 text-[10px] text-green-600 font-normal">
+                    (renseignée automatiquement via 17track)
+                  </span>
+                )}
+              </label>
+              <input
+                type="date"
+                value={form.receivedAt}
+                onChange={(e) => set("receivedAt", e.target.value)}
+                readOnly={form.trackingStatus === "Delivered" && !!form.receivedAt}
+                className={`border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 ${
+                  form.trackingStatus === "Delivered" && form.receivedAt
+                    ? "bg-green-50 border-green-200 text-green-800 cursor-default"
+                    : ""
+                }`}
+              />
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Sample Photos */}
       <section>
@@ -233,7 +446,7 @@ export function SampleTab({
             onChange={(e) => set("reviewNotes", e.target.value)}
             rows={5}
             placeholder="Décrivez précisément les corrections à apporter…"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 resize-none"
           />
         </div>
       </section>
@@ -300,7 +513,7 @@ export function SampleTab({
               onChange={(e) => set("description", e.target.value)}
               rows={4}
               placeholder="Description commerciale du produit…"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 resize-none"
             />
           </div>
 
@@ -325,7 +538,7 @@ export function SampleTab({
               type="date"
               value={form.plannedLaunchAt}
               onChange={(e) => set("plannedLaunchAt", e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
             />
           </div>
         </section>
@@ -361,6 +574,17 @@ export function SampleTab({
               NON VALIDÉ
             </button>
           </>
+        )}
+
+        {isValidated && (
+          <button
+            onClick={() => validate("PENDING")}
+            disabled={validating}
+            className="inline-flex items-center gap-2 border border-gray-300 text-gray-600 hover:border-gray-400 hover:text-gray-800 disabled:opacity-50 text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+          >
+            <RotateCcw className="h-4 w-4" />
+            Remettre en attente
+          </button>
         )}
 
         {product.sampleStatus === "NOT_VALIDATED" && (
