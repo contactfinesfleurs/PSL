@@ -50,6 +50,14 @@ export function isRateLimited(ip: string): boolean {
 
   record.timestamps.push(now);
   store.set(ip, record);
+
+  // Cleanup: remove entries whose entire timestamp list has expired to prevent unbounded growth.
+  for (const [key, rec] of store.entries()) {
+    if (rec.timestamps.every((t) => t <= windowStart)) {
+      store.delete(key);
+    }
+  }
+
   return false;
 }
 
