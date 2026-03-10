@@ -72,6 +72,14 @@ export async function PATCH(
     if (!result.success) return result.response;
     const body = result.data;
 
+    // Verify the referenced event belongs to the same profile (prevents cross-tenant linking)
+    if (body.eventId) {
+      const event = await prisma.event.findFirst({
+        where: { id: body.eventId, profileId, deletedAt: null },
+      });
+      if (!event) return NextResponse.json({ error: "Événement introuvable" }, { status: 404 });
+    }
+
     const campaign = await prisma.campaign.update({
       where: { id },
       data: {

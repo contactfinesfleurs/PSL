@@ -3,11 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { parseBodyJson, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 import { logAudit } from "@/lib/audit";
+import { LOAN_STATUS_VALUES } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
 const LoanPatchSchema = z.object({
-  status: z.enum(["SENT", "RETURNED", "LOST"]).optional(),
+  status: z.enum(LOAN_STATUS_VALUES).optional(),
   returnedAt: z.string().datetime().nullable().optional(),
   dueAt: z.string().datetime().nullable().optional(),
   notes: z.string().max(1000).nullable().optional(),

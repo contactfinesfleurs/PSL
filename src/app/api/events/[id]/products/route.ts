@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 const EventProductSchema = z.object({
   productId: z.string().min(1),
   notes: z.string().nullable().optional(),
-  look: z.string().nullable().optional(),
+  look: z.number().int().nullable().optional(),
 });
 
 const EventProductDeleteSchema = z.object({

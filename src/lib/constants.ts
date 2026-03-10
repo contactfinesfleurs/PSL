@@ -65,6 +65,7 @@ export const EVENT_TYPE_VALUES = ["SHOW", "PRESENTATION", "LAUNCH", "PRESS", "TR
 export const GUEST_CATEGORY_VALUES = ["VIP", "PRESS", "BUYER", "INFLUENCER", "INDUSTRY", "GUEST"] as const;
 export const RSVP_STATUS_VALUES = ["INVITED", "CONFIRMED", "DECLINED", "WAITLIST"] as const;
 export const LOAN_PURPOSE_VALUES = ["EDITORIAL", "PRESS", "EVENT", "SHOWROOM", "INFLUENCER", "CELEBRITY"] as const;
+export const LOAN_STATUS_VALUES = ["SENT", "RETURNED", "LOST"] as const;
 export const PLACEMENT_TYPE_VALUES = ["PRINT", "DIGITAL", "SOCIAL", "TV", "PODCAST"] as const;
 
 // ─── Color codes ──────────────────────────────────────────────────────────────
