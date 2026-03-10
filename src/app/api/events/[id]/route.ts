@@ -25,6 +25,9 @@ export async function GET(
   if (!profileId) return unauthorizedResponse();
 
   const { id } = await params;
+  if (!id || typeof id !== 'string' || id.trim() === '') {
+    return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+  }
   const event = await prisma.event.findUnique({
     where: { id, profileId, deletedAt: null },
     include: {
@@ -48,6 +51,9 @@ export async function PATCH(
   if (!profileId) return unauthorizedResponse();
 
   const { id } = await params;
+  if (!id || typeof id !== 'string' || id.trim() === '') {
+    return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+  }
 
   const existing = await prisma.event.findUnique({ where: { id, profileId, deletedAt: null } });
   if (!existing) {
@@ -87,6 +93,9 @@ export async function DELETE(
   if (!profileId) return unauthorizedResponse();
 
   const { id } = await params;
+  if (!id || typeof id !== 'string' || id.trim() === '') {
+    return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+  }
 
   const existing = await prisma.event.findUnique({ where: { id, profileId, deletedAt: null } });
   if (!existing) {

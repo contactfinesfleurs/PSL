@@ -50,7 +50,7 @@ export async function PATCH(
 
   const { id } = await params;
 
-  const existing = await prisma.campaign.findUnique({ where: { id, profileId } });
+  const existing = await prisma.campaign.findUnique({ where: { id, profileId, deletedAt: null } });
   if (!existing) {
     return NextResponse.json({ error: "Campagne introuvable" }, { status: 404 });
   }
@@ -92,7 +92,7 @@ export async function DELETE(
 
   const { id } = await params;
 
-  const existing = await prisma.campaign.findUnique({ where: { id, profileId } });
+  const existing = await prisma.campaign.findUnique({ where: { id, profileId, deletedAt: null } });
   if (!existing) {
     return NextResponse.json({ error: "Campagne introuvable" }, { status: 404 });
   }
