@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { parseBodyJson, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 import { logAudit } from "@/lib/audit";
+import { deleteStoredFile } from "@/lib/storage";
+import { safeParseArray } from "@/lib/formatters";
 
 export const dynamic = "force-dynamic";
 
@@ -81,6 +83,16 @@ export async function PATCH(
     const result = await parseBodyJson(req, ProductPatchSchema);
     if (!result.success) return result.response;
     const body = result.data;
+
+    // Delete orphaned files when paths are removed from arrays or replaced
+    if (body.sketchPaths !== undefined) {
+      const oldPaths = safeParseArray(existing.sketchPaths);
+      const newSet = new Set(body.sketchPaths ?? []);
+      await Promise.all(oldPaths.filter((p) => !newSet.has(p)).map(deleteStoredFile));
+    }
+    if (body.techPackPath !== undefined && existing.techPackPath && body.techPackPath !== existing.techPackPath) {
+      await deleteStoredFile(existing.techPackPath);
+    }
 
     const product = await prisma.product.update({
       where: { id },

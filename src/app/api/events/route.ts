@@ -2,17 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { parseBodyJson, validateEnum, getProfileId, unauthorizedResponse, parsePagination } from "@/lib/api-helpers";
+import { EVENT_STATUS_VALUES, EVENT_TYPE_VALUES } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
-
-const EVENT_STATUSES = ["DRAFT", "CONFIRMED", "COMPLETED", "CANCELLED"] as const;
-const EVENT_TYPES = ["SHOW", "PRESENTATION", "LAUNCH", "PRESS", "TRADE-SHOW", "OTHER"] as const;
 
 const EventCreateSchema = z.object({
   name: z.string().min(1).max(200),
   description: z.string().max(2000).optional().nullable(),
-  type: z.enum(EVENT_TYPES),
-  status: z.enum(EVENT_STATUSES).default("DRAFT"),
+  type: z.enum(EVENT_TYPE_VALUES),
+  status: z.enum(EVENT_STATUS_VALUES).default("DRAFT"),
   startAt: z.string().datetime(),
   endAt: z.string().datetime().optional().nullable(),
   location: z.string().max(500).optional().nullable(),
@@ -25,8 +23,8 @@ export async function GET(req: NextRequest) {
     if (!profileId) return unauthorizedResponse();
 
     const { searchParams } = new URL(req.url);
-    const status = validateEnum(searchParams.get("status"), EVENT_STATUSES);
-    const type = validateEnum(searchParams.get("type"), EVENT_TYPES);
+    const status = validateEnum(searchParams.get("status"), EVENT_STATUS_VALUES);
+    const type = validateEnum(searchParams.get("type"), EVENT_TYPE_VALUES);
     const { skip, take, page, limit } = parsePagination(searchParams);
 
     const where = {

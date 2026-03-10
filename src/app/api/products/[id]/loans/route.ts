@@ -2,17 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { parseBodyJson, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
+import { LOAN_PURPOSE_VALUES } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
-
-const LOAN_PURPOSES = ["EDITORIAL", "PRESS", "EVENT", "SHOWROOM", "INFLUENCER", "CELEBRITY"] as const;
 
 const LoanCreateSchema = z.object({
   sampleId: z.string().min(1),
   contactName: z.string().min(1).max(200),
   contactRole: z.string().max(100).optional().nullable(),
   publication: z.string().max(200).optional().nullable(),
-  purpose: z.enum(LOAN_PURPOSES),
+  purpose: z.enum(LOAN_PURPOSE_VALUES),
   sentAt: z.string().datetime().optional(),
   dueAt: z.string().datetime().optional().nullable(),
   notes: z.string().max(1000).optional().nullable(),

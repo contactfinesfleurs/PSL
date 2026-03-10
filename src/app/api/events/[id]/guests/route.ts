@@ -2,11 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { parseBodyJson, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
+import { GUEST_CATEGORY_VALUES, RSVP_STATUS_VALUES } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
-
-const GUEST_CATEGORIES = ["VIP", "PRESS", "BUYER", "INFLUENCER", "INDUSTRY", "GUEST"] as const;
-const RSVP_STATUSES = ["INVITED", "CONFIRMED", "DECLINED", "WAITLIST"] as const;
 
 const GuestCreateSchema = z.object({
   firstName: z.string().min(1).max(100),
@@ -16,9 +14,9 @@ const GuestCreateSchema = z.object({
   instagram: z.string().max(100).optional().nullable(),
   company: z.string().max(200).optional().nullable(),
   title: z.string().max(200).optional().nullable(),
-  category: z.enum(GUEST_CATEGORIES).default("GUEST"),
+  category: z.enum(GUEST_CATEGORY_VALUES).default("GUEST"),
   invitedBy: z.string().max(200).optional().nullable(),
-  rsvpStatus: z.enum(RSVP_STATUSES).default("INVITED"),
+  rsvpStatus: z.enum(RSVP_STATUS_VALUES).default("INVITED"),
   tableNumber: z.string().max(20).optional().nullable(),
   seatNumber: z.string().max(20).optional().nullable(),
   notes: z.string().max(500).optional().nullable(),
