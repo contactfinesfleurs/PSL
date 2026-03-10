@@ -8,6 +8,27 @@ datasource db {
   directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
+// ─── PROFILE ROLE ─────────────────────────────────────────────────────────────
+
+enum ProfileRole {
+  SUPER_ADMIN
+  ADMIN
+  MEMBER
+}
+
+// ─── TEAM ─────────────────────────────────────────────────────────────────────
+
+model Team {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  name        String
+  description String?
+
+  members Profile[]
+}
+
 // ─── PROFILE (AUTH) ───────────────────────────────────────────────────────────
 
 model Profile {
@@ -19,9 +40,16 @@ model Profile {
   email        String @unique
   passwordHash String
 
+  role   ProfileRole @default(MEMBER)
+  teamId String?
+  team   Team?       @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
   products  Product[]
   events    Event[]
   campaigns Campaign[]
+
+  @@index([role])
+  @@index([teamId])
 }
 
 // ─── PRODUCT ─────────────────────────────────────────────────────────────────

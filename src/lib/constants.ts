@@ -67,6 +67,7 @@ export const RSVP_STATUS_VALUES = ["INVITED", "CONFIRMED", "DECLINED", "WAITLIST
 export const LOAN_PURPOSE_VALUES = ["EDITORIAL", "PRESS", "EVENT", "SHOWROOM", "INFLUENCER", "CELEBRITY"] as const;
 export const LOAN_STATUS_VALUES = ["SENT", "RETURNED", "LOST"] as const;
 export const PLACEMENT_TYPE_VALUES = ["PRINT", "DIGITAL", "SOCIAL", "TV", "PODCAST"] as const;
+export const PROFILE_ROLE_VALUES = ["SUPER_ADMIN", "ADMIN", "MEMBER"] as const;
 
 // ─── Color codes ──────────────────────────────────────────────────────────────
 

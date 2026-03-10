@@ -10,35 +10,47 @@ import {
   BookOpen,
   LogOut,
   User,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const sections = [
-  {
-    label: "GÉNÉRAL",
-    items: [
-      { name: "Vue d'ensemble", href: "/", icon: LayoutDashboard },
-    ],
-  },
-  {
-    label: "CATALOGUE",
-    items: [
-      { name: "Produits", href: "/products", icon: Package },
-      { name: "Look Book", href: "/lookbook", icon: BookOpen },
-      { name: "Événements", href: "/events", icon: Calendar },
-      { name: "Campagnes", href: "/campaigns", icon: Megaphone },
-    ],
-  },
-];
 
 type SidebarProps = {
   userName: string;
   userEmail: string;
+  userRole: string | null;
 };
 
-export function Sidebar({ userName, userEmail }: SidebarProps) {
+export function Sidebar({ userName, userEmail, userRole }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+
+  const isAdmin = userRole === "SUPER_ADMIN" || userRole === "ADMIN";
+
+  const sections = [
+    {
+      label: "GÉNÉRAL",
+      items: [
+        { name: "Vue d'ensemble", href: "/", icon: LayoutDashboard },
+      ],
+    },
+    {
+      label: "CATALOGUE",
+      items: [
+        { name: "Produits", href: "/products", icon: Package },
+        { name: "Look Book", href: "/lookbook", icon: BookOpen },
+        { name: "Événements", href: "/events", icon: Calendar },
+        { name: "Campagnes", href: "/campaigns", icon: Megaphone },
+      ],
+    },
+    ...(isAdmin
+      ? [{
+          label: "ADMINISTRATION",
+          items: [
+            { name: "Administration", href: "/admin", icon: ShieldCheck },
+          ],
+        }]
+      : []),
+  ];
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
