@@ -59,7 +59,24 @@ export function safeParseArray(raw: string | null | undefined): string[] {
 
 // ─── URL validation ───────────────────────────────────────────────────────────
 
-import { isStoredPath, isLegacyPublicBlobUrl } from "@/lib/storage";
+// Inlined from storage.ts to avoid pulling `fs/promises` into the client bundle.
+function isStoredPath(s: string): boolean {
+  return s.startsWith("/api/blob?url=") || s.startsWith("/api/files/");
+}
+
+// @deprecated: remove after running blob:migrate in production
+function isLegacyPublicBlobUrl(s: string): boolean {
+  try {
+    const { protocol, hostname } = new URL(s);
+    return (
+      protocol === "https:" &&
+      (hostname.endsWith(".vercel-storage.com") ||
+        hostname.endsWith(".blob.vercel-storage.com"))
+    );
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Returns true only for image URLs that are safe to embed in generated HTML.
