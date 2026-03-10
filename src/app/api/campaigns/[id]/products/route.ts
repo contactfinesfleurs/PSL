@@ -18,65 +18,89 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const profileId = getProfileId(req);
-  if (!profileId) return unauthorizedResponse();
+  try {
+    const profileId = getProfileId(req);
+    if (!profileId) return unauthorizedResponse();
 
-  const { id } = await params;
+    const { id } = await params;
+    if (!id || typeof id !== 'string' || id.trim() === '') {
+      return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+    }
 
-  // Verify campaign ownership
-  const campaign = await prisma.campaign.findFirst({
-    where: { id, profileId, deletedAt: null },
-  });
-  if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const result = await parseBodyJson(req, CampaignProductSchema);
+    if (!result.success) return result.response;
+    const body = result.data;
 
-  const result = await parseBodyJson(req, CampaignProductSchema);
-  if (!result.success) return result.response;
-  const body = result.data;
+    const cp = await prisma.$transaction(async (tx) => {
+      // Verify campaign ownership
+      const campaign = await tx.campaign.findFirst({
+        where: { id, profileId, deletedAt: null },
+      });
+      if (!campaign) return null;
 
-  const cp = await prisma.campaignProduct.upsert({
-    where: {
-      campaignId_productId: {
-        campaignId: id,
-        productId: body.productId,
-      },
-    },
-    create: {
-      campaignId: id,
-      productId: body.productId,
-      notes: body.notes ?? null,
-    },
-    update: {
-      notes: body.notes ?? null,
-    },
-  });
+      return tx.campaignProduct.upsert({
+        where: {
+          campaignId_productId: {
+            campaignId: id,
+            productId: body.productId,
+          },
+        },
+        create: {
+          campaignId: id,
+          productId: body.productId,
+          notes: body.notes ?? null,
+        },
+        update: {
+          notes: body.notes ?? null,
+        },
+      });
+    });
 
-  return NextResponse.json(cp, { status: 201 });
+    if (!cp) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    return NextResponse.json(cp, { status: 201 });
+  } catch (error) {
+    console.error('[POST /api/campaigns/[id]/products]', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }
 
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const profileId = getProfileId(req);
-  if (!profileId) return unauthorizedResponse();
+  try {
+    const profileId = getProfileId(req);
+    if (!profileId) return unauthorizedResponse();
 
-  const { id } = await params;
+    const { id } = await params;
+    if (!id || typeof id !== 'string' || id.trim() === '') {
+      return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+    }
 
-  // Verify campaign ownership
-  const campaign = await prisma.campaign.findFirst({
-    where: { id, profileId, deletedAt: null },
-  });
-  if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const result = await parseBodyJson(req, CampaignProductDeleteSchema);
+    if (!result.success) return result.response;
+    const { productId } = result.data;
 
-  const result = await parseBodyJson(req, CampaignProductDeleteSchema);
-  if (!result.success) return result.response;
-  const { productId } = result.data;
+    const deleted = await prisma.$transaction(async (tx) => {
+      // Verify campaign ownership
+      const campaign = await tx.campaign.findFirst({
+        where: { id, profileId, deletedAt: null },
+      });
+      if (!campaign) return null;
 
-  await prisma.campaignProduct.delete({
-    where: {
-      campaignId_productId: { campaignId: id, productId },
-    },
-  });
+      return tx.campaignProduct.delete({
+        where: {
+          campaignId_productId: { campaignId: id, productId },
+        },
+      });
+    });
 
-  return NextResponse.json({ success: true });
+    if (!deleted) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('[DELETE /api/campaigns/[id]/products]', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

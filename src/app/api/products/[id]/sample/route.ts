@@ -29,6 +29,9 @@ export async function GET(
   if (!profileId) return unauthorizedResponse();
 
   const { id } = await params;
+  if (!id || typeof id !== 'string' || id.trim() === '') {
+    return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+  }
 
   // Verify product ownership
   const product = await prisma.product.findFirst({
@@ -50,6 +53,9 @@ export async function PUT(
   if (!profileId) return unauthorizedResponse();
 
   const { id } = await params;
+  if (!id || typeof id !== 'string' || id.trim() === '') {
+    return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+  }
 
   // Verify product ownership
   const product = await prisma.product.findFirst({
@@ -134,6 +140,9 @@ export async function POST(
   if (!profileId) return unauthorizedResponse();
 
   const { id } = await params;
+  if (!id || typeof id !== 'string' || id.trim() === '') {
+    return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+  }
 
   // Verify product ownership
   const product = await prisma.product.findFirst({

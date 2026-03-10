@@ -31,108 +31,123 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const profileId = getProfileId(req);
-  if (!profileId) return unauthorizedResponse();
+  try {
+    const profileId = getProfileId(req);
+    if (!profileId) return unauthorizedResponse();
 
-  const { id } = await params;
-  if (!id || typeof id !== 'string' || id.trim() === '') {
-    return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+    const { id } = await params;
+    if (!id || typeof id !== 'string' || id.trim() === '') {
+      return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+    }
+    const product = await prisma.product.findUnique({
+      where: { id, profileId, deletedAt: null },
+      include: {
+        samples: true,
+        campaigns: { include: { campaign: true } },
+        events: { include: { event: true } },
+      },
+    });
+
+    if (!product) {
+      return NextResponse.json({ error: "Produit introuvable" }, { status: 404 });
+    }
+
+    return NextResponse.json(product);
+  } catch (error) {
+    console.error('[GET /api/products/[id]]', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-  const product = await prisma.product.findUnique({
-    where: { id, profileId, deletedAt: null },
-    include: {
-      samples: true,
-      campaigns: { include: { campaign: true } },
-      events: { include: { event: true } },
-    },
-  });
-
-  if (!product) {
-    return NextResponse.json({ error: "Produit introuvable" }, { status: 404 });
-  }
-
-  return NextResponse.json(product);
 }
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const profileId = getProfileId(req);
-  if (!profileId) return unauthorizedResponse();
+  try {
+    const profileId = getProfileId(req);
+    if (!profileId) return unauthorizedResponse();
 
-  const { id } = await params;
-  if (!id || typeof id !== 'string' || id.trim() === '') {
-    return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+    const { id } = await params;
+    if (!id || typeof id !== 'string' || id.trim() === '') {
+      return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+    }
+
+    // Verify ownership before patching
+    const existing = await prisma.product.findUnique({ where: { id, profileId, deletedAt: null } });
+    if (!existing) {
+      return NextResponse.json({ error: "Produit introuvable" }, { status: 404 });
+    }
+
+    const result = await parseBodyJson(req, ProductPatchSchema);
+    if (!result.success) return result.response;
+    const body = result.data;
+
+    const product = await prisma.product.update({
+      where: { id },
+      data: {
+        ...(body.name !== undefined && { name: body.name }),
+        ...(body.family !== undefined && { family: body.family }),
+        ...(body.season !== undefined && { season: body.season }),
+        ...(body.year !== undefined && { year: body.year }),
+        ...(body.sizeRange !== undefined && { sizeRange: body.sizeRange }),
+        ...(body.sizes !== undefined && { sizes: JSON.stringify(body.sizes) }),
+        ...(body.measurements !== undefined && { measurements: body.measurements ?? null }),
+        ...(body.materials !== undefined && { materials: JSON.stringify(body.materials) }),
+        // Merge colorPrimary/colorSecondary into colors JSON array
+        ...((body.colorPrimary !== undefined || body.colorSecondary !== undefined || body.colors !== undefined) && {
+          colors: (() => {
+            if (body.colorPrimary !== undefined || body.colorSecondary !== undefined) {
+              const codes = [body.colorPrimary, body.colorSecondary].filter(Boolean) as string[];
+              return codes.length > 0 ? JSON.stringify(codes) : null;
+            }
+            return body.colors !== undefined ? JSON.stringify(body.colors) : undefined;
+          })(),
+        }),
+        ...(body.sketchPaths !== undefined && { sketchPaths: JSON.stringify(body.sketchPaths) }),
+        ...(body.techPackPath !== undefined && { techPackPath: body.techPackPath }),
+        ...(body.sampleStatus !== undefined && { sampleStatus: body.sampleStatus }),
+        ...(body.description !== undefined && { description: body.description }),
+        ...(body.metaTags !== undefined && { metaTags: JSON.stringify(body.metaTags) }),
+        ...(body.plannedLaunchAt !== undefined && {
+          plannedLaunchAt: body.plannedLaunchAt ? new Date(body.plannedLaunchAt) : null,
+        }),
+        ...(body.reference !== undefined && { reference: body.reference }),
+      },
+    });
+
+    logAudit("PRODUCT_PATCH", profileId, "product", id, { fields: Object.keys(body) });
+
+    return NextResponse.json(product);
+  } catch (error) {
+    console.error('[PATCH /api/products/[id]]', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-
-  // Verify ownership before patching
-  const existing = await prisma.product.findUnique({ where: { id, profileId, deletedAt: null } });
-  if (!existing) {
-    return NextResponse.json({ error: "Produit introuvable" }, { status: 404 });
-  }
-
-  const result = await parseBodyJson(req, ProductPatchSchema);
-  if (!result.success) return result.response;
-  const body = result.data;
-
-  const product = await prisma.product.update({
-    where: { id },
-    data: {
-      ...(body.name !== undefined && { name: body.name }),
-      ...(body.family !== undefined && { family: body.family }),
-      ...(body.season !== undefined && { season: body.season }),
-      ...(body.year !== undefined && { year: body.year }),
-      ...(body.sizeRange !== undefined && { sizeRange: body.sizeRange }),
-      ...(body.sizes !== undefined && { sizes: JSON.stringify(body.sizes) }),
-      ...(body.measurements !== undefined && { measurements: body.measurements ?? null }),
-      ...(body.materials !== undefined && { materials: JSON.stringify(body.materials) }),
-      // Merge colorPrimary/colorSecondary into colors JSON array
-      ...((body.colorPrimary !== undefined || body.colorSecondary !== undefined || body.colors !== undefined) && {
-        colors: (() => {
-          if (body.colorPrimary !== undefined || body.colorSecondary !== undefined) {
-            const codes = [body.colorPrimary, body.colorSecondary].filter(Boolean) as string[];
-            return codes.length > 0 ? JSON.stringify(codes) : null;
-          }
-          return body.colors !== undefined ? JSON.stringify(body.colors) : undefined;
-        })(),
-      }),
-      ...(body.sketchPaths !== undefined && { sketchPaths: JSON.stringify(body.sketchPaths) }),
-      ...(body.techPackPath !== undefined && { techPackPath: body.techPackPath }),
-      ...(body.sampleStatus !== undefined && { sampleStatus: body.sampleStatus }),
-      ...(body.description !== undefined && { description: body.description }),
-      ...(body.metaTags !== undefined && { metaTags: JSON.stringify(body.metaTags) }),
-      ...(body.plannedLaunchAt !== undefined && {
-        plannedLaunchAt: body.plannedLaunchAt ? new Date(body.plannedLaunchAt) : null,
-      }),
-      ...(body.reference !== undefined && { reference: body.reference }),
-    },
-  });
-
-  logAudit("PRODUCT_PATCH", profileId, "product", id, { fields: Object.keys(body) });
-
-  return NextResponse.json(product);
 }
 
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const profileId = getProfileId(req);
-  if (!profileId) return unauthorizedResponse();
+  try {
+    const profileId = getProfileId(req);
+    if (!profileId) return unauthorizedResponse();
 
-  const { id } = await params;
-  if (!id || typeof id !== 'string' || id.trim() === '') {
-    return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+    const { id } = await params;
+    if (!id || typeof id !== 'string' || id.trim() === '') {
+      return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+    }
+
+    // Verify ownership before deleting
+    const existing = await prisma.product.findUnique({ where: { id, profileId, deletedAt: null } });
+    if (!existing) {
+      return NextResponse.json({ error: "Produit introuvable" }, { status: 404 });
+    }
+
+    await prisma.product.update({ where: { id }, data: { deletedAt: new Date() } });
+    logAudit("PRODUCT_DELETE", profileId, "product", id);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('[DELETE /api/products/[id]]', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-
-  // Verify ownership before deleting
-  const existing = await prisma.product.findUnique({ where: { id, profileId, deletedAt: null } });
-  if (!existing) {
-    return NextResponse.json({ error: "Produit introuvable" }, { status: 404 });
-  }
-
-  await prisma.product.update({ where: { id }, data: { deletedAt: new Date() } });
-  logAudit("PRODUCT_DELETE", profileId, "product", id);
-  return NextResponse.json({ success: true });
 }
