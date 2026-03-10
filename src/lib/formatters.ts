@@ -64,8 +64,10 @@ export function safeParseArray(raw: string | null | undefined): string[] {
  * Prevents SSRF / XSS via user-controlled img src attributes in generated HTML.
  */
 export function isTrustedImageUrl(url: string): boolean {
-  // Local uploads served through the authenticated /api/files/ route
+  // Local dev uploads served through the authenticated /api/files/ route
   if (url.startsWith("/api/files/")) return true;
+  // Production: private Vercel Blob served through the authenticated /api/blob proxy
+  if (url.startsWith("/api/blob?url=")) return true;
   try {
     const { protocol, hostname } = new URL(url);
     return (

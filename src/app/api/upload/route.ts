@@ -60,14 +60,18 @@ export async function POST(req: NextRequest) {
   const timestamp = Date.now();
 
   try {
-    // ── Production: Vercel Blob ────────────────────────────────────────────
+    // ── Production: Vercel Blob (private) ─────────────────────────────────
     if (process.env.BLOB_READ_WRITE_TOKEN) {
       const filename = `${folder}/${timestamp}_${safeName}`;
       const blob = await put(filename, file, {
-        access: "public",
+        access: "private",
         contentType: file.type, // Explicitly declare — don't rely on client header
       });
-      return NextResponse.json({ path: blob.url, filename: blob.pathname });
+      // Never expose the raw Vercel Blob URL to the client — it would be a
+      // permanent, unauthenticated link. Instead, return a path that routes
+      // through our authenticated /api/blob proxy.
+      const proxiedPath = `/api/blob?url=${encodeURIComponent(blob.url)}`;
+      return NextResponse.json({ path: proxiedPath, filename: blob.pathname });
     }
 
     // ── Development: local filesystem ─────────────────────────────────────
