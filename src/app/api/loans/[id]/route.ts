@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import { parseBodyJson, getProfileId } from "@/lib/api-helpers";
+import { parseBodyJson, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 import { logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
@@ -20,13 +20,25 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params;
   const profileId = getProfileId(req);
+  if (!profileId) return unauthorizedResponse();
+
+  const { id } = await params;
+
+  // Verify ownership via product.profileId
+  const loan = await prisma.sampleLoan.findFirst({
+    where: { id },
+    include: { product: { select: { profileId: true } } },
+  });
+  if (!loan || loan.product.profileId !== profileId) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   const result = await parseBodyJson(req, LoanPatchSchema);
   if (!result.success) return result.response;
   const body = result.data;
 
-  const loan = await prisma.sampleLoan.update({
+  const updated = await prisma.sampleLoan.update({
     where: { id },
     data: {
       ...(body.status !== undefined && { status: body.status }),
@@ -45,14 +57,28 @@ export async function PATCH(
 
   logAudit("LOAN_PATCH", profileId, "sampleLoan", id, { fields: Object.keys(body) });
 
-  return NextResponse.json(loan);
+  return NextResponse.json(updated);
 }
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const profileId = getProfileId(req);
+  if (!profileId) return unauthorizedResponse();
+
   const { id } = await params;
+
+  // Verify ownership via product.profileId
+  const loan = await prisma.sampleLoan.findFirst({
+    where: { id },
+    include: { product: { select: { profileId: true } } },
+  });
+  if (!loan || loan.product.profileId !== profileId) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   await prisma.sampleLoan.delete({ where: { id } });
+  logAudit("LOAN_DELETE", profileId, "sampleLoan", id);
   return NextResponse.json({ success: true });
 }

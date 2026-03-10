@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import { parseBodyJson } from "@/lib/api-helpers";
+import { parseBodyJson, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -25,13 +25,26 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const profileId = getProfileId(req);
+  if (!profileId) return unauthorizedResponse();
+
   const { id } = await params;
+
+  // Verify ownership via event.profileId
+  const guest = await prisma.eventGuest.findFirst({
+    where: { id },
+    include: { event: { select: { profileId: true } } },
+  });
+  if (!guest || guest.event.profileId !== profileId) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   const result = await parseBodyJson(req, GuestPatchSchema);
   if (!result.success) return result.response;
   const body = result.data;
 
   const now = new Date();
-  const guest = await prisma.eventGuest.update({
+  const updated = await prisma.eventGuest.update({
     where: { id },
     data: {
       ...(body.firstName !== undefined && { firstName: body.firstName }),
@@ -54,14 +67,27 @@ export async function PATCH(
     },
   });
 
-  return NextResponse.json(guest);
+  return NextResponse.json(updated);
 }
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const profileId = getProfileId(req);
+  if (!profileId) return unauthorizedResponse();
+
   const { id } = await params;
+
+  // Verify ownership via event.profileId
+  const guest = await prisma.eventGuest.findFirst({
+    where: { id },
+    include: { event: { select: { profileId: true } } },
+  });
+  if (!guest || guest.event.profileId !== profileId) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   await prisma.eventGuest.delete({ where: { id } });
   return NextResponse.json({ success: true });
 }

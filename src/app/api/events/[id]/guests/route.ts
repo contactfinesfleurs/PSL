@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import { parseBodyJson } from "@/lib/api-helpers";
+import { parseBodyJson, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -25,10 +25,20 @@ const GuestCreateSchema = z.object({
 });
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const profileId = getProfileId(req);
+  if (!profileId) return unauthorizedResponse();
+
   const { id } = await params;
+
+  // Verify event ownership
+  const event = await prisma.event.findFirst({
+    where: { id, profileId, deletedAt: null },
+  });
+  if (!event) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
   const guests = await prisma.eventGuest.findMany({
     where: { eventId: id },
     orderBy: [{ category: "asc" }, { lastName: "asc" }],
@@ -40,7 +50,17 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const profileId = getProfileId(req);
+  if (!profileId) return unauthorizedResponse();
+
   const { id } = await params;
+
+  // Verify event ownership
+  const event = await prisma.event.findFirst({
+    where: { id, profileId, deletedAt: null },
+  });
+  if (!event) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
   const result = await parseBodyJson(req, GuestCreateSchema);
   if (!result.success) return result.response;
   const data = result.data;

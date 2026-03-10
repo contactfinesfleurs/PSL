@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import { parseBodyJson } from "@/lib/api-helpers";
+import { parseBodyJson, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -19,10 +19,20 @@ const LoanCreateSchema = z.object({
 });
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const profileId = getProfileId(req);
+  if (!profileId) return unauthorizedResponse();
+
   const { id } = await params;
+
+  // Verify product ownership
+  const product = await prisma.product.findFirst({
+    where: { id, profileId, deletedAt: null },
+  });
+  if (!product) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
   const loans = await prisma.sampleLoan.findMany({
     where: { productId: id },
     orderBy: { sentAt: "desc" },
@@ -34,7 +44,17 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const profileId = getProfileId(req);
+  if (!profileId) return unauthorizedResponse();
+
   const { id } = await params;
+
+  // Verify product ownership
+  const product = await prisma.product.findFirst({
+    where: { id, profileId, deletedAt: null },
+  });
+  if (!product) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
   const result = await parseBodyJson(req, LoanCreateSchema);
   if (!result.success) return result.response;
   const data = result.data;
