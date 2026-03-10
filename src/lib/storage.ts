@@ -228,7 +228,7 @@ export async function fetchBlobContent(blobUrl: string): Promise<BlobFetchResult
   return {
     ok: true,
     stream: result.stream as ReadableStream,
-    contentType: result.blob.contentType,
+    contentType: result.blob.contentType ?? "application/octet-stream",
     statusCode: result.statusCode,
   };
 }
