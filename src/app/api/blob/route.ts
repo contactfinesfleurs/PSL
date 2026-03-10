@@ -1,35 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromRequest } from "@/lib/auth";
-import { get } from "@vercel/blob";
+import { isVercelBlobHostname, fetchBlobContent } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
-
-/** Only Vercel Blob hostnames are accepted as `url` parameter values. */
-function isVercelBlobUrl(raw: string): boolean {
-  try {
-    const { protocol, hostname } = new URL(raw);
-    return (
-      protocol === "https:" &&
-      (hostname.endsWith(".vercel-storage.com") ||
-        hostname.endsWith(".blob.vercel-storage.com"))
-    );
-  } catch {
-    return false;
-  }
-}
 
 /**
  * Authenticated proxy for private Vercel Blob files.
  *
  * Usage:  GET /api/blob?url=<encoded-blob-url>
  *
- * The route validates:
- *  1. The caller is authenticated (session cookie).
- *  2. The `url` parameter points to a Vercel Blob hostname.
- *
- * It then fetches the private blob server-side (using BLOB_READ_WRITE_TOKEN)
- * and streams the content back with private cache headers so the browser
- * never receives a permanent, unauthenticated link.
+ * The raw Vercel Blob URL is never sent to the browser — it would be a
+ * permanent, unauthenticated link. This route validates the session, checks
+ * that the URL points to a Vercel Blob hostname, fetches the file server-side
+ * and streams it back with private cache headers.
  */
 export async function GET(req: NextRequest) {
   const session = await getSessionFromRequest(req);
@@ -42,17 +25,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Paramètre url manquant." }, { status: 400 });
   }
 
-  if (!isVercelBlobUrl(blobUrl)) {
+  if (!isVercelBlobHostname(blobUrl)) {
     return NextResponse.json({ error: "URL non autorisée." }, { status: 403 });
   }
 
-  const result = await get(blobUrl, { access: "private" });
+  const result = await fetchBlobContent(blobUrl);
 
-  if (!result) {
-    return NextResponse.json({ error: "Fichier introuvable." }, { status: 404 });
+  if (!result.ok) {
+    return NextResponse.json({ error: "Fichier introuvable." }, { status: result.status });
   }
 
-  // statusCode 304 means ETag matched — no stream available
+  // 304 Not Modified — ETag matched, no stream available
   if (result.statusCode === 304 || !result.stream) {
     return new NextResponse(null, { status: 304 });
   }
@@ -60,7 +43,7 @@ export async function GET(req: NextRequest) {
   return new NextResponse(result.stream, {
     status: 200,
     headers: {
-      "Content-Type": result.blob.contentType,
+      "Content-Type": result.contentType,
       // Prevent MIME sniffing
       "X-Content-Type-Options": "nosniff",
       // Private: browser may cache but must not share with other users
