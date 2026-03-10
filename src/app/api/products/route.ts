@@ -34,16 +34,21 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const sampleStatus = validateEnum(searchParams.get("status"), SAMPLE_STATUSES);
-    const family = searchParams.get("family");
-    const season = searchParams.get("season");
+    // Sanitize free-text filters: trim whitespace and enforce a max length
+    // consistent with the schema (100 chars). This prevents unexpectedly large
+    // strings reaching the database layer even though Prisma uses parameterized queries.
+    const rawFamily = searchParams.get("family");
+    const rawSeason = searchParams.get("season");
+    const family = rawFamily ? rawFamily.trim().slice(0, 100) || undefined : undefined;
+    const season = rawSeason ? rawSeason.trim().slice(0, 100) || undefined : undefined;
     const { skip, take, page, limit } = parsePagination(searchParams);
 
     const where = {
       profileId,
       deletedAt: null,
-      ...(sampleStatus ? { sampleStatus } : {}),
-      ...(family ? { family } : {}),
-      ...(season ? { season } : {}),
+      ...(sampleStatus !== undefined ? { sampleStatus } : {}),
+      ...(family !== undefined ? { family } : {}),
+      ...(season !== undefined ? { season } : {}),
     };
 
     const [products, total] = await Promise.all([

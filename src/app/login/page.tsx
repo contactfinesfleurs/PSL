@@ -8,7 +8,10 @@ type Mode = "login" | "register";
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const from = searchParams.get("from") ?? "/";
+  // Restrict redirect to same-origin relative paths.
+  // Reject absolute URLs (https://...) and protocol-relative URLs (//evil.com).
+  const rawFrom = searchParams.get("from") ?? "/";
+  const from = rawFrom.startsWith("/") && !rawFrom.startsWith("//") ? rawFrom : "/";
 
   const [mode, setMode] = useState<Mode>("login");
   const [name, setName] = useState("");

@@ -19,8 +19,11 @@ const ALLOWED_MIME_TYPES = new Set([
   "application/pdf",
 ]);
 
-// Resolved once at module load — stable for the lifetime of the server process
-const UPLOADS_ROOT = path.resolve(process.cwd(), "public", "uploads");
+// Resolved once at module load — stable for the lifetime of the server process.
+// Files are stored OUTSIDE the Next.js public/ directory so they are never served
+// as static assets. They are only accessible through the authenticated
+// /api/files/[...path] route handler.
+const UPLOADS_ROOT = path.resolve(process.cwd(), "private-uploads");
 
 // ─── Handler ───────────────────────────────────────────────────────────────
 
@@ -82,7 +85,7 @@ export async function POST(req: NextRequest) {
     await mkdir(uploadDir, { recursive: true });
     await writeFile(path.join(uploadDir, filename), buffer);
 
-    return NextResponse.json({ path: `/uploads/${folder}/${filename}`, filename });
+    return NextResponse.json({ path: `/api/files/${folder}/${filename}`, filename });
   } catch {
     return NextResponse.json({ error: "Erreur lors de l'upload." }, { status: 500 });
   }
