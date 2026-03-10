@@ -25,145 +25,86 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const profileId = getProfileId(req);
-  if (!profileId) return unauthorizedResponse();
+  try {
+    const profileId = getProfileId(req);
+    if (!profileId) return unauthorizedResponse();
 
-  const { id } = await params;
-  if (!id || typeof id !== 'string' || id.trim() === '') {
-    return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+    const { id } = await params;
+    if (!id || typeof id !== 'string' || id.trim() === '') {
+      return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+    }
+
+    // Verify product ownership
+    const product = await prisma.product.findFirst({
+      where: { id, profileId, deletedAt: null },
+    });
+    if (!product) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const sample = await prisma.sample.findFirst({
+      where: { productId: id },
+    });
+    return NextResponse.json(sample ?? null);
+  } catch (error) {
+    console.error('[GET /api/products/[id]/sample]', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-
-  // Verify product ownership
-  const product = await prisma.product.findFirst({
-    where: { id, profileId, deletedAt: null },
-  });
-  if (!product) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-  const sample = await prisma.sample.findFirst({
-    where: { productId: id },
-  });
-  return NextResponse.json(sample ?? null);
 }
 
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const profileId = getProfileId(req);
-  if (!profileId) return unauthorizedResponse();
+  try {
+    const profileId = getProfileId(req);
+    if (!profileId) return unauthorizedResponse();
 
-  const { id } = await params;
-  if (!id || typeof id !== 'string' || id.trim() === '') {
-    return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
-  }
+    const { id } = await params;
+    if (!id || typeof id !== 'string' || id.trim() === '') {
+      return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+    }
 
-  // Verify product ownership
-  const product = await prisma.product.findFirst({
-    where: { id, profileId, deletedAt: null },
-  });
-  if (!product) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    // Verify product ownership
+    const product = await prisma.product.findFirst({
+      where: { id, profileId, deletedAt: null },
+    });
+    if (!product) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const result = await parseBodyJson(req, SampleUpsertSchema);
-  if (!result.success) return result.response;
-  const body = result.data;
+    const result = await parseBodyJson(req, SampleUpsertSchema);
+    if (!result.success) return result.response;
+    const body = result.data;
 
-  const sample = await prisma.sample.upsert({
-    where: {
-      id: body.sampleId ?? "new",
-    },
-    create: {
-      productId: id,
-      samplePhotoPaths: body.samplePhotoPaths
-        ? JSON.stringify(body.samplePhotoPaths)
-        : null,
-      detailPhotoPaths: body.detailPhotoPaths
-        ? JSON.stringify(body.detailPhotoPaths)
-        : null,
-      reviewPhotoPaths: body.reviewPhotoPaths
-        ? JSON.stringify(body.reviewPhotoPaths)
-        : null,
-      reviewNotes: body.reviewNotes ?? null,
-      supplierName: body.supplierName ?? null,
-      supplierAddress: body.supplierAddress ?? null,
-      supplierCountry: body.supplierCountry ?? null,
-      shippingDate: body.shippingDate ? new Date(body.shippingDate) : null,
-      trackingNumber: body.trackingNumber ?? null,
-      packshotPaths: body.packshotPaths
-        ? JSON.stringify(body.packshotPaths)
-        : null,
-      definitiveColors: body.definitiveColors
-        ? JSON.stringify(body.definitiveColors)
-        : null,
-      definitiveMaterials: body.definitiveMaterials
-        ? JSON.stringify(body.definitiveMaterials)
-        : null,
-    },
-    update: {
-      ...(body.samplePhotoPaths !== undefined && {
-        samplePhotoPaths: JSON.stringify(body.samplePhotoPaths),
-      }),
-      ...(body.detailPhotoPaths !== undefined && {
-        detailPhotoPaths: JSON.stringify(body.detailPhotoPaths),
-      }),
-      ...(body.reviewPhotoPaths !== undefined && {
-        reviewPhotoPaths: JSON.stringify(body.reviewPhotoPaths),
-      }),
-      ...(body.reviewNotes !== undefined && { reviewNotes: body.reviewNotes }),
-      ...(body.supplierName !== undefined && { supplierName: body.supplierName }),
-      ...(body.supplierAddress !== undefined && { supplierAddress: body.supplierAddress }),
-      ...(body.supplierCountry !== undefined && { supplierCountry: body.supplierCountry }),
-      ...(body.shippingDate !== undefined && {
+    const sample = await prisma.sample.upsert({
+      where: {
+        id: body.sampleId ?? "new",
+      },
+      create: {
+        productId: id,
+        samplePhotoPaths: body.samplePhotoPaths
+          ? JSON.stringify(body.samplePhotoPaths)
+          : null,
+        detailPhotoPaths: body.detailPhotoPaths
+          ? JSON.stringify(body.detailPhotoPaths)
+          : null,
+        reviewPhotoPaths: body.reviewPhotoPaths
+          ? JSON.stringify(body.reviewPhotoPaths)
+          : null,
+        reviewNotes: body.reviewNotes ?? null,
+        supplierName: body.supplierName ?? null,
+        supplierAddress: body.supplierAddress ?? null,
+        supplierCountry: body.supplierCountry ?? null,
         shippingDate: body.shippingDate ? new Date(body.shippingDate) : null,
-      }),
-      ...(body.trackingNumber !== undefined && { trackingNumber: body.trackingNumber }),
-      ...(body.packshotPaths !== undefined && {
-        packshotPaths: JSON.stringify(body.packshotPaths),
-      }),
-      ...(body.definitiveColors !== undefined && {
-        definitiveColors: JSON.stringify(body.definitiveColors),
-      }),
-      ...(body.definitiveMaterials !== undefined && {
-        definitiveMaterials: JSON.stringify(body.definitiveMaterials),
-      }),
-    },
-  });
-
-  return NextResponse.json(sample);
-}
-
-// Dedicated POST for creating a new sample if none exists
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const profileId = getProfileId(req);
-  if (!profileId) return unauthorizedResponse();
-
-  const { id } = await params;
-  if (!id || typeof id !== 'string' || id.trim() === '') {
-    return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
-  }
-
-  // Verify product ownership
-  const product = await prisma.product.findFirst({
-    where: { id, profileId, deletedAt: null },
-  });
-  if (!product) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-  const result = await parseBodyJson(req, SampleUpsertSchema);
-  if (!result.success) return result.response;
-  const body = result.data;
-
-  // Check if sample already exists
-  const existing = await prisma.sample.findFirst({
-    where: { productId: id },
-  });
-
-  if (existing) {
-    // Update instead
-    const updated = await prisma.sample.update({
-      where: { id: existing.id },
-      data: {
+        trackingNumber: body.trackingNumber ?? null,
+        packshotPaths: body.packshotPaths
+          ? JSON.stringify(body.packshotPaths)
+          : null,
+        definitiveColors: body.definitiveColors
+          ? JSON.stringify(body.definitiveColors)
+          : null,
+        definitiveMaterials: body.definitiveMaterials
+          ? JSON.stringify(body.definitiveMaterials)
+          : null,
+      },
+      update: {
         ...(body.samplePhotoPaths !== undefined && {
           samplePhotoPaths: JSON.stringify(body.samplePhotoPaths),
         }),
@@ -192,29 +133,103 @@ export async function POST(
         }),
       },
     });
-    return NextResponse.json(updated);
+
+    return NextResponse.json(sample);
+  } catch (error) {
+    console.error('[PUT /api/products/[id]/sample]', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
+}
 
-  const sample = await prisma.sample.create({
-    data: {
-      productId: id,
-      samplePhotoPaths: body.samplePhotoPaths
-        ? JSON.stringify(body.samplePhotoPaths)
-        : null,
-      detailPhotoPaths: body.detailPhotoPaths
-        ? JSON.stringify(body.detailPhotoPaths)
-        : null,
-      reviewPhotoPaths: body.reviewPhotoPaths
-        ? JSON.stringify(body.reviewPhotoPaths)
-        : null,
-      reviewNotes: body.reviewNotes ?? null,
-      supplierName: body.supplierName ?? null,
-      supplierAddress: body.supplierAddress ?? null,
-      supplierCountry: body.supplierCountry ?? null,
-      shippingDate: body.shippingDate ? new Date(body.shippingDate) : null,
-      trackingNumber: body.trackingNumber ?? null,
-    },
-  });
+// Dedicated POST for creating a new sample if none exists
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const profileId = getProfileId(req);
+    if (!profileId) return unauthorizedResponse();
 
-  return NextResponse.json(sample, { status: 201 });
+    const { id } = await params;
+    if (!id || typeof id !== 'string' || id.trim() === '') {
+      return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+    }
+
+    // Verify product ownership
+    const product = await prisma.product.findFirst({
+      where: { id, profileId, deletedAt: null },
+    });
+    if (!product) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const result = await parseBodyJson(req, SampleUpsertSchema);
+    if (!result.success) return result.response;
+    const body = result.data;
+
+    // Check if sample already exists
+    const existing = await prisma.sample.findFirst({
+      where: { productId: id },
+    });
+
+    if (existing) {
+      // Update instead
+      const updated = await prisma.sample.update({
+        where: { id: existing.id },
+        data: {
+          ...(body.samplePhotoPaths !== undefined && {
+            samplePhotoPaths: JSON.stringify(body.samplePhotoPaths),
+          }),
+          ...(body.detailPhotoPaths !== undefined && {
+            detailPhotoPaths: JSON.stringify(body.detailPhotoPaths),
+          }),
+          ...(body.reviewPhotoPaths !== undefined && {
+            reviewPhotoPaths: JSON.stringify(body.reviewPhotoPaths),
+          }),
+          ...(body.reviewNotes !== undefined && { reviewNotes: body.reviewNotes }),
+          ...(body.supplierName !== undefined && { supplierName: body.supplierName }),
+          ...(body.supplierAddress !== undefined && { supplierAddress: body.supplierAddress }),
+          ...(body.supplierCountry !== undefined && { supplierCountry: body.supplierCountry }),
+          ...(body.shippingDate !== undefined && {
+            shippingDate: body.shippingDate ? new Date(body.shippingDate) : null,
+          }),
+          ...(body.trackingNumber !== undefined && { trackingNumber: body.trackingNumber }),
+          ...(body.packshotPaths !== undefined && {
+            packshotPaths: JSON.stringify(body.packshotPaths),
+          }),
+          ...(body.definitiveColors !== undefined && {
+            definitiveColors: JSON.stringify(body.definitiveColors),
+          }),
+          ...(body.definitiveMaterials !== undefined && {
+            definitiveMaterials: JSON.stringify(body.definitiveMaterials),
+          }),
+        },
+      });
+      return NextResponse.json(updated);
+    }
+
+    const sample = await prisma.sample.create({
+      data: {
+        productId: id,
+        samplePhotoPaths: body.samplePhotoPaths
+          ? JSON.stringify(body.samplePhotoPaths)
+          : null,
+        detailPhotoPaths: body.detailPhotoPaths
+          ? JSON.stringify(body.detailPhotoPaths)
+          : null,
+        reviewPhotoPaths: body.reviewPhotoPaths
+          ? JSON.stringify(body.reviewPhotoPaths)
+          : null,
+        reviewNotes: body.reviewNotes ?? null,
+        supplierName: body.supplierName ?? null,
+        supplierAddress: body.supplierAddress ?? null,
+        supplierCountry: body.supplierCountry ?? null,
+        shippingDate: body.shippingDate ? new Date(body.shippingDate) : null,
+        trackingNumber: body.trackingNumber ?? null,
+      },
+    });
+
+    return NextResponse.json(sample, { status: 201 });
+  } catch (error) {
+    console.error('[POST /api/products/[id]/sample]', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

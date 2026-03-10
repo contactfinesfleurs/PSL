@@ -25,75 +25,85 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const profileId = getProfileId(req);
-  if (!profileId) return unauthorizedResponse();
+  try {
+    const profileId = getProfileId(req);
+    if (!profileId) return unauthorizedResponse();
 
-  const { id } = await params;
-  if (!id || typeof id !== 'string' || id.trim() === '') {
-    return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+    const { id } = await params;
+    if (!id || typeof id !== 'string' || id.trim() === '') {
+      return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+    }
+
+    // Verify ownership via event.profileId
+    const guest = await prisma.eventGuest.findFirst({
+      where: { id },
+      include: { event: { select: { profileId: true } } },
+    });
+    if (!guest || guest.event.profileId !== profileId) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    const result = await parseBodyJson(req, GuestPatchSchema);
+    if (!result.success) return result.response;
+    const body = result.data;
+
+    const now = new Date();
+    const updated = await prisma.eventGuest.update({
+      where: { id },
+      data: {
+        ...(body.firstName !== undefined && { firstName: body.firstName }),
+        ...(body.lastName !== undefined && { lastName: body.lastName }),
+        ...(body.email !== undefined && { email: body.email }),
+        ...(body.phone !== undefined && { phone: body.phone }),
+        ...(body.instagram !== undefined && { instagram: body.instagram }),
+        ...(body.company !== undefined && { company: body.company }),
+        ...(body.title !== undefined && { title: body.title }),
+        ...(body.category !== undefined && { category: body.category }),
+        ...(body.rsvpStatus !== undefined && { rsvpStatus: body.rsvpStatus }),
+        ...(body.tableNumber !== undefined && { tableNumber: body.tableNumber }),
+        ...(body.seatNumber !== undefined && { seatNumber: body.seatNumber }),
+        ...(body.notes !== undefined && { notes: body.notes }),
+        // Track check-in timestamp automatically
+        ...(body.checkedIn !== undefined && {
+          checkedIn: body.checkedIn,
+          checkedInAt: body.checkedIn ? now : null,
+        }),
+      },
+    });
+
+    return NextResponse.json(updated);
+  } catch (error) {
+    console.error('[PATCH /api/guests/[id]]', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-
-  // Verify ownership via event.profileId
-  const guest = await prisma.eventGuest.findFirst({
-    where: { id },
-    include: { event: { select: { profileId: true } } },
-  });
-  if (!guest || guest.event.profileId !== profileId) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
-
-  const result = await parseBodyJson(req, GuestPatchSchema);
-  if (!result.success) return result.response;
-  const body = result.data;
-
-  const now = new Date();
-  const updated = await prisma.eventGuest.update({
-    where: { id },
-    data: {
-      ...(body.firstName !== undefined && { firstName: body.firstName }),
-      ...(body.lastName !== undefined && { lastName: body.lastName }),
-      ...(body.email !== undefined && { email: body.email }),
-      ...(body.phone !== undefined && { phone: body.phone }),
-      ...(body.instagram !== undefined && { instagram: body.instagram }),
-      ...(body.company !== undefined && { company: body.company }),
-      ...(body.title !== undefined && { title: body.title }),
-      ...(body.category !== undefined && { category: body.category }),
-      ...(body.rsvpStatus !== undefined && { rsvpStatus: body.rsvpStatus }),
-      ...(body.tableNumber !== undefined && { tableNumber: body.tableNumber }),
-      ...(body.seatNumber !== undefined && { seatNumber: body.seatNumber }),
-      ...(body.notes !== undefined && { notes: body.notes }),
-      // Track check-in timestamp automatically
-      ...(body.checkedIn !== undefined && {
-        checkedIn: body.checkedIn,
-        checkedInAt: body.checkedIn ? now : null,
-      }),
-    },
-  });
-
-  return NextResponse.json(updated);
 }
 
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const profileId = getProfileId(req);
-  if (!profileId) return unauthorizedResponse();
+  try {
+    const profileId = getProfileId(req);
+    if (!profileId) return unauthorizedResponse();
 
-  const { id } = await params;
-  if (!id || typeof id !== 'string' || id.trim() === '') {
-    return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+    const { id } = await params;
+    if (!id || typeof id !== 'string' || id.trim() === '') {
+      return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+    }
+
+    // Verify ownership via event.profileId
+    const guest = await prisma.eventGuest.findFirst({
+      where: { id },
+      include: { event: { select: { profileId: true } } },
+    });
+    if (!guest || guest.event.profileId !== profileId) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    await prisma.eventGuest.delete({ where: { id } });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('[DELETE /api/guests/[id]]', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-
-  // Verify ownership via event.profileId
-  const guest = await prisma.eventGuest.findFirst({
-    where: { id },
-    include: { event: { select: { profileId: true } } },
-  });
-  if (!guest || guest.event.profileId !== profileId) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
-
-  await prisma.eventGuest.delete({ where: { id } });
-  return NextResponse.json({ success: true });
 }
