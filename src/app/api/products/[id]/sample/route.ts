@@ -1,13 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { z } from "zod";
+import { parseBodyJson, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 
 export const dynamic = 'force-dynamic';
 
+const SampleUpsertSchema = z.object({
+  sampleId: z.string().optional(),
+  samplePhotoPaths: z.array(z.string()).nullable().optional(),
+  detailPhotoPaths: z.array(z.string()).nullable().optional(),
+  reviewPhotoPaths: z.array(z.string()).nullable().optional(),
+  reviewNotes: z.string().nullable().optional(),
+  supplierName: z.string().nullable().optional(),
+  supplierAddress: z.string().nullable().optional(),
+  supplierCountry: z.string().nullable().optional(),
+  shippingDate: z.string().datetime().nullable().optional(),
+  trackingNumber: z.string().nullable().optional(),
+  packshotPaths: z.array(z.string()).nullable().optional(),
+  definitiveColors: z.array(z.string()).nullable().optional(),
+  definitiveMaterials: z.array(z.string()).nullable().optional(),
+});
+
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const profileId = getProfileId(req);
+  if (!profileId) return unauthorizedResponse();
+
   const { id } = await params;
+
+  // Verify product ownership
+  const product = await prisma.product.findFirst({
+    where: { id, profileId, deletedAt: null },
+  });
+  if (!product) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
   const sample = await prisma.sample.findFirst({
     where: { productId: id },
   });
@@ -18,12 +46,23 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const profileId = getProfileId(req);
+  if (!profileId) return unauthorizedResponse();
+
   const { id } = await params;
-  const body = await req.json();
+
+  // Verify product ownership
+  const product = await prisma.product.findFirst({
+    where: { id, profileId, deletedAt: null },
+  });
+  if (!product) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const result = await parseBodyJson(req, SampleUpsertSchema);
+  if (!result.success) return result.response;
+  const body = result.data;
 
   const sample = await prisma.sample.upsert({
     where: {
-      // Use findFirst pattern via update or create
       id: body.sampleId ?? "new",
     },
     create: {
@@ -91,8 +130,20 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const profileId = getProfileId(req);
+  if (!profileId) return unauthorizedResponse();
+
   const { id } = await params;
-  const body = await req.json();
+
+  // Verify product ownership
+  const product = await prisma.product.findFirst({
+    where: { id, profileId, deletedAt: null },
+  });
+  if (!product) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const result = await parseBodyJson(req, SampleUpsertSchema);
+  if (!result.success) return result.response;
+  const body = result.data;
 
   // Check if sample already exists
   const existing = await prisma.sample.findFirst({
