@@ -16,7 +16,8 @@
     "agents:design": "tsx scripts/run-agents.ts --design-only",
     "agents:no-code": "tsx scripts/run-agents.ts --no-code",
     "blob:migrate": "tsx scripts/migrate-blobs-to-private.ts",
-    "blob:migrate:dry": "tsx scripts/migrate-blobs-to-private.ts --dry-run"
+    "blob:migrate:dry": "tsx scripts/migrate-blobs-to-private.ts --dry-run",
+    "admin:promote": "tsx scripts/make-super-admin.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
