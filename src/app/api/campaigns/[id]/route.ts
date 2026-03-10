@@ -3,14 +3,15 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { parseBodyJson, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 import { logAudit } from "@/lib/audit";
+import { CAMPAIGN_TYPE_VALUES, CAMPAIGN_STATUS_VALUES } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
 const CampaignPatchSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   description: z.string().max(2000).nullable().optional(),
-  type: z.enum(["DIGITAL", "PRINT", "OOH", "SOCIAL", "INFLUENCER", "OTHER"]).optional(),
-  status: z.enum(["DRAFT", "ACTIVE", "PAUSED", "COMPLETED", "CANCELLED"]).optional(),
+  type: z.enum(CAMPAIGN_TYPE_VALUES).optional(),
+  status: z.enum(CAMPAIGN_STATUS_VALUES).optional(),
   startAt: z.string().datetime().nullable().optional(),
   endAt: z.string().datetime().nullable().optional(),
   budget: z.number().positive().nullable().optional(),
