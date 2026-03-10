@@ -24,6 +24,9 @@ export async function PATCH(
   if (!profileId) return unauthorizedResponse();
 
   const { id } = await params;
+  if (!id || typeof id !== 'string' || id.trim() === '') {
+    return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+  }
 
   // Verify ownership via product.profileId
   const loan = await prisma.sampleLoan.findFirst({
@@ -68,6 +71,9 @@ export async function DELETE(
   if (!profileId) return unauthorizedResponse();
 
   const { id } = await params;
+  if (!id || typeof id !== 'string' || id.trim() === '') {
+    return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+  }
 
   // Verify ownership via product.profileId
   const loan = await prisma.sampleLoan.findFirst({

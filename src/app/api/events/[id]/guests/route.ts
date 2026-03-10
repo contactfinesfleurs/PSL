@@ -28,61 +28,77 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const profileId = getProfileId(req);
-  if (!profileId) return unauthorizedResponse();
+  try {
+    const profileId = getProfileId(req);
+    if (!profileId) return unauthorizedResponse();
 
-  const { id } = await params;
+    const { id } = await params;
+    if (!id || typeof id !== 'string' || id.trim() === '') {
+      return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+    }
 
-  // Verify event ownership
-  const event = await prisma.event.findFirst({
-    where: { id, profileId, deletedAt: null },
-  });
-  if (!event) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    // Verify event ownership
+    const event = await prisma.event.findFirst({
+      where: { id, profileId, deletedAt: null },
+    });
+    if (!event) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const guests = await prisma.eventGuest.findMany({
-    where: { eventId: id },
-    orderBy: [{ category: "asc" }, { lastName: "asc" }],
-  });
-  return NextResponse.json(guests);
+    const guests = await prisma.eventGuest.findMany({
+      where: { eventId: id },
+      orderBy: [{ category: "asc" }, { lastName: "asc" }],
+    });
+    return NextResponse.json(guests);
+  } catch (error) {
+    console.error('[GET /api/events/[id]/guests]', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const profileId = getProfileId(req);
-  if (!profileId) return unauthorizedResponse();
+  try {
+    const profileId = getProfileId(req);
+    if (!profileId) return unauthorizedResponse();
 
-  const { id } = await params;
+    const { id } = await params;
+    if (!id || typeof id !== 'string' || id.trim() === '') {
+      return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+    }
 
-  // Verify event ownership
-  const event = await prisma.event.findFirst({
-    where: { id, profileId, deletedAt: null },
-  });
-  if (!event) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    // Verify event ownership
+    const event = await prisma.event.findFirst({
+      where: { id, profileId, deletedAt: null },
+    });
+    if (!event) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const result = await parseBodyJson(req, GuestCreateSchema);
-  if (!result.success) return result.response;
-  const data = result.data;
+    const result = await parseBodyJson(req, GuestCreateSchema);
+    if (!result.success) return result.response;
+    const data = result.data;
 
-  const guest = await prisma.eventGuest.create({
-    data: {
-      eventId: id,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      email: data.email ?? null,
-      phone: data.phone ?? null,
-      instagram: data.instagram ?? null,
-      company: data.company ?? null,
-      title: data.title ?? null,
-      category: data.category,
-      invitedBy: data.invitedBy ?? null,
-      rsvpStatus: data.rsvpStatus,
-      tableNumber: data.tableNumber ?? null,
-      seatNumber: data.seatNumber ?? null,
-      notes: data.notes ?? null,
-    },
-  });
+    const guest = await prisma.eventGuest.create({
+      data: {
+        eventId: id,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email ?? null,
+        phone: data.phone ?? null,
+        instagram: data.instagram ?? null,
+        company: data.company ?? null,
+        title: data.title ?? null,
+        category: data.category,
+        invitedBy: data.invitedBy ?? null,
+        rsvpStatus: data.rsvpStatus,
+        tableNumber: data.tableNumber ?? null,
+        seatNumber: data.seatNumber ?? null,
+        notes: data.notes ?? null,
+      },
+    });
 
-  return NextResponse.json(guest, { status: 201 });
+    return NextResponse.json(guest, { status: 201 });
+  } catch (error) {
+    console.error('[POST /api/events/[id]/guests]', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

@@ -29,6 +29,9 @@ export async function PATCH(
   if (!profileId) return unauthorizedResponse();
 
   const { id } = await params;
+  if (!id || typeof id !== 'string' || id.trim() === '') {
+    return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+  }
 
   // Verify ownership via event.profileId
   const guest = await prisma.eventGuest.findFirst({
@@ -78,6 +81,9 @@ export async function DELETE(
   if (!profileId) return unauthorizedResponse();
 
   const { id } = await params;
+  if (!id || typeof id !== 'string' || id.trim() === '') {
+    return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+  }
 
   // Verify ownership via event.profileId
   const guest = await prisma.eventGuest.findFirst({
