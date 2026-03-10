@@ -39,6 +39,12 @@ export async function POST(
       });
       if (!event) return null;
 
+      // Verify product belongs to the same profile (prevents cross-tenant linking)
+      const product = await tx.product.findFirst({
+        where: { id: body.productId, profileId, deletedAt: null },
+      });
+      if (!product) return null;
+
       return tx.eventProduct.upsert({
         where: {
           eventId_productId: {
@@ -91,6 +97,12 @@ export async function DELETE(
         where: { id, profileId, deletedAt: null },
       });
       if (!event) return null;
+
+      // Verify product belongs to the same profile (prevents cross-tenant unlinking)
+      const product = await tx.product.findFirst({
+        where: { id: productId, profileId },
+      });
+      if (!product) return null;
 
       return tx.eventProduct.delete({
         where: {

@@ -70,6 +70,12 @@ export async function POST(
     if (!result.success) return result.response;
     const data = result.data;
 
+    // Verify the sample belongs to this product (prevents cross-product loan association)
+    const sample = await prisma.sample.findFirst({
+      where: { id: data.sampleId, productId: id },
+    });
+    if (!sample) return NextResponse.json({ error: "Sample introuvable" }, { status: 404 });
+
     const loan = await prisma.sampleLoan.create({
       data: {
         productId: id,

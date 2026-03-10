@@ -174,7 +174,7 @@ model Campaign {
   currency String?   @default("EUR")
 
   eventId String?
-  event   Event?  @relation(fields: [eventId], references: [id])
+  event   Event?  @relation(fields: [eventId], references: [id], onDelete: SetNull)
 
   // Relations
   products CampaignProduct[]
@@ -232,7 +232,7 @@ model MediaPlacement {
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   sampleLoanId String?
-  sampleLoan   SampleLoan? @relation(fields: [sampleLoanId], references: [id])
+  sampleLoan   SampleLoan? @relation(fields: [sampleLoanId], references: [id], onDelete: SetNull)
 
   publication    String
   // Type: PRINT | DIGITAL | SOCIAL | TV | PODCAST

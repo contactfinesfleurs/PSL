@@ -3,14 +3,15 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { parseBodyJson, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 import { logAudit } from "@/lib/audit";
+import { EVENT_TYPE_VALUES, EVENT_STATUS_VALUES } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
 const EventPatchSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   description: z.string().max(2000).nullable().optional(),
-  type: z.enum(["SHOW", "PRESENTATION", "LAUNCH", "PRESS", "TRADE-SHOW", "OTHER"]).optional(),
-  status: z.enum(["DRAFT", "CONFIRMED", "COMPLETED", "CANCELLED"]).optional(),
+  type: z.enum(EVENT_TYPE_VALUES).optional(),
+  status: z.enum(EVENT_STATUS_VALUES).optional(),
   startAt: z.string().datetime().optional(),
   endAt: z.string().datetime().nullable().optional(),
   location: z.string().max(500).nullable().optional(),

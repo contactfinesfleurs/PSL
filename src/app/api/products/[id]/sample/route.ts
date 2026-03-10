@@ -79,6 +79,10 @@ export async function PUT(
     const existingSample = body.sampleId
       ? await prisma.sample.findUnique({ where: { id: body.sampleId } })
       : null;
+    // Verify the sampleId belongs to this product (prevents updating another user's sample)
+    if (existingSample && existingSample.productId !== id) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
     if (existingSample) {
       const photoFields = [
         [existingSample.samplePhotoPaths, body.samplePhotoPaths],
@@ -257,6 +261,9 @@ export async function POST(
         supplierCountry: body.supplierCountry ?? null,
         shippingDate: body.shippingDate ? new Date(body.shippingDate) : null,
         trackingNumber: body.trackingNumber ?? null,
+        packshotPaths: body.packshotPaths ? JSON.stringify(body.packshotPaths) : null,
+        definitiveColors: body.definitiveColors ? JSON.stringify(body.definitiveColors) : null,
+        definitiveMaterials: body.definitiveMaterials ? JSON.stringify(body.definitiveMaterials) : null,
       },
     });
 
