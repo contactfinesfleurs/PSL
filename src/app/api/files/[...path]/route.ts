@@ -1,27 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromRequest } from "@/lib/auth";
+import { UPLOADS_ROOT, MIME_BY_EXT } from "@/lib/storage";
 import { readFile } from "fs/promises";
 import path from "path";
 
 export const dynamic = "force-dynamic";
 
-// Resolved once at module load — must match the root used by the upload handler.
-const UPLOADS_ROOT = path.resolve(process.cwd(), "private-uploads");
-
-const MIME_BY_EXT: Record<string, string> = {
-  jpg: "image/jpeg",
-  jpeg: "image/jpeg",
-  png: "image/png",
-  webp: "image/webp",
-  gif: "image/gif",
-  pdf: "application/pdf",
-};
-
+/**
+ * Authenticated file server for development-mode local uploads.
+ *
+ * Files are stored outside public/ so they are never served as static assets.
+ * This handler checks the session and guards against path traversal before
+ * reading and streaming the file.
+ */
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
-  // Require authentication
   const session = await getSessionFromRequest(req);
   if (!session) {
     return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
@@ -48,9 +43,7 @@ export async function GET(
       status: 200,
       headers: {
         "Content-Type": contentType,
-        // Prevent browsers from sniffing the MIME type
         "X-Content-Type-Options": "nosniff",
-        // Files are user-specific — do not store in shared caches
         "Cache-Control": "private, max-age=3600",
       },
     });

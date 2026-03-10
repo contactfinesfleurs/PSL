@@ -25,25 +25,13 @@
  */
 
 import { PrismaClient } from "@prisma/client";
-import { copy, del, list } from "@vercel/blob";
+import { copy, del } from "@vercel/blob";
+import { isVercelBlobHostname } from "../src/lib/storage";
 
 const prisma = new PrismaClient();
 const DRY_RUN = process.argv.includes("--dry-run");
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function isRawVercelBlobUrl(url: string): boolean {
-  try {
-    const { protocol, hostname } = new URL(url);
-    return (
-      protocol === "https:" &&
-      (hostname.endsWith(".vercel-storage.com") ||
-        hostname.endsWith(".blob.vercel-storage.com"))
-    );
-  } catch {
-    return false;
-  }
-}
 
 function toProxiedPath(privateUrl: string): string {
   return `/api/blob?url=${encodeURIComponent(privateUrl)}`;
@@ -71,9 +59,9 @@ async function collectPublicUrls(): Promise<Set<string>> {
   });
   for (const p of products) {
     for (const url of parseJsonArray(p.sketchPaths)) {
-      if (isRawVercelBlobUrl(url)) publicUrls.add(url);
+      if (isVercelBlobHostname(url)) publicUrls.add(url);
     }
-    if (p.techPackPath && isRawVercelBlobUrl(p.techPackPath)) {
+    if (p.techPackPath && isVercelBlobHostname(p.techPackPath)) {
       publicUrls.add(p.techPackPath);
     }
   }
@@ -96,7 +84,7 @@ async function collectPublicUrls(): Promise<Set<string>> {
       s.packshotPaths,
     ]) {
       for (const url of parseJsonArray(field)) {
-        if (isRawVercelBlobUrl(url)) publicUrls.add(url);
+        if (isVercelBlobHostname(url)) publicUrls.add(url);
       }
     }
   }
@@ -106,7 +94,7 @@ async function collectPublicUrls(): Promise<Set<string>> {
     select: { id: true, screenshotPath: true },
   });
   for (const mp of placements) {
-    if (mp.screenshotPath && isRawVercelBlobUrl(mp.screenshotPath)) {
+    if (mp.screenshotPath && isVercelBlobHostname(mp.screenshotPath)) {
       publicUrls.add(mp.screenshotPath);
     }
   }

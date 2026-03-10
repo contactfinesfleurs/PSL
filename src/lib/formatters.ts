@@ -59,23 +59,24 @@ export function safeParseArray(raw: string | null | undefined): string[] {
 
 // ─── URL validation ───────────────────────────────────────────────────────────
 
+import { isStoredPath, isLegacyPublicBlobUrl } from "@/lib/storage";
+
 /**
- * Returns true only for image URLs from trusted origins (Vercel Blob or local uploads).
- * Prevents SSRF / XSS via user-controlled img src attributes in generated HTML.
+ * Returns true only for image URLs that are safe to embed in generated HTML.
+ * Prevents SSRF / XSS via user-controlled img src attributes.
+ *
+ * Accepts:
+ *   - /api/blob?url=<encoded>  production proxied blobs (see lib/storage.ts)
+ *   - /api/files/<path>        development local files (see lib/storage.ts)
+ *   - Legacy raw blob URLs     only during the migration window — see note below
+ *
+ * NOTE: The isLegacyPublicBlobUrl() branch exists for backward compatibility
+ * while existing public blobs are being migrated to private access.
+ * Remove it once `npm run blob:migrate` has been run in production.
  */
 export function isTrustedImageUrl(url: string): boolean {
-  // Local dev uploads served through the authenticated /api/files/ route
-  if (url.startsWith("/api/files/")) return true;
-  // Production: private Vercel Blob served through the authenticated /api/blob proxy
-  if (url.startsWith("/api/blob?url=")) return true;
-  try {
-    const { protocol, hostname } = new URL(url);
-    return (
-      protocol === "https:" &&
-      (hostname.endsWith(".vercel-storage.com") ||
-        hostname.endsWith(".blob.vercel-storage.com"))
-    );
-  } catch {
-    return false;
-  }
+  if (isStoredPath(url)) return true;
+  // @deprecated: remove after running blob:migrate in production
+  if (isLegacyPublicBlobUrl(url)) return true;
+  return false;
 }
