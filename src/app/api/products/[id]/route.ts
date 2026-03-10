@@ -61,7 +61,7 @@ export async function PATCH(
   const { id } = await params;
 
   // Verify ownership before patching
-  const existing = await prisma.product.findUnique({ where: { id, profileId } });
+  const existing = await prisma.product.findUnique({ where: { id, profileId, deletedAt: null } });
   if (!existing) {
     return NextResponse.json({ error: "Produit introuvable" }, { status: 404 });
   }
@@ -118,7 +118,7 @@ export async function DELETE(
   const { id } = await params;
 
   // Verify ownership before deleting
-  const existing = await prisma.product.findUnique({ where: { id, profileId } });
+  const existing = await prisma.product.findUnique({ where: { id, profileId, deletedAt: null } });
   if (!existing) {
     return NextResponse.json({ error: "Produit introuvable" }, { status: 404 });
   }
