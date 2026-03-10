@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/ui/Sidebar";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
   title: "PSL — Product & Event Management",
@@ -26,7 +29,7 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang="fr">
+    <html lang="fr" className={inter.variable}>
       <body className="font-sans bg-[#f4f4f6]">
         <div className="flex h-screen">
           {session && (
