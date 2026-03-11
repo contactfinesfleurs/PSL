@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Save } from "lucide-react";
-import { PRODUCT_FAMILIES, SEASONS, SIZE_RANGES } from "@/lib/utils";
+import { Save, RefreshCw } from "lucide-react";
+import { PRODUCT_FAMILIES, SEASONS, SIZE_RANGES, COLOR_CODES, generateReference } from "@/lib/utils";
 import { TagInput } from "@/components/ui/TagInput";
 import { FileUpload } from "@/components/ui/FileUpload";
 
@@ -27,6 +27,7 @@ export function TechPackTab({ product }: { product: Product }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const parse = (s: string | null) => {
     if (!s) return [];
@@ -45,7 +46,8 @@ export function TechPackTab({ product }: { product: Product }) {
     sizeRange: product.sizeRange,
     sizes: parse(product.sizes),
     materials: parse(product.materials),
-    colors: parse(product.colors),
+    colorPrimary: parse(product.colors)[0] ?? "",
+    colorSecondary: parse(product.colors)[1] ?? "",
     measurements: product.measurements ?? "",
     reference: product.reference ?? "",
     sketchPaths: parse(product.sketchPaths),
@@ -55,30 +57,54 @@ export function TechPackTab({ product }: { product: Product }) {
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
-  async function handleSave() {
-    setSaving(true);
-    await fetch(`/api/products/${product.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+  const generatedReference = useMemo(
+    () =>
+      generateReference({
         name: form.name,
-        family: form.family,
         season: form.season,
         year: form.year,
-        sizeRange: form.sizeRange,
-        sizes: form.sizes,
-        materials: form.materials,
-        colors: form.colors,
-        measurements: form.measurements,
-        reference: form.reference,
-        sketchPaths: form.sketchPaths,
-        techPackPath: form.techPackPath,
+        material: form.materials[0] ?? null,
+        colorPrimary: form.colorPrimary || null,
       }),
-    });
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
-    router.refresh();
+    [form.name, form.season, form.year, form.materials, form.colorPrimary]
+  );
+
+  async function handleSave() {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const res = await fetch(`/api/products/${product.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name,
+          family: form.family,
+          season: form.season,
+          year: form.year,
+          sizeRange: form.sizeRange,
+          sizes: form.sizes,
+          materials: form.materials,
+          colorPrimary: form.colorPrimary || null,
+          colorSecondary: form.colorSecondary || null,
+          measurements: form.measurements || null,
+          reference: form.reference,
+          sketchPaths: form.sketchPaths,
+          techPackPath: form.techPackPath,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setSaveError(body?.error ?? `Erreur ${res.status}`);
+      } else {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2500);
+        router.refresh();
+      }
+    } catch {
+      setSaveError("Erreur réseau, réessayez.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -92,7 +118,7 @@ export function TechPackTab({ product }: { product: Product }) {
           type="text"
           value={form.name}
           onChange={(e) => set("name", e.target.value)}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
         />
       </div>
 
@@ -101,12 +127,23 @@ export function TechPackTab({ product }: { product: Product }) {
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Référence interne
         </label>
-        <input
-          type="text"
-          value={form.reference}
-          onChange={(e) => set("reference", e.target.value)}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-        />
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={form.reference}
+            onChange={(e) => set("reference", e.target.value)}
+            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-gray-300"
+          />
+          <button
+            type="button"
+            onClick={() => set("reference", generatedReference)}
+            title={`Régénérer : ${generatedReference}`}
+            className="inline-flex items-center gap-1.5 border border-gray-300 text-gray-500 hover:border-gray-400 hover:text-gray-700 text-xs font-medium px-3 py-2 rounded-lg transition-colors whitespace-nowrap"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            {generatedReference}
+          </button>
+        </div>
       </div>
 
       {/* Family + Season + Year */}
@@ -118,7 +155,7 @@ export function TechPackTab({ product }: { product: Product }) {
           <select
             value={form.family}
             onChange={(e) => set("family", e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
           >
             {PRODUCT_FAMILIES.map((f) => (
               <option key={f.value} value={f.value}>
@@ -135,7 +172,7 @@ export function TechPackTab({ product }: { product: Product }) {
           <select
             value={form.season}
             onChange={(e) => set("season", e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
           >
             {SEASONS.map((s) => (
               <option key={s.value} value={s.value}>
@@ -155,7 +192,7 @@ export function TechPackTab({ product }: { product: Product }) {
             onChange={(e) => set("year", parseInt(e.target.value))}
             min={2020}
             max={2040}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
           />
         </div>
       </div>
@@ -168,7 +205,7 @@ export function TechPackTab({ product }: { product: Product }) {
         <select
           value={form.sizeRange}
           onChange={(e) => set("sizeRange", e.target.value)}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
         >
           {SIZE_RANGES.map((s) => (
             <option key={s.value} value={s.value}>
@@ -203,16 +240,37 @@ export function TechPackTab({ product }: { product: Product }) {
       </div>
 
       {/* Colors */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Coloris
-        </label>
-        <TagInput
-          value={form.colors}
-          onChange={(v) => set("colors", v)}
-          placeholder="ex. Noir, Ivoire"
-          colorMode
-        />
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Couleur principale
+          </label>
+          <select
+            value={form.colorPrimary}
+            onChange={(e) => set("colorPrimary", e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+          >
+            <option value="">— Sélectionner</option>
+            {COLOR_CODES.map((c) => (
+              <option key={c.code} value={c.code}>{c.code} — {c.label}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Couleur secondaire
+          </label>
+          <select
+            value={form.colorSecondary}
+            onChange={(e) => set("colorSecondary", e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+          >
+            <option value="">— Optionnel</option>
+            {COLOR_CODES.map((c) => (
+              <option key={c.code} value={c.code}>{c.code} — {c.label}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Measurements */}
@@ -224,7 +282,7 @@ export function TechPackTab({ product }: { product: Product }) {
           value={form.measurements}
           onChange={(e) => set("measurements", e.target.value)}
           rows={4}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 resize-none"
         />
       </div>
 
@@ -267,7 +325,7 @@ export function TechPackTab({ product }: { product: Product }) {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="inline-flex items-center gap-2 bg-purple-700 hover:bg-purple-800 disabled:opacity-50 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors"
+          className="inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-800 disabled:opacity-50 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors"
         >
           <Save className="h-4 w-4" />
           {saving ? "Sauvegarde…" : "Sauvegarder"}
@@ -275,6 +333,11 @@ export function TechPackTab({ product }: { product: Product }) {
         {saved && (
           <span className="text-sm text-green-600 font-medium">
             ✓ Sauvegardé
+          </span>
+        )}
+        {saveError && (
+          <span className="text-sm text-red-600 font-medium">
+            ✗ {saveError}
           </span>
         )}
       </div>

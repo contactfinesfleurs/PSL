@@ -1,0 +1,1948 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "PSL Studio API",
+    "description": "REST API for PSL Studio — a fashion product lifecycle management platform covering products, samples, events, campaigns, loans, media placements, and guests.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local development server"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT token obtained from POST /api/auth/login or POST /api/auth/register. Pass in the Authorization header as: Bearer <token>"
+      }
+    },
+    "schemas": {
+      "Pagination": {
+        "type": "object",
+        "properties": {
+          "page": { "type": "integer", "example": 1 },
+          "limit": { "type": "integer", "example": 20 },
+          "total": { "type": "integer", "example": 100 },
+          "totalPages": { "type": "integer", "example": 5 }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string" }
+        },
+        "required": ["error"]
+      },
+      "Success": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true }
+        }
+      },
+      "Profile": {
+        "type": "object",
+        "properties": {
+          "profileId": { "type": "string" },
+          "name": { "type": "string" },
+          "email": { "type": "string", "format": "email" }
+        }
+      },
+      "Sample": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "productId": { "type": "string" },
+          "samplePhotoPaths": { "type": "string", "nullable": true, "description": "JSON-encoded array of photo paths" },
+          "detailPhotoPaths": { "type": "string", "nullable": true },
+          "reviewPhotoPaths": { "type": "string", "nullable": true },
+          "reviewNotes": { "type": "string", "nullable": true },
+          "supplierName": { "type": "string", "nullable": true },
+          "supplierAddress": { "type": "string", "nullable": true },
+          "supplierCountry": { "type": "string", "nullable": true },
+          "shippingDate": { "type": "string", "format": "date-time", "nullable": true },
+          "trackingNumber": { "type": "string", "nullable": true },
+          "trackingStatus": { "type": "string", "nullable": true, "enum": ["InTransit", "Delivered", "NotFound", "Pending", "Expired", "PickUp", "Undelivered", "Alert"] },
+          "receivedAt": { "type": "string", "format": "date-time", "nullable": true },
+          "packshotPaths": { "type": "string", "nullable": true },
+          "definitiveColors": { "type": "string", "nullable": true },
+          "definitiveMaterials": { "type": "string", "nullable": true }
+        }
+      },
+      "Product": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "deletedAt": { "type": "string", "format": "date-time", "nullable": true },
+          "profileId": { "type": "string" },
+          "name": { "type": "string" },
+          "sku": { "type": "string" },
+          "reference": { "type": "string", "nullable": true },
+          "family": {
+            "type": "string",
+            "enum": ["accessories", "pret-a-porter", "shoes", "leather-goods", "small-leather-goods", "other"]
+          },
+          "season": {
+            "type": "string",
+            "enum": ["FALL-WINTER", "PRE-FALL", "SPRING-SUMMER", "CRUISE", "RESORT"]
+          },
+          "year": { "type": "integer", "minimum": 2000, "maximum": 2100 },
+          "sizeRange": { "type": "string" },
+          "sizes": { "type": "string", "description": "JSON-encoded array of size strings" },
+          "measurements": { "type": "string", "nullable": true },
+          "materials": { "type": "string", "nullable": true, "description": "JSON-encoded array" },
+          "colors": { "type": "string", "nullable": true, "description": "JSON-encoded array of color codes" },
+          "sketchPaths": { "type": "string", "nullable": true, "description": "JSON-encoded array of file paths" },
+          "techPackPath": { "type": "string", "nullable": true },
+          "description": { "type": "string", "nullable": true },
+          "metaTags": { "type": "string", "nullable": true, "description": "JSON-encoded array of tags" },
+          "sampleStatus": { "type": "string", "enum": ["PENDING", "VALIDATED", "NOT_VALIDATED"] },
+          "plannedLaunchAt": { "type": "string", "format": "date-time", "nullable": true },
+          "samples": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Sample" }
+          }
+        }
+      },
+      "ProductWithRelations": {
+        "allOf": [
+          { "$ref": "#/components/schemas/Product" },
+          {
+            "type": "object",
+            "properties": {
+              "campaigns": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "string" },
+                    "campaignId": { "type": "string" },
+                    "productId": { "type": "string" },
+                    "campaign": { "$ref": "#/components/schemas/Campaign" }
+                  }
+                }
+              },
+              "events": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "string" },
+                    "eventId": { "type": "string" },
+                    "productId": { "type": "string" },
+                    "event": { "$ref": "#/components/schemas/Event" }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "ProductCreate": {
+        "type": "object",
+        "required": ["name", "family", "season", "year", "sizeRange"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "family": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "example": "accessories"
+          },
+          "season": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "example": "FALL-WINTER"
+          },
+          "year": { "type": "integer", "minimum": 2000, "maximum": 2100, "example": 2025 },
+          "sizeRange": { "type": "string", "minLength": 1, "maxLength": 100, "example": "S-XL" },
+          "sizes": {
+            "type": "array",
+            "items": { "type": "string", "maxLength": 20 },
+            "default": []
+          },
+          "measurements": { "type": "string", "nullable": true },
+          "materials": {
+            "type": "array",
+            "nullable": true,
+            "items": { "type": "string", "maxLength": 200 }
+          },
+          "colorPrimary": { "type": "string", "maxLength": 10, "nullable": true },
+          "colorSecondary": { "type": "string", "maxLength": 10, "nullable": true }
+        }
+      },
+      "ProductPatch": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "family": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "season": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "year": { "type": "integer", "minimum": 2000, "maximum": 2100 },
+          "sizeRange": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "sizes": { "type": "array", "items": { "type": "string", "maxLength": 20 } },
+          "measurements": { "type": "string", "nullable": true },
+          "materials": { "type": "array", "nullable": true, "items": { "type": "string", "maxLength": 200 } },
+          "colors": { "type": "array", "nullable": true, "items": { "type": "string", "maxLength": 100 } },
+          "colorPrimary": { "type": "string", "maxLength": 10, "nullable": true },
+          "colorSecondary": { "type": "string", "maxLength": 10, "nullable": true },
+          "sketchPaths": { "type": "array", "nullable": true, "items": { "type": "string" } },
+          "techPackPath": { "type": "string", "maxLength": 500, "nullable": true },
+          "sampleStatus": { "type": "string", "enum": ["PENDING", "VALIDATED", "NOT_VALIDATED"] },
+          "description": { "type": "string", "maxLength": 5000, "nullable": true },
+          "metaTags": { "type": "array", "nullable": true, "items": { "type": "string", "maxLength": 100 } },
+          "plannedLaunchAt": { "type": "string", "format": "date-time", "nullable": true },
+          "reference": { "type": "string", "maxLength": 200, "nullable": true }
+        }
+      },
+      "SampleUpsert": {
+        "type": "object",
+        "properties": {
+          "sampleId": { "type": "string", "description": "Existing sample ID for upsert (PUT only)" },
+          "samplePhotoPaths": { "type": "array", "items": { "type": "string" } },
+          "detailPhotoPaths": { "type": "array", "items": { "type": "string" } },
+          "reviewPhotoPaths": { "type": "array", "items": { "type": "string" } },
+          "reviewNotes": { "type": "string", "nullable": true },
+          "supplierName": { "type": "string", "nullable": true },
+          "supplierAddress": { "type": "string", "nullable": true },
+          "supplierCountry": { "type": "string", "nullable": true },
+          "shippingDate": { "type": "string", "format": "date-time", "nullable": true },
+          "trackingNumber": { "type": "string", "nullable": true },
+          "packshotPaths": { "type": "array", "items": { "type": "string" } },
+          "definitiveColors": { "type": "array", "items": { "type": "string" } },
+          "definitiveMaterials": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "Event": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "deletedAt": { "type": "string", "format": "date-time", "nullable": true },
+          "profileId": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string", "nullable": true },
+          "type": {
+            "type": "string",
+            "enum": ["SHOW", "PRESENTATION", "LAUNCH", "PRESS", "TRADE-SHOW", "OTHER"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["DRAFT", "CONFIRMED", "COMPLETED", "CANCELLED"]
+          },
+          "startAt": { "type": "string", "format": "date-time" },
+          "endAt": { "type": "string", "format": "date-time", "nullable": true },
+          "location": { "type": "string", "nullable": true },
+          "venue": { "type": "string", "nullable": true }
+        }
+      },
+      "EventCreate": {
+        "type": "object",
+        "required": ["name", "type", "startAt"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "description": { "type": "string", "maxLength": 2000, "nullable": true },
+          "type": {
+            "type": "string",
+            "enum": ["SHOW", "PRESENTATION", "LAUNCH", "PRESS", "TRADE-SHOW", "OTHER"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["DRAFT", "CONFIRMED", "COMPLETED", "CANCELLED"],
+            "default": "DRAFT"
+          },
+          "startAt": { "type": "string", "format": "date-time" },
+          "endAt": { "type": "string", "format": "date-time", "nullable": true },
+          "location": { "type": "string", "maxLength": 500, "nullable": true },
+          "venue": { "type": "string", "maxLength": 300, "nullable": true }
+        }
+      },
+      "EventPatch": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "description": { "type": "string", "maxLength": 2000, "nullable": true },
+          "type": {
+            "type": "string",
+            "enum": ["SHOW", "PRESENTATION", "LAUNCH", "PRESS", "TRADE-SHOW", "OTHER"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["DRAFT", "CONFIRMED", "COMPLETED", "CANCELLED"]
+          },
+          "startAt": { "type": "string", "format": "date-time" },
+          "endAt": { "type": "string", "format": "date-time", "nullable": true },
+          "location": { "type": "string", "maxLength": 500, "nullable": true },
+          "venue": { "type": "string", "maxLength": 300, "nullable": true }
+        }
+      },
+      "Campaign": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "deletedAt": { "type": "string", "format": "date-time", "nullable": true },
+          "profileId": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string", "nullable": true },
+          "type": {
+            "type": "string",
+            "enum": ["DIGITAL", "PRINT", "OOH", "SOCIAL", "INFLUENCER", "OTHER"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["DRAFT", "ACTIVE", "PAUSED", "COMPLETED", "CANCELLED"]
+          },
+          "startAt": { "type": "string", "format": "date-time", "nullable": true },
+          "endAt": { "type": "string", "format": "date-time", "nullable": true },
+          "budget": { "type": "number", "nullable": true },
+          "currency": { "type": "string", "nullable": true, "example": "EUR" },
+          "eventId": { "type": "string", "nullable": true }
+        }
+      },
+      "CampaignCreate": {
+        "type": "object",
+        "required": ["name", "type"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "description": { "type": "string", "maxLength": 2000, "nullable": true },
+          "type": {
+            "type": "string",
+            "enum": ["DIGITAL", "PRINT", "OOH", "SOCIAL", "INFLUENCER", "OTHER"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["DRAFT", "ACTIVE", "PAUSED", "COMPLETED", "CANCELLED"],
+            "default": "DRAFT"
+          },
+          "startAt": { "type": "string", "format": "date-time", "nullable": true },
+          "endAt": { "type": "string", "format": "date-time", "nullable": true },
+          "budget": { "type": "number", "minimum": 0, "exclusiveMinimum": true, "nullable": true },
+          "currency": { "type": "string", "minLength": 3, "maxLength": 3, "default": "EUR" },
+          "eventId": { "type": "string", "nullable": true }
+        }
+      },
+      "CampaignPatch": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "description": { "type": "string", "maxLength": 2000, "nullable": true },
+          "type": {
+            "type": "string",
+            "enum": ["DIGITAL", "PRINT", "OOH", "SOCIAL", "INFLUENCER", "OTHER"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["DRAFT", "ACTIVE", "PAUSED", "COMPLETED", "CANCELLED"]
+          },
+          "startAt": { "type": "string", "format": "date-time", "nullable": true },
+          "endAt": { "type": "string", "format": "date-time", "nullable": true },
+          "budget": { "type": "number", "minimum": 0, "exclusiveMinimum": true, "nullable": true },
+          "currency": { "type": "string", "minLength": 3, "maxLength": 3 },
+          "eventId": { "type": "string", "nullable": true }
+        }
+      },
+      "SampleLoan": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "sampleId": { "type": "string" },
+          "productId": { "type": "string" },
+          "contactName": { "type": "string" },
+          "contactRole": { "type": "string", "nullable": true },
+          "publication": { "type": "string", "nullable": true },
+          "purpose": {
+            "type": "string",
+            "enum": ["EDITORIAL", "PRESS", "EVENT", "SHOWROOM", "INFLUENCER", "CELEBRITY"]
+          },
+          "sentAt": { "type": "string", "format": "date-time" },
+          "dueAt": { "type": "string", "format": "date-time", "nullable": true },
+          "returnedAt": { "type": "string", "format": "date-time", "nullable": true },
+          "status": { "type": "string", "enum": ["SENT", "RETURNED", "LOST"] },
+          "notes": { "type": "string", "nullable": true }
+        }
+      },
+      "LoanCreate": {
+        "type": "object",
+        "required": ["sampleId", "contactName", "purpose"],
+        "properties": {
+          "sampleId": { "type": "string", "minLength": 1 },
+          "contactName": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "contactRole": { "type": "string", "maxLength": 100, "nullable": true },
+          "publication": { "type": "string", "maxLength": 200, "nullable": true },
+          "purpose": {
+            "type": "string",
+            "enum": ["EDITORIAL", "PRESS", "EVENT", "SHOWROOM", "INFLUENCER", "CELEBRITY"]
+          },
+          "sentAt": { "type": "string", "format": "date-time" },
+          "dueAt": { "type": "string", "format": "date-time", "nullable": true },
+          "notes": { "type": "string", "maxLength": 1000, "nullable": true }
+        }
+      },
+      "LoanPatch": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "enum": ["SENT", "RETURNED", "LOST"] },
+          "returnedAt": { "type": "string", "format": "date-time", "nullable": true },
+          "dueAt": { "type": "string", "format": "date-time", "nullable": true },
+          "notes": { "type": "string", "maxLength": 1000, "nullable": true },
+          "contactName": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "contactRole": { "type": "string", "maxLength": 100, "nullable": true },
+          "publication": { "type": "string", "maxLength": 200, "nullable": true }
+        }
+      },
+      "MediaPlacement": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "productId": { "type": "string" },
+          "sampleLoanId": { "type": "string", "nullable": true },
+          "publication": { "type": "string" },
+          "type": {
+            "type": "string",
+            "enum": ["PRINT", "DIGITAL", "SOCIAL", "TV", "PODCAST"]
+          },
+          "publishedAt": { "type": "string", "format": "date-time" },
+          "url": { "type": "string", "format": "uri", "nullable": true },
+          "screenshotPath": { "type": "string", "nullable": true },
+          "notes": { "type": "string", "nullable": true },
+          "reach": { "type": "integer", "nullable": true }
+        }
+      },
+      "PlacementCreate": {
+        "type": "object",
+        "required": ["publication", "type", "publishedAt"],
+        "properties": {
+          "publication": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "type": {
+            "type": "string",
+            "enum": ["PRINT", "DIGITAL", "SOCIAL", "TV", "PODCAST"]
+          },
+          "publishedAt": { "type": "string", "format": "date-time" },
+          "url": { "type": "string", "format": "uri", "nullable": true },
+          "screenshotPath": { "type": "string", "nullable": true },
+          "notes": { "type": "string", "maxLength": 1000, "nullable": true },
+          "reach": { "type": "integer", "minimum": 1, "nullable": true },
+          "sampleLoanId": { "type": "string", "nullable": true }
+        }
+      },
+      "EventGuest": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "eventId": { "type": "string" },
+          "firstName": { "type": "string" },
+          "lastName": { "type": "string" },
+          "email": { "type": "string", "format": "email", "nullable": true },
+          "phone": { "type": "string", "nullable": true },
+          "instagram": { "type": "string", "nullable": true },
+          "company": { "type": "string", "nullable": true },
+          "title": { "type": "string", "nullable": true },
+          "category": {
+            "type": "string",
+            "enum": ["VIP", "PRESS", "BUYER", "INFLUENCER", "INDUSTRY", "GUEST"]
+          },
+          "invitedBy": { "type": "string", "nullable": true },
+          "rsvpStatus": {
+            "type": "string",
+            "enum": ["INVITED", "CONFIRMED", "DECLINED", "WAITLIST"]
+          },
+          "checkedIn": { "type": "boolean" },
+          "checkedInAt": { "type": "string", "format": "date-time", "nullable": true },
+          "tableNumber": { "type": "string", "nullable": true },
+          "seatNumber": { "type": "string", "nullable": true },
+          "notes": { "type": "string", "nullable": true }
+        }
+      },
+      "GuestCreate": {
+        "type": "object",
+        "required": ["firstName", "lastName"],
+        "properties": {
+          "firstName": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "lastName": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "email": { "type": "string", "format": "email", "nullable": true },
+          "phone": { "type": "string", "maxLength": 50, "nullable": true },
+          "instagram": { "type": "string", "maxLength": 100, "nullable": true },
+          "company": { "type": "string", "maxLength": 200, "nullable": true },
+          "title": { "type": "string", "maxLength": 200, "nullable": true },
+          "category": {
+            "type": "string",
+            "enum": ["VIP", "PRESS", "BUYER", "INFLUENCER", "INDUSTRY", "GUEST"],
+            "default": "GUEST"
+          },
+          "invitedBy": { "type": "string", "maxLength": 200, "nullable": true },
+          "rsvpStatus": {
+            "type": "string",
+            "enum": ["INVITED", "CONFIRMED", "DECLINED", "WAITLIST"],
+            "default": "INVITED"
+          },
+          "tableNumber": { "type": "string", "maxLength": 20, "nullable": true },
+          "seatNumber": { "type": "string", "maxLength": 20, "nullable": true },
+          "notes": { "type": "string", "maxLength": 500, "nullable": true }
+        }
+      },
+      "GuestPatch": {
+        "type": "object",
+        "properties": {
+          "firstName": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "lastName": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "email": { "type": "string", "format": "email", "nullable": true },
+          "phone": { "type": "string", "maxLength": 50, "nullable": true },
+          "instagram": { "type": "string", "maxLength": 100, "nullable": true },
+          "company": { "type": "string", "maxLength": 200, "nullable": true },
+          "title": { "type": "string", "maxLength": 200, "nullable": true },
+          "category": {
+            "type": "string",
+            "enum": ["VIP", "PRESS", "BUYER", "INFLUENCER", "INDUSTRY", "GUEST"]
+          },
+          "rsvpStatus": {
+            "type": "string",
+            "enum": ["INVITED", "CONFIRMED", "DECLINED", "WAITLIST"]
+          },
+          "checkedIn": { "type": "boolean" },
+          "tableNumber": { "type": "string", "maxLength": 20, "nullable": true },
+          "seatNumber": { "type": "string", "maxLength": 20, "nullable": true },
+          "notes": { "type": "string", "maxLength": 500, "nullable": true }
+        }
+      },
+      "EventProductBody": {
+        "type": "object",
+        "required": ["productId"],
+        "properties": {
+          "productId": { "type": "string" },
+          "notes": { "type": "string", "nullable": true },
+          "look": { "type": "integer", "nullable": true, "description": "Look number for fashion shows" }
+        }
+      },
+      "EventProductDelete": {
+        "type": "object",
+        "required": ["productId"],
+        "properties": {
+          "productId": { "type": "string" }
+        }
+      },
+      "CampaignProductBody": {
+        "type": "object",
+        "required": ["productId"],
+        "properties": {
+          "productId": { "type": "string" },
+          "notes": { "type": "string", "nullable": true }
+        }
+      },
+      "CampaignProductDelete": {
+        "type": "object",
+        "required": ["productId"],
+        "properties": {
+          "productId": { "type": "string" }
+        }
+      },
+      "TrackRequest": {
+        "type": "object",
+        "required": ["trackingNumber", "sampleId"],
+        "properties": {
+          "trackingNumber": { "type": "string" },
+          "sampleId": { "type": "string" }
+        }
+      },
+      "TrackResponse": {
+        "type": "object",
+        "properties": {
+          "trackingStatus": {
+            "type": "string",
+            "enum": ["NotFound", "InTransit", "Expired", "PickUp", "Undelivered", "Delivered", "Alert", "Unknown"]
+          },
+          "receivedAt": { "type": "string", "format": "date-time", "nullable": true }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "password": { "type": "string", "minLength": 1 }
+        }
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "required": ["name", "email", "password"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "email": { "type": "string", "format": "email" },
+          "password": { "type": "string", "minLength": 8, "maxLength": 100 }
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "email": { "type": "string", "format": "email" }
+        }
+      },
+      "UploadResponse": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string", "description": "Public URL or local path to the uploaded file" },
+          "filename": { "type": "string" }
+        }
+      }
+    },
+    "parameters": {
+      "idParam": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string" },
+        "description": "Resource identifier (cuid)"
+      },
+      "pageParam": {
+        "name": "page",
+        "in": "query",
+        "schema": { "type": "integer", "minimum": 1, "default": 1 },
+        "description": "Page number (1-based)"
+      },
+      "limitParam": {
+        "name": "limit",
+        "in": "query",
+        "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 },
+        "description": "Number of items per page"
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Missing or invalid authentication token",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" },
+            "example": { "error": "Non authentifié" }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Authenticated but not authorized to access this resource",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" }
+          }
+        }
+      },
+      "BadRequest": {
+        "description": "Invalid request body or parameters",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" }
+          }
+        }
+      },
+      "InternalServerError": {
+        "description": "Unexpected server error",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    { "name": "Auth", "description": "Authentication and session management" },
+    { "name": "Products", "description": "Fashion product management" },
+    { "name": "Samples", "description": "Physical sample data for a product" },
+    { "name": "Events", "description": "Fashion event management (shows, presentations, launches)" },
+    { "name": "Campaigns", "description": "Marketing campaign management" },
+    { "name": "Loans", "description": "Sample loan tracking (press, editorial, influencer)" },
+    { "name": "Placements", "description": "Media placement / press coverage tracking" },
+    { "name": "Guests", "description": "Event guest list and RSVP management" },
+    { "name": "Upload", "description": "File upload (images and PDFs)" },
+    { "name": "Track", "description": "Shipment tracking via 17track" }
+  ],
+  "paths": {
+    "/api/auth/register": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Register a new account",
+        "operationId": "authRegister",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RegisterRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Account created successfully. A session cookie is set.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuthResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "409": {
+            "description": "Email already in use",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" },
+                "example": { "error": "Un compte avec cet email existe déjà" }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests (rate limited: 5 per 15-minute window per IP)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Log in with email and password",
+        "operationId": "authLogin",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful. A session cookie is set.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuthResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": {
+            "description": "Invalid email or password",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" },
+                "example": { "error": "Email ou mot de passe incorrect" }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests (rate limited: 5 per 15-minute window per IP)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Log out and clear session cookie",
+        "operationId": "authLogout",
+        "responses": {
+          "200": {
+            "description": "Logged out successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "ok": { "type": "boolean", "example": true } }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "Get the currently authenticated user",
+        "operationId": "authMe",
+        "responses": {
+          "200": {
+            "description": "Current session profile",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Profile" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/products": {
+      "get": {
+        "tags": ["Products"],
+        "summary": "List products (paginated)",
+        "operationId": "listProducts",
+        "parameters": [
+          { "$ref": "#/components/parameters/pageParam" },
+          { "$ref": "#/components/parameters/limitParam" },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["PENDING", "VALIDATED", "NOT_VALIDATED"]
+            },
+            "description": "Filter by sample status"
+          },
+          {
+            "name": "family",
+            "in": "query",
+            "schema": { "type": "string" },
+            "description": "Filter by product family (e.g. accessories, shoes)"
+          },
+          {
+            "name": "season",
+            "in": "query",
+            "schema": { "type": "string" },
+            "description": "Filter by season (e.g. FALL-WINTER)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of products",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Product" }
+                    },
+                    "pagination": { "$ref": "#/components/schemas/Pagination" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["Products"],
+        "summary": "Create a new product",
+        "operationId": "createProduct",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ProductCreate" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Product created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Product" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/products/{id}": {
+      "get": {
+        "tags": ["Products"],
+        "summary": "Get a product by ID (with samples, campaigns, and events)",
+        "operationId": "getProduct",
+        "parameters": [
+          { "$ref": "#/components/parameters/idParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product detail with relations",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ProductWithRelations" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "patch": {
+        "tags": ["Products"],
+        "summary": "Partially update a product",
+        "operationId": "patchProduct",
+        "parameters": [
+          { "$ref": "#/components/parameters/idParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ProductPatch" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated product",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Product" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Products"],
+        "summary": "Soft-delete a product",
+        "operationId": "deleteProduct",
+        "parameters": [
+          { "$ref": "#/components/parameters/idParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product soft-deleted",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Success" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/products/{id}/sample": {
+      "get": {
+        "tags": ["Samples"],
+        "summary": "Get the sample for a product",
+        "operationId": "getProductSample",
+        "parameters": [
+          { "$ref": "#/components/parameters/idParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sample object or null if none exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    { "$ref": "#/components/schemas/Sample" },
+                    { "type": "null" }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["Samples"],
+        "summary": "Create or update the sample for a product",
+        "operationId": "createProductSample",
+        "description": "Creates a new sample. If a sample already exists for this product, updates it instead.",
+        "parameters": [
+          { "$ref": "#/components/parameters/idParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SampleUpsert" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Sample created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Sample" }
+              }
+            }
+          },
+          "200": {
+            "description": "Existing sample updated (returned when sample already existed)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Sample" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "put": {
+        "tags": ["Samples"],
+        "summary": "Upsert the sample for a product",
+        "operationId": "upsertProductSample",
+        "description": "Creates or updates the sample. Supply `sampleId` in the body to target an existing sample.",
+        "parameters": [
+          { "$ref": "#/components/parameters/idParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SampleUpsert" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sample upserted",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Sample" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/products/{id}/pdf": {
+      "get": {
+        "tags": ["Products"],
+        "summary": "Generate a non-validation PDF report for a product",
+        "operationId": "getProductPdf",
+        "description": "Returns an HTML document intended to be printed as a PDF. Contains product info, review notes, and review photos.",
+        "parameters": [
+          { "$ref": "#/components/parameters/idParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "HTML report document",
+            "content": {
+              "text/html": {
+                "schema": { "type": "string" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/InternalServerError" }
+        }
+      }
+    },
+    "/api/products/{id}/loans": {
+      "get": {
+        "tags": ["Loans"],
+        "summary": "List loans for a product",
+        "operationId": "listProductLoans",
+        "parameters": [
+          { "$ref": "#/components/parameters/idParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of sample loans",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/SampleLoan" }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["Loans"],
+        "summary": "Create a loan for a product",
+        "operationId": "createProductLoan",
+        "parameters": [
+          { "$ref": "#/components/parameters/idParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoanCreate" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Loan created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SampleLoan" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/products/{id}/placements": {
+      "get": {
+        "tags": ["Placements"],
+        "summary": "List media placements for a product",
+        "operationId": "listProductPlacements",
+        "parameters": [
+          { "$ref": "#/components/parameters/idParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of media placements",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/MediaPlacement" }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["Placements"],
+        "summary": "Create a media placement for a product",
+        "operationId": "createProductPlacement",
+        "parameters": [
+          { "$ref": "#/components/parameters/idParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PlacementCreate" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Placement created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MediaPlacement" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/events": {
+      "get": {
+        "tags": ["Events"],
+        "summary": "List events (paginated)",
+        "operationId": "listEvents",
+        "parameters": [
+          { "$ref": "#/components/parameters/pageParam" },
+          { "$ref": "#/components/parameters/limitParam" },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["DRAFT", "CONFIRMED", "COMPLETED", "CANCELLED"]
+            },
+            "description": "Filter by event status"
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["SHOW", "PRESENTATION", "LAUNCH", "PRESS", "TRADE-SHOW", "OTHER"]
+            },
+            "description": "Filter by event type"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "allOf": [
+                          { "$ref": "#/components/schemas/Event" },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "_count": {
+                                "type": "object",
+                                "properties": {
+                                  "campaigns": { "type": "integer" },
+                                  "products": { "type": "integer" }
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "pagination": { "$ref": "#/components/schemas/Pagination" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["Events"],
+        "summary": "Create a new event",
+        "operationId": "createEvent",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/EventCreate" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Event created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Event" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/events/{id}": {
+      "get": {
+        "tags": ["Events"],
+        "summary": "Get an event by ID (with campaigns and products)",
+        "operationId": "getEvent",
+        "parameters": [
+          { "$ref": "#/components/parameters/idParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event detail with campaigns and products",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Event" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "patch": {
+        "tags": ["Events"],
+        "summary": "Partially update an event",
+        "operationId": "patchEvent",
+        "parameters": [
+          { "$ref": "#/components/parameters/idParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/EventPatch" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated event",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Event" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Events"],
+        "summary": "Soft-delete an event",
+        "operationId": "deleteEvent",
+        "parameters": [
+          { "$ref": "#/components/parameters/idParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event soft-deleted",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Success" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/events/{id}/products": {
+      "post": {
+        "tags": ["Events"],
+        "summary": "Add or update a product in an event (upsert)",
+        "operationId": "addEventProduct",
+        "parameters": [
+          { "$ref": "#/components/parameters/idParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/EventProductBody" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Product added to event",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "string" },
+                    "eventId": { "type": "string" },
+                    "productId": { "type": "string" },
+                    "addedAt": { "type": "string", "format": "date-time" },
+                    "notes": { "type": "string", "nullable": true },
+                    "look": { "type": "integer", "nullable": true }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "delete": {
+        "tags": ["Events"],
+        "summary": "Remove a product from an event",
+        "operationId": "removeEventProduct",
+        "parameters": [
+          { "$ref": "#/components/parameters/idParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/EventProductDelete" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Product removed from event",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Success" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/events/{id}/guests": {
+      "get": {
+        "tags": ["Guests"],
+        "summary": "List guests for an event",
+        "operationId": "listEventGuests",
+        "parameters": [
+          { "$ref": "#/components/parameters/idParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of guests, sorted by category then last name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/EventGuest" }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["Guests"],
+        "summary": "Add a guest to an event",
+        "operationId": "createEventGuest",
+        "parameters": [
+          { "$ref": "#/components/parameters/idParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/GuestCreate" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Guest created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EventGuest" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/campaigns": {
+      "get": {
+        "tags": ["Campaigns"],
+        "summary": "List campaigns (paginated)",
+        "operationId": "listCampaigns",
+        "parameters": [
+          { "$ref": "#/components/parameters/pageParam" },
+          { "$ref": "#/components/parameters/limitParam" },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["DRAFT", "ACTIVE", "PAUSED", "COMPLETED", "CANCELLED"]
+            },
+            "description": "Filter by campaign status"
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["DIGITAL", "PRINT", "OOH", "SOCIAL", "INFLUENCER", "OTHER"]
+            },
+            "description": "Filter by campaign type"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of campaigns",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "allOf": [
+                          { "$ref": "#/components/schemas/Campaign" },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "event": {
+                                "nullable": true,
+                                "type": "object",
+                                "properties": {
+                                  "id": { "type": "string" },
+                                  "name": { "type": "string" },
+                                  "type": { "type": "string" },
+                                  "status": { "type": "string" },
+                                  "startAt": { "type": "string", "format": "date-time" }
+                                }
+                              },
+                              "_count": {
+                                "type": "object",
+                                "properties": {
+                                  "products": { "type": "integer" }
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "pagination": { "$ref": "#/components/schemas/Pagination" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["Campaigns"],
+        "summary": "Create a new campaign",
+        "operationId": "createCampaign",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CampaignCreate" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Campaign created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Campaign" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/campaigns/{id}": {
+      "get": {
+        "tags": ["Campaigns"],
+        "summary": "Get a campaign by ID (with products and event)",
+        "operationId": "getCampaign",
+        "parameters": [
+          { "$ref": "#/components/parameters/idParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Campaign detail with products and linked event",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Campaign" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "patch": {
+        "tags": ["Campaigns"],
+        "summary": "Partially update a campaign",
+        "operationId": "patchCampaign",
+        "parameters": [
+          { "$ref": "#/components/parameters/idParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CampaignPatch" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated campaign",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Campaign" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Campaigns"],
+        "summary": "Soft-delete a campaign",
+        "operationId": "deleteCampaign",
+        "parameters": [
+          { "$ref": "#/components/parameters/idParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Campaign soft-deleted",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Success" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/campaigns/{id}/products": {
+      "post": {
+        "tags": ["Campaigns"],
+        "summary": "Add or update a product in a campaign (upsert)",
+        "operationId": "addCampaignProduct",
+        "parameters": [
+          { "$ref": "#/components/parameters/idParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CampaignProductBody" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Product added to campaign",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "string" },
+                    "campaignId": { "type": "string" },
+                    "productId": { "type": "string" },
+                    "addedAt": { "type": "string", "format": "date-time" },
+                    "notes": { "type": "string", "nullable": true }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "delete": {
+        "tags": ["Campaigns"],
+        "summary": "Remove a product from a campaign",
+        "operationId": "removeCampaignProduct",
+        "parameters": [
+          { "$ref": "#/components/parameters/idParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CampaignProductDelete" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Product removed from campaign",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Success" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/loans/{id}": {
+      "patch": {
+        "tags": ["Loans"],
+        "summary": "Update a sample loan",
+        "operationId": "patchLoan",
+        "parameters": [
+          { "$ref": "#/components/parameters/idParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoanPatch" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated loan",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SampleLoan" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Loans"],
+        "summary": "Delete a sample loan",
+        "operationId": "deleteLoan",
+        "parameters": [
+          { "$ref": "#/components/parameters/idParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Loan deleted",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Success" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/placements/{id}": {
+      "delete": {
+        "tags": ["Placements"],
+        "summary": "Delete a media placement",
+        "operationId": "deletePlacement",
+        "parameters": [
+          { "$ref": "#/components/parameters/idParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Placement deleted",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Success" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/guests/{id}": {
+      "patch": {
+        "tags": ["Guests"],
+        "summary": "Update a guest (RSVP, check-in, seating, etc.)",
+        "operationId": "patchGuest",
+        "parameters": [
+          { "$ref": "#/components/parameters/idParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/GuestPatch" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated guest",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EventGuest" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Guests"],
+        "summary": "Delete a guest",
+        "operationId": "deleteGuest",
+        "parameters": [
+          { "$ref": "#/components/parameters/idParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Guest deleted",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Success" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/track": {
+      "post": {
+        "tags": ["Track"],
+        "summary": "Refresh shipment tracking status for a sample via 17track",
+        "operationId": "trackShipment",
+        "description": "Calls the 17track API and persists the latest status on the sample record.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/TrackRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tracking result",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TrackResponse" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": {
+            "description": "17track API key not configured or upstream API error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad gateway — 17track API returned a non-OK response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/upload": {
+      "post": {
+        "tags": ["Upload"],
+        "summary": "Upload a file (image or PDF)",
+        "operationId": "uploadFile",
+        "description": "Accepts multipart/form-data. Maximum file size: 10 MB. Allowed types: JPEG, PNG, WebP, GIF, PDF. In production, files are stored in Vercel Blob; in development they are written to public/uploads.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file"],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "The file to upload"
+                  },
+                  "folder": {
+                    "type": "string",
+                    "description": "Destination folder name (alphanumeric, hyphen, underscore). Defaults to 'general'.",
+                    "default": "general"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "File uploaded successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UploadResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "No file provided or invalid path",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "413": {
+            "description": "File too large (> 10 MB)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "500": { "$ref": "#/components/responses/InternalServerError" }
+        }
+      }
+    },
+    "/api/docs": {
+      "get": {
+        "tags": ["Docs"],
+        "summary": "Retrieve this OpenAPI specification",
+        "operationId": "getDocs",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "OpenAPI 3.0 specification as JSON",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,35 +1,51 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { escapeHtml, safeParseArray, isTrustedImageUrl } from "@/lib/utils";
+import { getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
+
+// Alias so the template literals stay terse
+const esc = escapeHtml;
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const profileId = getProfileId(req);
+  if (!profileId) return unauthorizedResponse();
+
   const { id } = await params;
-  const product = await prisma.product.findUnique({
-    where: { id },
-    include: { samples: true },
-  });
+  if (!id || typeof id !== 'string' || id.trim() === '') {
+    return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+  }
+
+  let product;
+  try {
+    product = await prisma.product.findUnique({
+      where: { id, profileId, deletedAt: null },
+      include: { samples: true },
+    });
+  } catch {
+    return NextResponse.json({ error: "Erreur serveur." }, { status: 500 });
+  }
 
   if (!product) {
     return NextResponse.json({ error: "Produit introuvable" }, { status: 404 });
   }
 
   const sample = product.samples[0];
+  const now = new Date();
 
-  // Generate HTML for PDF (using browser print)
-  const reviewNotes = sample?.reviewNotes ?? "";
-  const reviewPhotos: string[] = sample?.reviewPhotoPaths
-    ? JSON.parse(sample.reviewPhotoPaths)
-    : [];
+  // Escape user-controlled text; safely parse JSON arrays; filter untrusted URLs
+  const reviewNotes = esc(sample?.reviewNotes ?? "");
+  const reviewPhotos = safeParseArray(sample?.reviewPhotoPaths).filter(isTrustedImageUrl);
 
   const html = `<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Rapport de Non-Validation — ${product.name}</title>
+  <title>Rapport de Non-Validation — ${esc(product.name)}</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: Arial, sans-serif; color: #1a1a1a; padding: 40px; }
@@ -57,7 +73,7 @@ export async function GET(
 <body>
   <div class="header">
     <h1>Rapport de Non-Validation — Prototypage</h1>
-    <p>Document généré le ${new Date().toLocaleDateString("fr-FR")} à ${new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</p>
+    <p>Document généré le ${now.toLocaleDateString("fr-FR")} à ${now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</p>
     <span class="badge">NON VALIDÉ</span>
   </div>
 
@@ -66,19 +82,19 @@ export async function GET(
     <div class="info-grid">
       <div class="info-item">
         <div class="label">Nom du produit</div>
-        <div class="value">${product.name}</div>
+        <div class="value">${esc(product.name)}</div>
       </div>
       <div class="info-item">
         <div class="label">Référence SKU</div>
-        <div class="value">${product.sku}</div>
+        <div class="value">${esc(product.sku)}</div>
       </div>
       <div class="info-item">
         <div class="label">Famille</div>
-        <div class="value">${product.family}</div>
+        <div class="value">${esc(product.family)}</div>
       </div>
       <div class="info-item">
         <div class="label">Saison</div>
-        <div class="value">${product.season} ${product.year}</div>
+        <div class="value">${esc(product.season)} ${esc(String(product.year))}</div>
       </div>
     </div>
   </div>
@@ -97,7 +113,7 @@ export async function GET(
       ? `<div class="section">
     <h2>Photos des détails à revoir (${reviewPhotos.length})</h2>
     <div class="photos-grid">
-      ${reviewPhotos.map((p) => `<img src="${p}" alt="Détail à revoir" />`).join("")}
+      ${reviewPhotos.map((p) => `<img src="${esc(p)}" alt="Détail à revoir" />`).join("")}
     </div>
   </div>`
       : ""
@@ -105,7 +121,7 @@ export async function GET(
 
   <div class="footer">
     <p>PSL Studio — Document confidentiel destiné au fournisseur</p>
-    <p>Produit : ${product.name} · SKU : ${product.sku}</p>
+    <p>Produit : ${esc(product.name)} · SKU : ${esc(product.sku)}</p>
   </div>
 </body>
 </html>`;
