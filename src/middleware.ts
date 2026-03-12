@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromRequest } from "@/lib/auth";
 
 // Routes publiques (pas de session requise)
-const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/auth/register"];
+const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/auth/register", "/api/dev/init"];
+
+// Profil dev utilisé quand BYPASS_AUTH=1
+const DEV_PROFILE_ID = "dev-bypass-profile-001";
+const DEV_PROFILE_EMAIL = "dev@psl.local";
+const DEV_PROFILE_NAME = "Développeur";
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -14,6 +19,15 @@ export async function middleware(req: NextRequest) {
     PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"))
   ) {
     return NextResponse.next();
+  }
+
+  // Mode bypass dev : BYPASS_AUTH=1 → session fictive injectée
+  if (process.env.BYPASS_AUTH === "1") {
+    const res = NextResponse.next();
+    res.headers.set("x-profile-id", DEV_PROFILE_ID);
+    res.headers.set("x-profile-email", DEV_PROFILE_EMAIL);
+    res.headers.set("x-profile-name", DEV_PROFILE_NAME);
+    return res;
   }
 
   const session = await getSessionFromRequest(req);
