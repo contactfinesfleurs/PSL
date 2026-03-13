@@ -1,0 +1,7 @@
+-- Migration: add_role_and_team
+-- Ces changements (Team, ProfileRole, role, teamId) ont été intégrés
+-- directement dans la migration initiale (00000000000000_init).
+-- Ce fichier existe uniquement pour résoudre l'entrée échouée dans
+-- _prisma_migrations. Il est marqué comme appliqué via :
+--   prisma migrate resolve --applied 20260310_add_role_and_team
+-- Aucune instruction SQL n'est nécessaire ici.
