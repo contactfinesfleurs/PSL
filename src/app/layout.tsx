@@ -3,7 +3,6 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/ui/Sidebar";
 import { getSession } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -18,15 +17,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const session = await getSession();
-
-  let userRole: string | null = null;
-  if (session) {
-    const profile = await prisma.profile.findUnique({
-      where: { id: session.profileId },
-      select: { role: true },
-    });
-    userRole = profile?.role ?? null;
-  }
+  const userRole = session?.role ?? null;
 
   return (
     <html lang="fr" className={inter.variable}>
