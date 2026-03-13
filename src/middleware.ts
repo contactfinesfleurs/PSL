@@ -24,7 +24,16 @@ export async function middleware(req: NextRequest) {
     return res;
   }
 
-  return NextResponse.next();
+  // Permettre l'accès non authentifié à la page login et aux routes auth API
+  if (pathname === "/login" || pathname.startsWith("/api/auth/")) {
+    return NextResponse.next();
+  }
+
+  // Rediriger les utilisateurs non authentifiés vers /login
+  const loginUrl = req.nextUrl.clone();
+  loginUrl.pathname = "/login";
+  loginUrl.searchParams.set("from", pathname);
+  return NextResponse.redirect(loginUrl);
 }
 
 export const config = {
