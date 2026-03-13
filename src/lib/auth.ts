@@ -19,7 +19,7 @@ export type SessionPayload = {
   profileId: string;
   email: string;
   name: string;
-  role: string;
+  role?: string;
 };
 
 // ─── Sign & verify ────────────────────────────────────────────────────────────
