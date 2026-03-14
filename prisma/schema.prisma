@@ -48,6 +48,10 @@ model Profile {
   events    Event[]
   campaigns Campaign[]
 
+  ownedProjects        Project[]
+  projectMemberships   ProjectCollaborator[]
+  projectContributions ProjectContribution[]
+
   @@index([role])
   @@index([teamId])
 }
@@ -100,6 +104,8 @@ model Product {
   loans      SampleLoan[]
   placements MediaPlacement[]
   shares     ProductShare[]
+  projectLinks    ProjectProduct[]
+  projectContributions ProjectContribution[]
 
   @@index([profileId])
   @@index([profileId, season, year])
@@ -382,4 +388,79 @@ model EventProduct {
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, productId])
+}
+
+// ─── PROJECT (COLLABORATIVE COLLECTIONS) ─────────────────────────────────────
+// An authenticated profile creates a Project (e.g. SS26), adds products to it,
+// then shares a join code with collaborators. Collaborators can view all products
+// in the project and add photos/notes (contributions) but cannot edit or delete.
+
+model Project {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name        String
+  description String?
+  code        String  @unique // join code, e.g. "a3f9c12b" (8 hex chars)
+
+  profileId String  // owner
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  products      ProjectProduct[]
+  collaborators ProjectCollaborator[]
+  contributions ProjectContribution[]
+
+  @@index([profileId])
+}
+
+model ProjectProduct {
+  id        String   @id @default(cuid())
+  addedAt   DateTime @default(now())
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, productId])
+  @@index([projectId])
+  @@index([productId])
+}
+
+model ProjectCollaborator {
+  id       String   @id @default(cuid())
+  joinedAt DateTime @default(now())
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  profileId String
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, profileId])
+  @@index([projectId])
+  @@index([profileId])
+}
+
+model ProjectContribution {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  profileId String   // collaborator who contributed
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  photoPaths String? // JSON array of stored paths
+  note       String?
+
+  @@index([projectId])
+  @@index([productId])
+  @@index([profileId])
 }

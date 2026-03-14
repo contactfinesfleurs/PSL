@@ -11,6 +11,7 @@ import {
   LogOut,
   User,
   ShieldCheck,
+  FolderKanban,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -40,6 +41,12 @@ export function Sidebar({ userName, userEmail, userRole }: SidebarProps) {
         { name: "Look Book", href: "/lookbook", icon: BookOpen },
         { name: "Événements", href: "/events", icon: Calendar },
         { name: "Campagnes", href: "/campaigns", icon: Megaphone },
+      ],
+    },
+    {
+      label: "COLLABORATION",
+      items: [
+        { name: "Projets", href: "/projects", icon: FolderKanban },
       ],
     },
     ...(isAdmin
