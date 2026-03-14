@@ -110,6 +110,7 @@ model Product {
   projectContributions ProjectContribution[]
 
   @@index([profileId])
+  @@index([profileId, deletedAt])
   @@index([profileId, season, year])
   @@index([profileId, family])
   @@index([sampleStatus])
@@ -489,4 +490,5 @@ model ProjectInvitation {
   @@index([projectId])
   @@index([invitedEmail])
   @@index([invitedProfileId])
+  @@index([expiresAt])
 }
