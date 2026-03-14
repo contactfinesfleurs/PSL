@@ -84,6 +84,28 @@ export async function POST(
       );
     }
 
+    // Cooldown: block re-sending to the same email within 24 hours.
+    // Since expiresAt is always set to now+30d on (re)send, an existing
+    // invitation with expiresAt > now+29d means it was sent less than 24h ago.
+    const existing = await prisma.projectInvitation.findUnique({
+      where: {
+        projectId_invitedEmail: {
+          projectId: project.id,
+          invitedEmail: email.toLowerCase(),
+        },
+      },
+      select: { expiresAt: true, status: true },
+    });
+    if (existing?.status === "PENDING" && existing.expiresAt) {
+      const cooldownThreshold = new Date(Date.now() + 29 * 24 * 60 * 60 * 1000);
+      if (existing.expiresAt > cooldownThreshold) {
+        return NextResponse.json(
+          { error: "Une invitation a déjà été envoyée à cet email récemment. Réessayez dans 24h." },
+          { status: 429 }
+        );
+      }
+    }
+
     // Invitation expires 30 days from now
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 

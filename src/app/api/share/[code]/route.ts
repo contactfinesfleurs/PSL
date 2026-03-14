@@ -17,6 +17,10 @@ export async function GET(
   try {
     const { code } = await params;
 
+    if (!code || code.length > 20) {
+      return NextResponse.json({ error: "Lien de partage invalide." }, { status: 404 });
+    }
+
     const share = await prisma.productShare.findUnique({
       where: { code },
       include: {

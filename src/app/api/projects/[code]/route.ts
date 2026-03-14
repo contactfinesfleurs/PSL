@@ -58,8 +58,16 @@ export async function GET(req: NextRequest, { params }: Params) {
         addedAt: pp.addedAt,
       }));
 
+    // Collaborators only see their own contributions, not everyone else's.
+    const visibleContributions = isOwner
+      ? project.contributions
+      : project.contributions.filter(
+          (c: { profileId: string }) => c.profileId === profileId
+        );
+
     return NextResponse.json({
       ...project,
+      contributions: visibleContributions,
       isOwner,
       products,
     });

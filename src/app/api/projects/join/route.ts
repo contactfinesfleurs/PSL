@@ -10,7 +10,7 @@ const JoinSchema = z.object({
   code: z.string().min(1).max(20),
 });
 
-// POST /api/projects/join — join a project by code (any authenticated user)
+// POST /api/projects/join — join a project by code (invitation required)
 export async function POST(req: NextRequest) {
   try {
     const profileId = getProfileId(req);
@@ -39,12 +39,41 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Upsert — idempotent: joining twice is a no-op
-    await prisma.projectCollaborator.upsert({
-      where: { projectId_profileId: { projectId: project.id, profileId } },
-      create: { projectId: project.id, profileId },
-      update: {},
+    // Require a valid, non-expired invitation addressed to this user's email
+    const profile = await prisma.profile.findUnique({
+      where: { id: profileId },
+      select: { email: true },
     });
+    if (!profile) return unauthorizedResponse();
+
+    const invitation = await prisma.projectInvitation.findFirst({
+      where: {
+        projectId: project.id,
+        invitedEmail: profile.email.toLowerCase(),
+        status: "PENDING",
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+      },
+    });
+
+    if (!invitation) {
+      return NextResponse.json(
+        { error: "Aucune invitation valide pour rejoindre ce projet." },
+        { status: 403 }
+      );
+    }
+
+    // Accept invitation + create collaborator atomically
+    await prisma.$transaction([
+      prisma.projectCollaborator.upsert({
+        where: { projectId_profileId: { projectId: project.id, profileId } },
+        create: { projectId: project.id, profileId },
+        update: {},
+      }),
+      prisma.projectInvitation.update({
+        where: { id: invitation.id },
+        data: { status: "ACCEPTED", invitedProfileId: profileId },
+      }),
+    ]);
 
     logAudit("PROJECT_JOIN", profileId, "project", project.id, { code });
 
