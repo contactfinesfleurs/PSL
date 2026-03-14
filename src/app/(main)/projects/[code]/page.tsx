@@ -12,6 +12,9 @@ import {
   ChevronUp,
   Image as ImageIcon,
   MessageSquare,
+  UserPlus,
+  X,
+  Send,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -92,6 +95,13 @@ export default function ProjectDetailPage() {
   // Delete project modal
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Invite collaborator modal
+  const [showInvite, setShowInvite] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviting, setInviting] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviteSuccess, setInviteSuccess] = useState(false);
 
   // ─── Load data ──────────────────────────────────────────────────────────────
 
@@ -179,6 +189,27 @@ export default function ProjectDetailPage() {
     }
   }
 
+  // ─── Invite collaborator ─────────────────────────────────────────────────────
+
+  async function handleInvite() {
+    if (!inviteEmail.trim()) return;
+    setInviting(true);
+    setInviteError(null);
+    const res = await fetch(`/api/projects/${code}/invite`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: inviteEmail.trim() }),
+    });
+    if (res.ok) {
+      setInviteSuccess(true);
+      setInviteEmail("");
+    } else {
+      const body = await res.json().catch(() => ({}));
+      setInviteError(body.error ?? "Erreur lors de l'envoi.");
+    }
+    setInviting(false);
+  }
+
   // ─── Render ────────────────────────────────────────────────────────────────
 
   if (loading) {
@@ -237,13 +268,26 @@ export default function ProjectDetailPage() {
         </div>
 
         {isOwner && (
-          <button
-            onClick={() => setConfirmDelete(true)}
-            className="text-xs text-gray-400 hover:text-red-600 transition-colors flex items-center gap-1"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-            Supprimer
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                setShowInvite(true);
+                setInviteSuccess(false);
+                setInviteError(null);
+              }}
+              className="text-xs text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1.5 border border-indigo-200 px-3 py-1.5 rounded-lg"
+            >
+              <UserPlus className="h-3.5 w-3.5" />
+              Inviter un collaborateur
+            </button>
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="text-xs text-gray-400 hover:text-red-600 transition-colors flex items-center gap-1"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Supprimer
+            </button>
+          </div>
         )}
       </div>
 
@@ -535,6 +579,90 @@ export default function ProjectDetailPage() {
           </div>
         )}
       </section>
+
+      {/* Invite collaborator modal */}
+      {showInvite && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Inviter un collaborateur
+              </h2>
+              <button
+                onClick={() => {
+                  setShowInvite(false);
+                  setInviteEmail("");
+                  setInviteError(null);
+                  setInviteSuccess(false);
+                }}
+                className="text-gray-400 hover:text-gray-700"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {inviteSuccess ? (
+              <div className="text-center py-4 space-y-3">
+                <div className="h-10 w-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center mx-auto">
+                  <Check className="h-5 w-5" />
+                </div>
+                <p className="text-sm text-gray-700">
+                  Invitation envoyée ! La personne recevra une notification
+                  à la prochaine connexion.
+                </p>
+                <button
+                  onClick={() => {
+                    setInviteSuccess(false);
+                    setInviteError(null);
+                  }}
+                  className="text-sm text-indigo-600 hover:underline"
+                >
+                  Inviter une autre personne
+                </button>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-gray-500 mb-4">
+                  Entrez l&apos;adresse email du collaborateur à inviter sur{" "}
+                  <strong className="text-gray-800">{data.name}</strong>.
+                </p>
+                <input
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleInvite()}
+                  placeholder="email@exemple.com"
+                  className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 mb-3"
+                  autoFocus
+                />
+                {inviteError && (
+                  <p className="text-xs text-red-600 mb-3">{inviteError}</p>
+                )}
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleInvite}
+                    disabled={inviting || !inviteEmail.trim()}
+                    className="flex-1 inline-flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors"
+                  >
+                    <Send className="h-3.5 w-3.5" />
+                    {inviting ? "Envoi…" : "Envoyer l'invitation"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowInvite(false);
+                      setInviteEmail("");
+                      setInviteError(null);
+                    }}
+                    className="flex-1 border border-gray-300 text-gray-700 text-sm font-medium py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Annuler
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Delete confirmation modal */}
       {confirmDelete && (

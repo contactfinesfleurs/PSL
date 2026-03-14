@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { Plus, FolderKanban } from "lucide-react";
 import { JoinProjectButton } from "./JoinProjectButton";
+import { PendingInvitations } from "./PendingInvitations";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +59,9 @@ export default async function ProjectsPage() {
           </Link>
         </div>
       </div>
+
+      {/* Pending invitations */}
+      <PendingInvitations />
 
       {/* Owned projects */}
       <section className="space-y-4">

@@ -1,0 +1,112 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { z } from "zod";
+import { parseBodyJson, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
+import { logAudit } from "@/lib/audit";
+import { sendProjectInvitationEmail } from "@/lib/email";
+
+export const dynamic = "force-dynamic";
+
+const InviteSchema = z.object({
+  email: z.string().email(),
+});
+
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ code: string }> }
+) {
+  try {
+    const profileId = getProfileId(req);
+    if (!profileId) return unauthorizedResponse();
+
+    const { code } = await params;
+
+    // Load project — owner only
+    const project = await prisma.project.findUnique({
+      where: { code },
+      include: { profile: { select: { id: true, name: true } } },
+    });
+    if (!project || project.profileId !== profileId) {
+      return NextResponse.json({ error: "Projet introuvable." }, { status: 404 });
+    }
+
+    const result = await parseBodyJson(req, InviteSchema);
+    if (!result.success) return result.response;
+    const { email } = result.data;
+
+    // Owner cannot invite themselves
+    const owner = await prisma.profile.findUnique({ where: { id: profileId } });
+    if (owner?.email.toLowerCase() === email.toLowerCase()) {
+      return NextResponse.json(
+        { error: "Vous ne pouvez pas vous inviter vous-même." },
+        { status: 400 }
+      );
+    }
+
+    // Look up profile by email (might not exist yet)
+    const invitedProfile = await prisma.profile.findUnique({
+      where: { email: email.toLowerCase() },
+    });
+
+    // Already a collaborator?
+    if (invitedProfile) {
+      const alreadyMember = await prisma.projectCollaborator.findUnique({
+        where: {
+          projectId_profileId: {
+            projectId: project.id,
+            profileId: invitedProfile.id,
+          },
+        },
+      });
+      if (alreadyMember) {
+        return NextResponse.json(
+          { error: "Cette personne est déjà collaboratrice du projet." },
+          { status: 409 }
+        );
+      }
+    }
+
+    // Upsert invitation (idempotent re-send)
+    const invitation = await prisma.projectInvitation.upsert({
+      where: {
+        projectId_invitedEmail: {
+          projectId: project.id,
+          invitedEmail: email.toLowerCase(),
+        },
+      },
+      create: {
+        projectId: project.id,
+        invitedByProfileId: profileId,
+        invitedEmail: email.toLowerCase(),
+        invitedProfileId: invitedProfile?.id ?? null,
+        status: "PENDING",
+      },
+      update: {
+        status: "PENDING", // re-activate a declined invitation
+        invitedProfileId: invitedProfile?.id ?? null,
+      },
+    });
+
+    logAudit("PROJECT_INVITE", profileId, "project", project.id, { email });
+
+    // Send email (non-blocking — failure does not abort the response)
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL ??
+      (req.headers.get("origin") || "https://pslstudio.app");
+
+    sendProjectInvitationEmail({
+      to: email,
+      inviterName: owner?.name ?? "Un utilisateur",
+      projectName: project.name,
+      projectCode: project.code,
+      appUrl,
+    }).catch((err) =>
+      console.error("[invite] email send failed:", err)
+    );
+
+    return NextResponse.json({ success: true, invitationId: invitation.id });
+  } catch (error) {
+    console.error("[POST /api/projects/[code]/invite]", error);
+    return NextResponse.json({ error: "Erreur serveur." }, { status: 500 });
+  }
+}
