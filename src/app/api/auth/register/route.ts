@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   try {
     // Rate limiting: max 5 attempts per IP per 15-minute window.
     const ip = getClientIp(req);
-    const limited = await rateLimitResponse(ip);
+    const limited = await rateLimitResponse(`register:${ip}`);
     if (limited) return limited;
 
     const result = await parseBodyJson(req, RegisterSchema);
