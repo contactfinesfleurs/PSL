@@ -38,9 +38,13 @@ export async function middleware(req: NextRequest) {
   }
 
   // Rediriger les utilisateurs non authentifiés vers /login
+  // On ne transmet "from" que si c'est un chemin relatif (pas une URL absolue)
+  // pour éviter un open redirect.
   const loginUrl = req.nextUrl.clone();
   loginUrl.pathname = "/login";
-  loginUrl.searchParams.set("from", pathname);
+  if (pathname.startsWith("/") && !pathname.startsWith("//")) {
+    loginUrl.searchParams.set("from", pathname);
+  }
   return NextResponse.redirect(loginUrl);
 }
 
