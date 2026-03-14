@@ -12,7 +12,7 @@ export default async function CampaignsPage() {
   const profileId = session?.profileId ?? "";
 
   const campaigns = await prisma.campaign.findMany({
-    where: { profileId },
+    where: { profileId, deletedAt: null },
     include: { products: true, event: true },
     orderBy: { createdAt: "desc" },
   });
