@@ -2,6 +2,7 @@
 // Uses Resend when RESEND_API_KEY is set; silently skips otherwise (dev mode).
 
 import { Resend } from "resend";
+import { escapeHtml } from "@/lib/formatters";
 
 const FROM_ADDRESS =
   process.env.RESEND_FROM_EMAIL ?? "PSL Studio <noreply@pslstudio.app>";
@@ -34,6 +35,12 @@ export async function sendProjectInvitationEmail(
 
   const joinUrl = `${params.appUrl}/projects`;
 
+  // Escape all user-controlled values before embedding in HTML — inviterName and
+  // projectName come from the database and could contain arbitrary characters.
+  const safeName = escapeHtml(params.inviterName);
+  const safeProject = escapeHtml(params.projectName);
+  const safeCode = escapeHtml(params.projectCode);
+
   const html = `
 <!DOCTYPE html>
 <html lang="fr">
@@ -44,13 +51,13 @@ export async function sendProjectInvitationEmail(
       Invitation à collaborer
     </h1>
     <p style="color:#6b7280;font-size:14px;margin:0 0 24px">
-      <strong style="color:#111">${params.inviterName}</strong> vous invite à rejoindre le projet
-      <strong style="color:#111">${params.projectName}</strong> sur PSL Studio.
+      <strong style="color:#111">${safeName}</strong> vous invite à rejoindre le projet
+      <strong style="color:#111">${safeProject}</strong> sur PSL Studio.
     </p>
     <div style="background:#f9fafb;border-radius:8px;padding:16px;margin-bottom:24px;text-align:center">
       <p style="font-size:12px;color:#9ca3af;margin:0 0 4px">Code projet</p>
       <code style="font-size:20px;font-family:monospace;color:#111;letter-spacing:2px">
-        ${params.projectCode}
+        ${safeCode}
       </code>
     </div>
     <a href="${joinUrl}"
@@ -64,10 +71,11 @@ export async function sendProjectInvitationEmail(
 </body>
 </html>`;
 
+  // Subject: strip HTML tags as a safety measure (email subject is plain-text)
   await resend.emails.send({
     from: FROM_ADDRESS,
     to: params.to,
-    subject: `${params.inviterName} vous invite sur le projet "${params.projectName}"`,
+    subject: `${params.inviterName.replace(/<[^>]*>/g, "")} vous invite sur le projet "${params.projectName.replace(/<[^>]*>/g, "")}"`,
     html,
   });
 }
