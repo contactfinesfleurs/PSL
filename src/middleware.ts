@@ -24,8 +24,14 @@ export async function middleware(req: NextRequest) {
     return res;
   }
 
-  // Permettre l'accès non authentifié à la page login et aux routes auth API
-  if (pathname === "/login" || pathname.startsWith("/api/auth/")) {
+  // Permettre l'accès non authentifié à la page login, aux routes auth API
+  // et aux routes de partage public (code uniquement, pas de session)
+  if (
+    pathname === "/login" ||
+    pathname.startsWith("/api/auth/") ||
+    pathname.startsWith("/api/share/") ||
+    pathname.startsWith("/share/")
+  ) {
     return NextResponse.next();
   }
 
