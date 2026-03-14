@@ -17,6 +17,7 @@ function LoginForm() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -24,6 +25,12 @@ function LoginForm() {
     e.preventDefault();
     setError(null);
     setLoading(true);
+
+    if (mode === "register" && password !== confirmPassword) {
+      setError("Les mots de passe ne correspondent pas.");
+      setLoading(false);
+      return;
+    }
 
     const endpoint = mode === "login" ? "/api/auth/login" : "/api/auth/register";
     const body =
@@ -126,6 +133,22 @@ function LoginForm() {
             )}
           </div>
 
+          {mode === "register" && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Confirmer le mot de passe
+              </label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                placeholder="••••••••"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+              />
+            </div>
+          )}
+
           {error && (
             <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
               {error}
@@ -151,7 +174,7 @@ function LoginForm() {
             <>
               Pas encore de compte ?{" "}
               <button
-                onClick={() => { setMode("register"); setError(null); }}
+                onClick={() => { setMode("register"); setError(null); setConfirmPassword(""); }}
                 className="text-gray-900 font-medium hover:underline"
               >
                 Créer un espace
@@ -161,7 +184,7 @@ function LoginForm() {
             <>
               Déjà un compte ?{" "}
               <button
-                onClick={() => { setMode("login"); setError(null); }}
+                onClick={() => { setMode("login"); setError(null); setConfirmPassword(""); }}
                 className="text-gray-900 font-medium hover:underline"
               >
                 Se connecter
