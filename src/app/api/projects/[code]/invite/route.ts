@@ -4,6 +4,9 @@ import { z } from "zod";
 import { parseBodyJson, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 import { logAudit } from "@/lib/audit";
 import { sendProjectInvitationEmail } from "@/lib/email";
+import { getClientIp, rateLimitResponse } from "@/lib/rate-limit";
+
+const MAX_ACTIVE_INVITATIONS = 20;
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +19,10 @@ export async function POST(
   { params }: { params: Promise<{ code: string }> }
 ) {
   try {
+    const ip = getClientIp(req);
+    const limited = rateLimitResponse(ip);
+    if (limited) return limited;
+
     const profileId = getProfileId(req);
     if (!profileId) return unauthorizedResponse();
 
@@ -64,6 +71,17 @@ export async function POST(
           { status: 409 }
         );
       }
+    }
+
+    // Enforce max active invitations per project
+    const activeCount = await prisma.projectInvitation.count({
+      where: { projectId: project.id, status: "PENDING" },
+    });
+    if (activeCount >= MAX_ACTIVE_INVITATIONS) {
+      return NextResponse.json(
+        { error: "Ce projet a atteint le nombre maximum d'invitations en attente (20)." },
+        { status: 429 }
+      );
     }
 
     // Upsert invitation (idempotent re-send)

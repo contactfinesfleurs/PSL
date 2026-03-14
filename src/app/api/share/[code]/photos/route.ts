@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { storeFile, MAX_FILE_SIZE, ALLOWED_MIME_TYPES } from "@/lib/storage";
 import { logAudit } from "@/lib/audit";
+import { getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,10 @@ export async function POST(
   { params }: { params: Promise<{ code: string }> }
 ) {
   try {
+    const ip = getClientIp(req);
+    const limited = rateLimitResponse(ip);
+    if (limited) return limited;
+
     const { code } = await params;
 
     const share = await prisma.productShare.findUnique({
