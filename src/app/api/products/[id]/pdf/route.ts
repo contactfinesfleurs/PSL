@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { escapeHtml, safeParseArray, isTrustedImageUrl } from "@/lib/utils";
+import { escapeHtml, safeParseArray, isTrustedImageUrl } from "@/lib/formatters";
 import { getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 
 export const dynamic = "force-dynamic";

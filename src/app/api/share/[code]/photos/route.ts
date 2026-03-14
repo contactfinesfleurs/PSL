@@ -33,8 +33,18 @@ export async function POST(
 
     const formData = await req.formData();
     const files = formData.getAll("files") as File[];
-    const authorName = (formData.get("authorName") as string | null)?.trim() || null;
-    const note = (formData.get("note") as string | null)?.trim() || null;
+    const authorNameRaw = (formData.get("authorName") as string | null)?.trim() || null;
+    const noteRaw = (formData.get("note") as string | null)?.trim() || null;
+
+    // Validate text fields length to prevent abuse
+    if (authorNameRaw && authorNameRaw.length > 100) {
+      return NextResponse.json({ error: "Nom trop long (max 100 caractères)." }, { status: 400 });
+    }
+    if (noteRaw && noteRaw.length > 2000) {
+      return NextResponse.json({ error: "Note trop longue (max 2000 caractères)." }, { status: 400 });
+    }
+    const authorName = authorNameRaw;
+    const note = noteRaw;
 
     if (files.length === 0) {
       return NextResponse.json({ error: "Aucun fichier fourni." }, { status: 400 });
