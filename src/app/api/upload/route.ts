@@ -6,7 +6,7 @@ import { getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
-  const limited = rateLimitResponse(getClientIp(req));
+  const limited = await rateLimitResponse(getClientIp(req));
   if (limited) return limited;
 
   // Defense-in-depth: middleware already enforces auth, but we check here too
@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   if (!profileId) return unauthorizedResponse();
 
   // Per-user rate limit (guards against shared IPs / multi-account abuse).
-  const userLimited = rateLimitResponse(`upload:${profileId}`);
+  const userLimited = await rateLimitResponse(`upload:${profileId}`);
   if (userLimited) return userLimited;
 
   const formData = await req.formData();

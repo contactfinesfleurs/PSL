@@ -20,7 +20,7 @@ export async function POST(
 ) {
   try {
     const ip = getClientIp(req);
-    const limited = rateLimitResponse(ip);
+    const limited = await rateLimitResponse(ip);
     if (limited) return limited;
 
     const profileId = getProfileId(req);
