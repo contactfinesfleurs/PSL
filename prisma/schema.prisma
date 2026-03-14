@@ -99,6 +99,7 @@ model Product {
   events     EventProduct[]
   loans      SampleLoan[]
   placements MediaPlacement[]
+  shares     ProductShare[]
 
   @@index([profileId])
   @@index([profileId, season, year])
@@ -329,6 +330,44 @@ model CampaignProduct {
   product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([campaignId, productId])
+}
+
+// ─── PRODUCT SHARE ────────────────────────────────────────────────────────────
+// Allows an external user to view a product and add photos/notes via a short code.
+
+model ProductShare {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  code      String   @unique // short alphanumeric code, e.g. "a3f9c12b"
+  label     String?  // optional description, e.g. "Lien pour Valentino"
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  profileId String   // owner who created the share
+
+  expiresAt DateTime? // optional expiry
+
+  contributions ShareContribution[]
+
+  @@index([productId])
+  @@index([profileId])
+}
+
+model ShareContribution {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  shareId String
+  share   ProductShare @relation(fields: [shareId], references: [id], onDelete: Cascade)
+
+  authorName String?  // optional display name provided by contributor
+  photoPaths String?  // JSON array of stored paths
+  note       String?  // optional text note
+
+  @@index([shareId])
 }
 
 model EventProduct {
