@@ -24,6 +24,8 @@
     "@prisma/client": "^5.22.0",
     "@react-pdf/renderer": "^4.0.0",
     "@types/bcryptjs": "^2.4.6",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.37.0",
     "@vercel/blob": "^2.3.0",
     "autoprefixer": "^10.4.27",
     "bcryptjs": "^3.0.3",
