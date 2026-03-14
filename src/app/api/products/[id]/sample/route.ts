@@ -75,14 +75,19 @@ export async function PUT(
     if (!result.success) return result.response;
     const body = result.data;
 
-    // Delete orphaned photo files when path arrays are replaced
+    // Find the existing sample: by explicit sampleId, or by productId as fallback.
+    // Using an explicit findFirst + create/update instead of upsert avoids the
+    // fragile `id: sampleId ?? "new"` antipattern.
     const existingSample = body.sampleId
       ? await prisma.sample.findUnique({ where: { id: body.sampleId } })
-      : null;
+      : await prisma.sample.findFirst({ where: { productId: id } });
+
     // Verify the sampleId belongs to this product (prevents updating another user's sample)
     if (existingSample && existingSample.productId !== id) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
+
+    // Delete orphaned photo files when path arrays are replaced
     if (existingSample) {
       const photoFields = [
         [existingSample.samplePhotoPaths, body.samplePhotoPaths],
@@ -97,66 +102,58 @@ export async function PUT(
       }
     }
 
-    const sample = await prisma.sample.upsert({
-      where: {
-        id: body.sampleId ?? "new",
-      },
-      create: {
-        productId: id,
-        samplePhotoPaths: body.samplePhotoPaths
-          ? JSON.stringify(body.samplePhotoPaths)
-          : null,
-        detailPhotoPaths: body.detailPhotoPaths
-          ? JSON.stringify(body.detailPhotoPaths)
-          : null,
-        reviewPhotoPaths: body.reviewPhotoPaths
-          ? JSON.stringify(body.reviewPhotoPaths)
-          : null,
-        reviewNotes: body.reviewNotes ?? null,
-        supplierName: body.supplierName ?? null,
-        supplierAddress: body.supplierAddress ?? null,
-        supplierCountry: body.supplierCountry ?? null,
-        shippingDate: body.shippingDate ? new Date(body.shippingDate) : null,
-        trackingNumber: body.trackingNumber ?? null,
-        packshotPaths: body.packshotPaths
-          ? JSON.stringify(body.packshotPaths)
-          : null,
-        definitiveColors: body.definitiveColors
-          ? JSON.stringify(body.definitiveColors)
-          : null,
-        definitiveMaterials: body.definitiveMaterials
-          ? JSON.stringify(body.definitiveMaterials)
-          : null,
-      },
-      update: {
-        ...(body.samplePhotoPaths !== undefined && {
-          samplePhotoPaths: JSON.stringify(body.samplePhotoPaths),
-        }),
-        ...(body.detailPhotoPaths !== undefined && {
-          detailPhotoPaths: JSON.stringify(body.detailPhotoPaths),
-        }),
-        ...(body.reviewPhotoPaths !== undefined && {
-          reviewPhotoPaths: JSON.stringify(body.reviewPhotoPaths),
-        }),
-        ...(body.reviewNotes !== undefined && { reviewNotes: body.reviewNotes }),
-        ...(body.supplierName !== undefined && { supplierName: body.supplierName }),
-        ...(body.supplierAddress !== undefined && { supplierAddress: body.supplierAddress }),
-        ...(body.supplierCountry !== undefined && { supplierCountry: body.supplierCountry }),
-        ...(body.shippingDate !== undefined && {
+    let sample;
+    if (existingSample) {
+      sample = await prisma.sample.update({
+        where: { id: existingSample.id },
+        data: {
+          ...(body.samplePhotoPaths !== undefined && {
+            samplePhotoPaths: JSON.stringify(body.samplePhotoPaths),
+          }),
+          ...(body.detailPhotoPaths !== undefined && {
+            detailPhotoPaths: JSON.stringify(body.detailPhotoPaths),
+          }),
+          ...(body.reviewPhotoPaths !== undefined && {
+            reviewPhotoPaths: JSON.stringify(body.reviewPhotoPaths),
+          }),
+          ...(body.reviewNotes !== undefined && { reviewNotes: body.reviewNotes }),
+          ...(body.supplierName !== undefined && { supplierName: body.supplierName }),
+          ...(body.supplierAddress !== undefined && { supplierAddress: body.supplierAddress }),
+          ...(body.supplierCountry !== undefined && { supplierCountry: body.supplierCountry }),
+          ...(body.shippingDate !== undefined && {
+            shippingDate: body.shippingDate ? new Date(body.shippingDate) : null,
+          }),
+          ...(body.trackingNumber !== undefined && { trackingNumber: body.trackingNumber }),
+          ...(body.packshotPaths !== undefined && {
+            packshotPaths: JSON.stringify(body.packshotPaths),
+          }),
+          ...(body.definitiveColors !== undefined && {
+            definitiveColors: JSON.stringify(body.definitiveColors),
+          }),
+          ...(body.definitiveMaterials !== undefined && {
+            definitiveMaterials: JSON.stringify(body.definitiveMaterials),
+          }),
+        },
+      });
+    } else {
+      sample = await prisma.sample.create({
+        data: {
+          productId: id,
+          samplePhotoPaths: body.samplePhotoPaths ? JSON.stringify(body.samplePhotoPaths) : null,
+          detailPhotoPaths: body.detailPhotoPaths ? JSON.stringify(body.detailPhotoPaths) : null,
+          reviewPhotoPaths: body.reviewPhotoPaths ? JSON.stringify(body.reviewPhotoPaths) : null,
+          reviewNotes: body.reviewNotes ?? null,
+          supplierName: body.supplierName ?? null,
+          supplierAddress: body.supplierAddress ?? null,
+          supplierCountry: body.supplierCountry ?? null,
           shippingDate: body.shippingDate ? new Date(body.shippingDate) : null,
-        }),
-        ...(body.trackingNumber !== undefined && { trackingNumber: body.trackingNumber }),
-        ...(body.packshotPaths !== undefined && {
-          packshotPaths: JSON.stringify(body.packshotPaths),
-        }),
-        ...(body.definitiveColors !== undefined && {
-          definitiveColors: JSON.stringify(body.definitiveColors),
-        }),
-        ...(body.definitiveMaterials !== undefined && {
-          definitiveMaterials: JSON.stringify(body.definitiveMaterials),
-        }),
-      },
-    });
+          trackingNumber: body.trackingNumber ?? null,
+          packshotPaths: body.packshotPaths ? JSON.stringify(body.packshotPaths) : null,
+          definitiveColors: body.definitiveColors ? JSON.stringify(body.definitiveColors) : null,
+          definitiveMaterials: body.definitiveMaterials ? JSON.stringify(body.definitiveMaterials) : null,
+        },
+      });
+    }
 
     return NextResponse.json(sample);
   } catch (error) {

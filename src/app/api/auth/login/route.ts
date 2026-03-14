@@ -26,15 +26,12 @@ export async function POST(req: NextRequest) {
 
     const profile = await prisma.profile.findUnique({ where: { email } });
 
-    if (!profile) {
-      return NextResponse.json(
-        { error: "Email ou mot de passe incorrect" },
-        { status: 401 }
-      );
-    }
+    // Always run bcrypt compare — even when the profile doesn't exist — so that
+    // an attacker cannot enumerate valid emails via response-time differences.
+    const DUMMY_HASH = "$2b$12$aaaaaaaaaaaaaaaaaaaaaa.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    const valid = await compare(password, profile?.passwordHash ?? DUMMY_HASH);
 
-    const valid = await compare(password, profile.passwordHash);
-    if (!valid) {
+    if (!profile || !valid) {
       return NextResponse.json(
         { error: "Email ou mot de passe incorrect" },
         { status: 401 }
