@@ -14,6 +14,10 @@ export async function POST(req: NextRequest) {
   const profileId = getProfileId(req);
   if (!profileId) return unauthorizedResponse();
 
+  // Per-user rate limit (guards against shared IPs / multi-account abuse).
+  const userLimited = rateLimitResponse(`upload:${profileId}`);
+  if (userLimited) return userLimited;
+
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
   const folder = (formData.get("folder") as string) || "general";
