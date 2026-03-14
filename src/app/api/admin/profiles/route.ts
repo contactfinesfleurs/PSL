@@ -6,6 +6,7 @@ import { requireAdmin, requireSuperAdmin } from "@/lib/admin-auth";
 import { logAudit } from "@/lib/audit";
 import { PROFILE_ROLE_VALUES } from "@/lib/constants";
 import { hash } from "bcryptjs";
+import { getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,9 @@ const ProfileCreateSchema = z.object({
 
 export async function GET(req: NextRequest) {
   try {
+    const limited = rateLimitResponse(getClientIp(req));
+    if (limited) return limited;
+
     const auth = await requireAdmin(req);
     if (!auth.ok) return auth.response;
 
@@ -58,6 +62,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const limited = rateLimitResponse(getClientIp(req));
+    if (limited) return limited;
+
     const auth = await requireSuperAdmin(req);
     if (!auth.ok) return auth.response;
 
