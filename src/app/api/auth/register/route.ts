@@ -31,6 +31,10 @@ export async function POST(req: NextRequest) {
     if (!result.success) return result.response;
     const { name, email, password } = result.data;
 
+    // Hash first — ensures constant-time response regardless of whether the
+    // email is already registered, preventing timing-based email enumeration.
+    const passwordHash = await hash(password, 12);
+
     const existing = await prisma.profile.findUnique({ where: { email } });
     if (existing) {
       // Message volontairement vague pour éviter l'énumération d'emails
@@ -39,8 +43,6 @@ export async function POST(req: NextRequest) {
         { status: 409 }
       );
     }
-
-    const passwordHash = await hash(password, 12);
 
     const profile = await prisma.profile.create({
       data: { name, email, passwordHash },

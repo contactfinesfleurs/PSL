@@ -4,14 +4,16 @@ import { NextRequest } from "next/server";
 
 function getJwtSecret(): Uint8Array {
   const secret = process.env.JWT_SECRET;
-  if (!secret && process.env.NODE_ENV === "production") {
-    throw new Error("JWT_SECRET environment variable must be set in production");
+  // Throw in any non-development environment (production, staging, preview, test…)
+  // so that a missing JWT_SECRET never silently falls back to the hardcoded value.
+  if (!secret && process.env.NODE_ENV !== "development") {
+    throw new Error("JWT_SECRET environment variable must be set");
   }
   return new TextEncoder().encode(secret ?? "psl-dev-secret-change-in-production-32chars");
 }
 
 const COOKIE_NAME = "psl_session";
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
+const COOKIE_MAX_AGE = 60 * 60 * 8; // 8 hours — reduces exposure window if token is stolen
 
 // ─── Token payload ────────────────────────────────────────────────────────────
 
@@ -28,7 +30,7 @@ export async function signToken(payload: SessionPayload): Promise<string> {
   return new SignJWT(payload as Record<string, unknown>)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime("7d")
+    .setExpirationTime("8h")
     .sign(getJwtSecret());
 }
 
