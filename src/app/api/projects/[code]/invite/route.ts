@@ -84,6 +84,9 @@ export async function POST(
       );
     }
 
+    // Invitation expires 30 days from now
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
     // Upsert invitation (idempotent re-send)
     const invitation = await prisma.projectInvitation.upsert({
       where: {
@@ -98,10 +101,12 @@ export async function POST(
         invitedEmail: email.toLowerCase(),
         invitedProfileId: invitedProfile?.id ?? null,
         status: "PENDING",
+        expiresAt,
       },
       update: {
         status: "PENDING", // re-activate a declined invitation
         invitedProfileId: invitedProfile?.id ?? null,
+        expiresAt, // reset expiry on re-send
       },
     });
 

@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
       where: {
         invitedEmail: profile.email.toLowerCase(),
         status: "PENDING",
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
       },
       include: {
         project: { select: { id: true, name: true, code: true } },
