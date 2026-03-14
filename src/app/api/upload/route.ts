@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { MAX_FILE_SIZE, ALLOWED_MIME_TYPES, storeFile } from "@/lib/storage";
 import { getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
+import { getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
+  const limited = rateLimitResponse(getClientIp(req));
+  if (limited) return limited;
+
   // Defense-in-depth: middleware already enforces auth, but we check here too
   // so a future middleware misconfiguration doesn't silently expose this endpoint.
   const profileId = getProfileId(req);
