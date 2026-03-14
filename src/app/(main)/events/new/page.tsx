@@ -7,6 +7,7 @@ import { EVENT_TYPES } from "@/lib/utils";
 export default function NewEventPage() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     name: "",
@@ -26,6 +27,11 @@ export default function NewEventPage() {
     if (!form.name.trim() || !form.startAt) return;
 
     setSaving(true);
+    setError(null);
+
+    // datetime-local gives "YYYY-MM-DDTHH:MM" — convert to full ISO 8601 for the API
+    const toISO = (s: string) => (s ? new Date(s).toISOString() : null);
+
     const res = await fetch("/api/events", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -33,8 +39,8 @@ export default function NewEventPage() {
         name: form.name,
         type: form.type,
         description: form.description || null,
-        startAt: form.startAt,
-        endAt: form.endAt || null,
+        startAt: toISO(form.startAt),
+        endAt: form.endAt ? toISO(form.endAt) : null,
         location: form.location || null,
         venue: form.venue || null,
       }),
@@ -44,8 +50,14 @@ export default function NewEventPage() {
       const event = await res.json();
       router.push(`/events/${event.id}`);
     } else {
+      const body = await res.json().catch(() => ({}));
+      const details = body.details
+        ? Object.entries(body.details as Record<string, string[]>)
+            .map(([field, msgs]) => `${field} : ${msgs.join(", ")}`)
+            .join(" — ")
+        : null;
+      setError(details ?? body.error ?? "Erreur lors de la création.");
       setSaving(false);
-      alert("Erreur lors de la création.");
     }
   }
 
@@ -150,6 +162,12 @@ export default function NewEventPage() {
             className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 resize-none"
           />
         </div>
+
+        {error && (
+          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            {error}
+          </p>
+        )}
 
         <div className="flex items-center gap-3 pt-2">
           <button
