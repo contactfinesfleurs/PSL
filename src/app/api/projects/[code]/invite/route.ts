@@ -108,9 +108,9 @@ export async function POST(
     logAudit("PROJECT_INVITE", profileId, "project", project.id, { email });
 
     // Send email (non-blocking — failure does not abort the response)
-    const appUrl =
-      process.env.NEXT_PUBLIC_APP_URL ??
-      (req.headers.get("origin") || "https://pslstudio.app");
+    // Never use the Origin/Referer header here — it's attacker-controlled and
+    // would allow forging invitation links pointing to malicious sites.
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://pslstudio.app";
 
     sendProjectInvitationEmail({
       to: email,
