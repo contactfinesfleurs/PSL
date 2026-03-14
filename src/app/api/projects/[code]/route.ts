@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 import { logAudit } from "@/lib/audit";
 import { safeParseArray } from "@/lib/formatters";
+import { deleteStoredFile } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
 
@@ -87,9 +88,18 @@ export async function DELETE(req: NextRequest, { params }: Params) {
 
     const { code } = await params;
 
-    const project = await prisma.project.findUnique({ where: { code } });
+    const project = await prisma.project.findUnique({
+      where: { code },
+      include: { contributions: { select: { photoPaths: true } } },
+    });
     if (!project || project.profileId !== profileId) {
       return NextResponse.json({ error: "Projet introuvable." }, { status: 404 });
+    }
+
+    for (const contrib of project.contributions) {
+      for (const p of safeParseArray(contrib.photoPaths)) {
+        await deleteStoredFile(p);
+      }
     }
 
     await prisma.project.delete({ where: { code } });

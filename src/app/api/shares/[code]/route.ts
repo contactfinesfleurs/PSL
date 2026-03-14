@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 import { logAudit } from "@/lib/audit";
+import { deleteStoredFile } from "@/lib/storage";
+import { safeParseArray } from "@/lib/formatters";
 
 export const dynamic = "force-dynamic";
 
@@ -16,9 +18,18 @@ export async function DELETE(
 
     const { code } = await params;
 
-    const share = await prisma.productShare.findUnique({ where: { code } });
+    const share = await prisma.productShare.findUnique({
+      where: { code },
+      include: { contributions: { select: { photoPaths: true } } },
+    });
     if (!share || share.profileId !== profileId) {
       return NextResponse.json({ error: "Partage introuvable" }, { status: 404 });
+    }
+
+    for (const contrib of share.contributions) {
+      for (const p of safeParseArray(contrib.photoPaths)) {
+        await deleteStoredFile(p);
+      }
     }
 
     await prisma.productShare.delete({ where: { code } });

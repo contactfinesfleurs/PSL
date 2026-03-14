@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { parseBodyJson } from "@/lib/api-helpers";
 import { logAudit } from "@/lib/audit";
+import { rateLimitResponse, getClientIp } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,10 @@ export async function POST(
   { params }: { params: Promise<{ code: string }> }
 ) {
   try {
+    const ip = getClientIp(req);
+    const limited = await rateLimitResponse(ip);
+    if (limited) return limited;
+
     const { code } = await params;
 
     const share = await prisma.productShare.findUnique({
