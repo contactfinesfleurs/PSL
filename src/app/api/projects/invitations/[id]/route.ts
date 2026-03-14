@@ -45,6 +45,14 @@ export async function PATCH(
       );
     }
 
+    // Reject expired invitations
+    if (invitation.expiresAt && invitation.expiresAt < new Date()) {
+      return NextResponse.json(
+        { error: "Cette invitation a expiré." },
+        { status: 410 }
+      );
+    }
+
     const result = await parseBodyJson(req, ActionSchema);
     if (!result.success) return result.response;
     const { action } = result.data;

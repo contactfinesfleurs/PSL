@@ -482,7 +482,8 @@ model ProjectInvitation {
   invitedProfileId String?  // set if the email matches a registered profile
   invitedProfile   Profile? @relation("InvitationsReceived", fields: [invitedProfileId], references: [id], onDelete: SetNull)
 
-  status String @default("PENDING") // PENDING | ACCEPTED | DECLINED
+  status    String    @default("PENDING") // PENDING | ACCEPTED | DECLINED
+  expiresAt DateTime? // invitation expires after this date (null = never)
 
   @@unique([projectId, invitedEmail])
   @@index([projectId])
