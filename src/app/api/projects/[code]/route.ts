@@ -27,7 +27,7 @@ export async function GET(req: NextRequest, { params }: Params) {
           orderBy: { addedAt: "asc" },
         },
         collaborators: {
-          include: { profile: { select: { id: true, name: true, email: true } } },
+          include: { profile: { select: { id: true, name: true } } },
         },
         contributions: {
           orderBy: { createdAt: "desc" },

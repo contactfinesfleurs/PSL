@@ -87,7 +87,18 @@ export async function PATCH(
       select: SAFE_PROFILE_SELECT,
     });
 
-    logAudit("ADMIN_PROFILE_PATCH", auth.profileId, "profile", id, { fields: Object.keys(body) });
+    // Build a detailed audit delta for sensitive fields (role, teamId)
+    const auditDelta: Record<string, { old: unknown; new: unknown }> = {};
+    if (body.role !== undefined && body.role !== target.role) {
+      auditDelta.role = { old: target.role, new: body.role };
+    }
+    if (body.teamId !== undefined && body.teamId !== target.teamId) {
+      auditDelta.teamId = { old: target.teamId, new: body.teamId };
+    }
+    logAudit("ADMIN_PROFILE_PATCH", auth.profileId, "profile", id, {
+      fields: Object.keys(body),
+      ...(Object.keys(auditDelta).length > 0 && { changes: auditDelta }),
+    });
 
     return NextResponse.json(updated);
   } catch (error) {
