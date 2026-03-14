@@ -51,6 +51,8 @@ model Profile {
   ownedProjects        Project[]
   projectMemberships   ProjectCollaborator[]
   projectContributions ProjectContribution[]
+  sentInvitations      ProjectInvitation[] @relation("InvitationsSent")
+  receivedInvitations  ProjectInvitation[] @relation("InvitationsReceived")
 
   @@index([role])
   @@index([teamId])
@@ -410,6 +412,7 @@ model Project {
   products      ProjectProduct[]
   collaborators ProjectCollaborator[]
   contributions ProjectContribution[]
+  invitations   ProjectInvitation[]
 
   @@index([profileId])
 }
@@ -463,4 +466,26 @@ model ProjectContribution {
   @@index([projectId])
   @@index([productId])
   @@index([profileId])
+}
+
+model ProjectInvitation {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  invitedByProfileId String
+  invitedByProfile   Profile @relation("InvitationsSent", fields: [invitedByProfileId], references: [id], onDelete: Cascade)
+
+  invitedEmail     String   // email address of the invitee
+  invitedProfileId String?  // set if the email matches a registered profile
+  invitedProfile   Profile? @relation("InvitationsReceived", fields: [invitedProfileId], references: [id], onDelete: SetNull)
+
+  status String @default("PENDING") // PENDING | ACCEPTED | DECLINED
+
+  @@unique([projectId, invitedEmail])
+  @@index([projectId])
+  @@index([invitedEmail])
+  @@index([invitedProfileId])
 }
