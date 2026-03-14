@@ -22,6 +22,7 @@ export async function GET(req: NextRequest, { params }: Params) {
     const contributions = await prisma.projectContribution.findMany({
       where: { projectId: project.id },
       orderBy: { createdAt: "desc" },
+      take: 500,
       include: {
         profile: { select: { id: true, name: true } },
         product: { select: { id: true, name: true, sku: true } },

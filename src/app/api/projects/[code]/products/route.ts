@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 type Params = { params: Promise<{ code: string }> };
 
 const AddProductsSchema = z.object({
-  productIds: z.array(z.string()).min(1),
+  productIds: z.array(z.string()).min(1).max(100),
 });
 
 // POST /api/projects/[code]/products — add products to a project (owner only)
