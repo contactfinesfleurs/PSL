@@ -83,7 +83,7 @@ export async function parseBodyJson<T>(
 export function parsePagination(searchParams: URLSearchParams): { skip: number; take: number; page: number; limit: number } {
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1") || 1);
   const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "20") || 20));
-  return { skip: (page - 1) * limit, take: limit, page, limit }
+  return { skip: (page - 1) * limit, take: limit, page, limit };
 }
 
 /**
