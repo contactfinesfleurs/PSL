@@ -2,7 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { PRODUCT_FAMILIES, SEASONS, safeParseArray } from "@/lib/utils";
 import Image from "next/image";
-import { ArrowLeft, Package } from "lucide-react";
+import { Check, Package } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -63,169 +63,195 @@ export default async function LookBookPage({
   const notValidated = products.filter((p) => p.sampleStatus === "NOT_VALIDATED").length;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
+    <div className="flex gap-5 items-start">
+      {/* ── Left sidebar: season list ─────────────────────────────────────── */}
+      <aside className="w-44 shrink-0 sticky top-0">
+        <div className="bg-white border border-gray-200/80 rounded-2xl overflow-hidden">
+          <div className="px-3 pt-3 pb-2 border-b border-gray-100">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+              Collections
+            </p>
+          </div>
+          <ul className="py-1">
+            {collections.length === 0 && (
+              <li className="px-3 py-2 text-xs text-gray-400 italic">Aucune collection</li>
+            )}
+            {collections.map((c) => {
+              const isActive = c.season === activeSeason && c.year === activeYear;
+              const params = new URLSearchParams({
+                season: c.season,
+                year: String(c.year),
+                ...(activeFamily ? { family: activeFamily } : {}),
+              });
+              return (
+                <li key={`${c.season}-${c.year}`}>
+                  <Link
+                    href={`/lookbook?${params}`}
+                    className={`flex items-center gap-2.5 px-3 py-2 transition-colors ${
+                      isActive
+                        ? "bg-gray-50 text-gray-900"
+                        : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+                    }`}
+                  >
+                    <span
+                      className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                        isActive
+                          ? "bg-gray-900 border-gray-900"
+                          : "border-gray-300"
+                      }`}
+                    >
+                      {isActive && <Check className="w-2 h-2 text-white" strokeWidth={3} />}
+                    </span>
+                    <span className="text-xs font-medium leading-tight">
+                      {seasonLabel(c.season)}
+                      <br />
+                      <span className="text-gray-400 font-normal">{c.year}</span>
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </aside>
+
+      {/* ── Main content ──────────────────────────────────────────────────── */}
+      <div className="flex-1 min-w-0 space-y-5">
+        {/* Header */}
         <div>
           <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Look Book</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Vue collection — {products.length} pièce{products.length !== 1 ? "s" : ""}
+          <p className="text-sm text-gray-500 mt-0.5">
+            {seasonLabel(activeSeason)} {activeYear} — {products.length} pièce{products.length !== 1 ? "s" : ""}
           </p>
         </div>
 
-        {/* Collection selector */}
-        <div className="flex items-center gap-2 flex-wrap justify-end">
-          {collections.map((c) => {
-            const isActive = c.season === activeSeason && c.year === activeYear;
-            const params = new URLSearchParams({
-              season: c.season,
-              year: String(c.year),
-              ...(activeFamily ? { family: activeFamily } : {}),
-            });
-            return (
-              <Link
-                key={`${c.season}-${c.year}`}
-                href={`/lookbook?${params}`}
-                className={`text-sm font-medium px-3 py-1.5 rounded-xl border transition-colors ${
-                  isActive
-                    ? "bg-gray-900 text-white border-gray-900"
-                    : "border-gray-200 text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                {seasonLabel(c.season)} {c.year}
-              </Link>
-            );
-          })}
-        </div>
-      </div>
+        {/* Family filter + Stats */}
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Link
+              href={`/lookbook?season=${activeSeason}&year=${activeYear}`}
+              className={`text-xs font-medium px-3 py-1 rounded-full border transition-colors ${
+                !activeFamily
+                  ? "bg-gray-900 text-white border-gray-900"
+                  : "border-gray-200 text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              Tout
+            </Link>
+            {PRODUCT_FAMILIES.map((f) => {
+              const isActive = activeFamily === f.value;
+              return (
+                <Link
+                  key={f.value}
+                  href={`/lookbook?season=${activeSeason}&year=${activeYear}&family=${f.value}`}
+                  className={`text-xs font-medium px-3 py-1 rounded-full border transition-colors ${
+                    isActive
+                      ? "bg-gray-900 text-white border-gray-900"
+                      : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  {f.label}
+                </Link>
+              );
+            })}
+          </div>
 
-      {/* Filters + Stats */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        {/* Family filter */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <Link
-            href={`/lookbook?season=${activeSeason}&year=${activeYear}`}
-            className={`text-xs font-medium px-3 py-1 rounded-full border transition-colors ${
-              !activeFamily
-                ? "bg-gray-900 text-white border-gray-900"
-                : "border-gray-200 text-gray-600 hover:bg-gray-50"
-            }`}
-          >
-            Tout
-          </Link>
-          {PRODUCT_FAMILIES.map((f) => {
-            const isActive = activeFamily === f.value;
-            return (
-              <Link
-                key={f.value}
-                href={`/lookbook?season=${activeSeason}&year=${activeYear}&family=${f.value}`}
-                className={`text-xs font-medium px-3 py-1 rounded-full border transition-colors ${
-                  isActive
-                    ? "bg-gray-900 text-white border-gray-900"
-                    : "border-gray-200 text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                {f.label}
-              </Link>
-            );
-          })}
-        </div>
-
-        {/* Completion stats */}
-        <div className="flex items-center gap-4 text-xs text-gray-500 shrink-0">
-          <span className="text-green-700 font-medium">{validated} validé{validated !== 1 ? "s" : ""}</span>
-          <span className="text-yellow-700 font-medium">{pending} en attente</span>
-          {notValidated > 0 && (
-            <span className="text-red-700 font-medium">{notValidated} non validé{notValidated !== 1 ? "s" : ""}</span>
-          )}
-          <div className="flex items-center gap-1">
-            <div className="w-24 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-green-500 rounded-full transition-all"
-                style={{ width: products.length > 0 ? `${(validated / products.length) * 100}%` : "0%" }}
-              />
+          {/* Completion stats */}
+          <div className="flex items-center gap-4 text-xs text-gray-500 shrink-0">
+            <span className="text-green-700 font-medium">{validated} validé{validated !== 1 ? "s" : ""}</span>
+            <span className="text-yellow-700 font-medium">{pending} en attente</span>
+            {notValidated > 0 && (
+              <span className="text-red-700 font-medium">{notValidated} non validé{notValidated !== 1 ? "s" : ""}</span>
+            )}
+            <div className="flex items-center gap-1">
+              <div className="w-24 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-green-500 rounded-full transition-all"
+                  style={{ width: products.length > 0 ? `${(validated / products.length) * 100}%` : "0%" }}
+                />
+              </div>
+              <span>{products.length > 0 ? Math.round((validated / products.length) * 100) : 0}%</span>
             </div>
-            <span>{products.length > 0 ? Math.round((validated / products.length) * 100) : 0}%</span>
           </div>
         </div>
-      </div>
 
-      {/* Grid */}
-      {products.length === 0 ? (
-        <div className="text-center py-24 bg-white rounded-2xl border border-gray-200/80">
-          <Package className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-          <p className="text-gray-500 font-medium">Aucun produit dans cette collection</p>
-          <Link
-            href="/products/new"
-            className="mt-3 inline-block text-sm text-purple-600 hover:underline"
-          >
-            Créer un produit
-          </Link>
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {products.map((product) => {
-            const sample = product.samples[0];
-            const packshots = safeParseArray(sample?.packshotPaths ?? null);
-            const samplePhotos = safeParseArray(sample?.samplePhotoPaths ?? null);
-            const coverPhoto = packshots[0] ?? samplePhotos[0] ?? null;
+        {/* Grid */}
+        {products.length === 0 ? (
+          <div className="text-center py-24 bg-white rounded-2xl border border-gray-200/80">
+            <Package className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+            <p className="text-gray-500 font-medium">Aucun produit dans cette collection</p>
+            <Link
+              href="/products/new"
+              className="mt-3 inline-block text-sm text-purple-600 hover:underline"
+            >
+              Créer un produit
+            </Link>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {products.map((product) => {
+              const sample = product.samples[0];
+              const packshots = safeParseArray(sample?.packshotPaths ?? null);
+              const samplePhotos = safeParseArray(sample?.samplePhotoPaths ?? null);
+              const coverPhoto = packshots[0] ?? samplePhotos[0] ?? null;
 
-            const statusColor =
-              product.sampleStatus === "VALIDATED"
-                ? "bg-green-500"
-                : product.sampleStatus === "NOT_VALIDATED"
-                ? "bg-red-500"
-                : "bg-yellow-400";
+              const statusColor =
+                product.sampleStatus === "VALIDATED"
+                  ? "bg-green-500"
+                  : product.sampleStatus === "NOT_VALIDATED"
+                  ? "bg-red-500"
+                  : "bg-yellow-400";
 
-            return (
-              <Link
-                key={product.id}
-                href={`/products/${product.id}?tab=sample`}
-                className="group bg-white border border-gray-200/80 rounded-2xl overflow-hidden hover:shadow-md transition-all duration-200"
-              >
-                {/* Photo */}
-                <div className="relative aspect-[3/4] bg-gray-100">
-                  {coverPhoto ? (
-                    <Image
-                      src={coverPhoto}
-                      alt={product.name}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-300"
-                      sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 20vw"
+              return (
+                <Link
+                  key={product.id}
+                  href={`/products/${product.id}?tab=sample`}
+                  className="group bg-white border border-gray-200/80 rounded-2xl overflow-hidden hover:shadow-md transition-all duration-200"
+                >
+                  {/* Photo */}
+                  <div className="relative aspect-[3/4] bg-gray-100">
+                    {coverPhoto ? (
+                      <Image
+                        src={coverPhoto}
+                        alt={product.name}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 20vw"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Package className="h-10 w-10 text-gray-300" />
+                      </div>
+                    )}
+
+                    {/* Status dot */}
+                    <span
+                      className={`absolute top-2 right-2 w-2.5 h-2.5 rounded-full ${statusColor} ring-2 ring-white`}
+                      title={product.sampleStatus}
                     />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Package className="h-10 w-10 text-gray-300" />
-                    </div>
-                  )}
 
-                  {/* Status dot */}
-                  <span
-                    className={`absolute top-2 right-2 w-2.5 h-2.5 rounded-full ${statusColor} ring-2 ring-white`}
-                    title={product.sampleStatus}
-                  />
+                    {/* Packshot count badge */}
+                    {packshots.length > 1 && (
+                      <span className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
+                        {packshots.length}
+                      </span>
+                    )}
+                  </div>
 
-                  {/* Packshot count badge */}
-                  {packshots.length > 1 && (
-                    <span className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
-                      {packshots.length}
-                    </span>
-                  )}
-                </div>
-
-                {/* Info */}
-                <div className="p-3">
-                  <p className="text-sm font-semibold text-gray-900 truncate leading-tight">
-                    {product.name}
-                  </p>
-                  <p className="text-xs text-gray-400 font-mono mt-0.5">{product.sku}</p>
-                  <p className="text-xs text-gray-500 mt-1">{familyLabel(product.family)}</p>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      )}
+                  {/* Info */}
+                  <div className="p-3">
+                    <p className="text-sm font-semibold text-gray-900 truncate leading-tight">
+                      {product.name}
+                    </p>
+                    <p className="text-xs text-gray-400 font-mono mt-0.5">{product.sku}</p>
+                    <p className="text-xs text-gray-500 mt-1">{familyLabel(product.family)}</p>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
