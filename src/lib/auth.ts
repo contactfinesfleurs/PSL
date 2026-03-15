@@ -1,11 +1,10 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
-import { randomBytes } from "crypto";
 
-// Generated once per process start — unpredictable even in dev, sessions
-// are invalidated on server restart which is acceptable in development.
-const DEV_FALLBACK_SECRET = randomBytes(32);
+// Generated once per process start using Web Crypto API (Edge-runtime compatible).
+// Sessions are invalidated on server restart which is acceptable in development.
+const DEV_FALLBACK_SECRET = crypto.getRandomValues(new Uint8Array(32));
 
 function getJwtSecret(): Uint8Array {
   const secret = process.env.JWT_SECRET;
