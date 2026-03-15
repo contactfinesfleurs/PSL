@@ -36,10 +36,19 @@ export async function DELETE() {
     logAudit("ACCOUNT_DELETE", session.profileId, "profile", session.profileId);
 
     // Collect all stored files belonging to the profile before deletion
-    const [products, placements, contributions] = await Promise.all([
+    const [products, samples, placements, projectContributions, shareContributions] = await Promise.all([
       prisma.product.findMany({
         where: { profileId: session.profileId },
         select: { sketchPaths: true, techPackPath: true },
+      }),
+      prisma.sample.findMany({
+        where: { product: { profileId: session.profileId } },
+        select: {
+          samplePhotoPaths: true,
+          detailPhotoPaths: true,
+          reviewPhotoPaths: true,
+          packshotPaths: true,
+        },
       }),
       prisma.mediaPlacement.findMany({
         where: { product: { profileId: session.profileId } },
@@ -47,6 +56,10 @@ export async function DELETE() {
       }),
       prisma.projectContribution.findMany({
         where: { profileId: session.profileId },
+        select: { photoPaths: true },
+      }),
+      prisma.shareContribution.findMany({
+        where: { share: { profileId: session.profileId } },
         select: { photoPaths: true },
       }),
     ]);
@@ -57,15 +70,25 @@ export async function DELETE() {
       for (const path of safeParseArray(p.sketchPaths)) filesToDelete.push(path);
       if (p.techPackPath) filesToDelete.push(p.techPackPath);
     }
+    for (const s of samples) {
+      for (const path of safeParseArray(s.samplePhotoPaths)) filesToDelete.push(path);
+      for (const path of safeParseArray(s.detailPhotoPaths)) filesToDelete.push(path);
+      for (const path of safeParseArray(s.reviewPhotoPaths)) filesToDelete.push(path);
+      for (const path of safeParseArray(s.packshotPaths)) filesToDelete.push(path);
+    }
     for (const pl of placements) {
       if (pl.screenshotPath) filesToDelete.push(pl.screenshotPath);
     }
-    for (const c of contributions) {
+    for (const c of projectContributions) {
       for (const path of safeParseArray(c.photoPaths)) filesToDelete.push(path);
     }
+    for (const sc of shareContributions) {
+      for (const path of safeParseArray(sc.photoPaths)) filesToDelete.push(path);
+    }
 
-    // Delete files and then the profile (cascade removes all DB records)
-    await Promise.all(filesToDelete.map(deleteStoredFile));
+    // Delete files gracefully — a missing or already-deleted file must not
+    // block account deletion.
+    await Promise.allSettled(filesToDelete.map(deleteStoredFile));
 
     await prisma.profile.delete({ where: { id: session.profileId } });
     await clearSessionCookie();
