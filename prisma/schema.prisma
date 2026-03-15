@@ -99,6 +99,9 @@ model Product {
   sampleStatus    String    @default("PENDING")
   plannedLaunchAt DateTime?
 
+  // Variants — products sharing the same variantGroupId are color variants of each other
+  variantGroupId String?
+
   // Relations
   samples    Sample[]
   campaigns  CampaignProduct[]
@@ -114,6 +117,7 @@ model Product {
   @@index([profileId, season, year])
   @@index([profileId, family])
   @@index([sampleStatus])
+  @@index([variantGroupId])
 }
 
 // ─── SAMPLE ──────────────────────────────────────────────────────────────────

@@ -6,6 +6,7 @@ import { Save, RefreshCw } from "lucide-react";
 import { PRODUCT_FAMILIES, SEASONS, SIZE_RANGES, COLOR_CODES, generateReference } from "@/lib/utils";
 import { TagInput } from "@/components/ui/TagInput";
 import { FileUpload } from "@/components/ui/FileUpload";
+import { VariantsSection } from "./VariantsSection";
 
 type Product = {
   id: string;
@@ -21,6 +22,7 @@ type Product = {
   sketchPaths: string | null;
   techPackPath: string | null;
   reference: string | null;
+  variantGroupId: string | null;
 };
 
 export function TechPackTab({ product }: { product: Product }) {
@@ -317,6 +319,14 @@ export function TechPackTab({ product }: { product: Product }) {
           existingPaths={form.techPackPath ? [form.techPackPath] : []}
           label="Déposer la fiche technique"
           hint="PDF, Word ou Excel"
+        />
+      </div>
+
+      {/* Variants */}
+      <div className="border-t border-gray-100 pt-6">
+        <VariantsSection
+          productId={product.id}
+          variantGroupId={product.variantGroupId}
         />
       </div>
 
