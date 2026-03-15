@@ -204,6 +204,7 @@ export default function SharePage() {
                   {" · "}
                   {new Date(c.createdAt).toLocaleDateString("fr-FR")}
                 </p>
+                {/* c.note is rendered as a React text node — XSS-safe, no escaping needed */}
                 {c.note && <p style={styles.contributionNote}>{c.note}</p>}
                 {c.photoPaths.length > 0 && (
                   <div style={styles.imageGrid}>

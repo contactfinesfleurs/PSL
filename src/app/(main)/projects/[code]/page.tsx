@@ -530,6 +530,7 @@ export default function ProjectDetailPage() {
                                     "fr-FR"
                                   )}
                                 </p>
+                                {/* c.note is rendered as a React text node — XSS-safe, no escaping needed */}
                                 {c.note && (
                                   <p className="text-sm text-gray-700">{c.note}</p>
                                 )}
