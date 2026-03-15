@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
       role: profile.role,
     });
 
-    await setSessionCookie(token);
+    await setSessionCookie(token, profile.role ?? undefined);
 
     logAudit("LOGIN_SUCCESS", profile.id, "profile", profile.id, { ip: getClientIp(req) });
 

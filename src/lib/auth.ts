@@ -19,7 +19,8 @@ function getJwtSecret(): Uint8Array {
 }
 
 const COOKIE_NAME = "psl_session";
-const COOKIE_MAX_AGE = 60 * 60 * 8; // 8 hours — reduces exposure window if token is stolen
+const COOKIE_MAX_AGE = 60 * 60 * 8; // 8 hours for regular users
+const ADMIN_COOKIE_MAX_AGE = 60 * 60 * 1; // 1 hour for admin/super-admin accounts
 
 // ─── Token payload ────────────────────────────────────────────────────────────
 
@@ -32,11 +33,16 @@ export type SessionPayload = {
 
 // ─── Sign & verify ────────────────────────────────────────────────────────────
 
+function isAdminRole(role?: string): boolean {
+  return role === "ADMIN" || role === "SUPER_ADMIN";
+}
+
 export async function signToken(payload: SessionPayload): Promise<string> {
+  const expiresIn = isAdminRole(payload.role) ? "1h" : "8h";
   return new SignJWT(payload as Record<string, unknown>)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime("8h")
+    .setExpirationTime(expiresIn)
     .sign(getJwtSecret());
 }
 
@@ -58,13 +64,13 @@ export async function getSession(): Promise<SessionPayload | null> {
   return verifyToken(token);
 }
 
-export async function setSessionCookie(token: string) {
+export async function setSessionCookie(token: string, role?: string) {
   const jar = await cookies();
   jar.set(COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
-    maxAge: COOKIE_MAX_AGE,
+    maxAge: isAdminRole(role) ? ADMIN_COOKIE_MAX_AGE : COOKIE_MAX_AGE,
     path: "/",
   });
 }
@@ -84,4 +90,4 @@ export async function getSessionFromRequest(
   return verifyToken(token);
 }
 
-export { COOKIE_NAME, COOKIE_MAX_AGE };
+export { COOKIE_NAME, COOKIE_MAX_AGE, ADMIN_COOKIE_MAX_AGE };
