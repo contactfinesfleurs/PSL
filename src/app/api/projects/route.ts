@@ -3,12 +3,15 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { parseBodyJson, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 import { logAudit } from "@/lib/audit";
-import { randomBytes } from "crypto";
 
 export const dynamic = "force-dynamic";
 
+// 16 URL-safe alphanumeric characters — ~95 bits of entropy (log2(62^16))
+// Uses Web Crypto (crypto.getRandomValues) available in all Next.js runtimes.
 function generateProjectCode(): string {
-  return randomBytes(8).toString("hex"); // 16 hex chars — 64 bits of entropy
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(bytes).map((b) => chars[b % chars.length]).join("");
 }
 
 const CreateProjectSchema = z.object({

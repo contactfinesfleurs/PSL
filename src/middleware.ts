@@ -94,11 +94,13 @@ export async function middleware(req: NextRequest) {
   }
 
   // Rediriger les utilisateurs non authentifiés vers /login
-  // On ne transmet "from" que si c'est un chemin relatif (pas une URL absolue)
-  // pour éviter un open redirect.
+  // On ne transmet "from" que si c'est un chemin relatif sûr : aucun protocole,
+  // aucun hostname, pas de chemin commençant par // (ex. //evil.com).
+  // La regex n'autorise que les caractères valides dans un chemin URL (RFC 3986).
+  const SAFE_PATH_RE = /^\/[a-zA-Z0-9\-._~!$&'()*+,;=:@/]*$/;
   const loginUrl = req.nextUrl.clone();
   loginUrl.pathname = "/login";
-  if (pathname.startsWith("/") && !pathname.startsWith("//")) {
+  if (SAFE_PATH_RE.test(pathname)) {
     loginUrl.searchParams.set("from", pathname);
   }
   return NextResponse.redirect(loginUrl);

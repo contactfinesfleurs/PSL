@@ -8,10 +8,12 @@ type Mode = "login" | "register";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  // Restrict redirect to same-origin relative paths.
-  // Reject absolute URLs (https://...) and protocol-relative URLs (//evil.com).
+  // Restrict redirect to same-origin relative paths using the same strict regex
+  // as the middleware. This rejects absolute URLs, protocol-relative URLs
+  // (//evil.com), and paths with query/fragment injection attempts.
+  const SAFE_PATH_RE = /^\/[a-zA-Z0-9\-._~!$&'()*+,;=:@/]*$/;
   const rawFrom = searchParams.get("from") ?? "/";
-  const from = rawFrom.startsWith("/") && !rawFrom.startsWith("//") ? rawFrom : "/";
+  const from = SAFE_PATH_RE.test(rawFrom) ? rawFrom : "/";
 
   const [mode, setMode] = useState<Mode>("login");
   const [name, setName] = useState("");

@@ -145,3 +145,46 @@ export async function rateLimitResponse(
   }
   return null;
 }
+
+// ---------------------------------------------------------------------------
+// Custom window rate limiter (arbitrary max / windowMs)
+// ---------------------------------------------------------------------------
+
+// Separate store for custom-limit entries to avoid collisions with tier store.
+const customStore = new Map<string, RequestRecord>();
+
+/**
+ * Returns `true` when the key has exceeded `max` requests within `windowMs`.
+ * Uses the in-memory store (same fallback strategy as isRateLimited).
+ * In production with Upstash configured, falls back to in-memory because
+ * custom windows cannot be expressed as Upstash tier strings — callers should
+ * pair this with a tier-based check for cross-instance accuracy.
+ */
+export function isRateLimitedCustom(
+  key: string,
+  max: number,
+  windowMs: number
+): boolean {
+  const now = Date.now();
+  const windowStart = now - windowMs;
+
+  const record = customStore.get(key) ?? { timestamps: [] };
+  record.timestamps = record.timestamps.filter((t) => t > windowStart);
+
+  if (record.timestamps.length >= max) {
+    customStore.set(key, record);
+    return true;
+  }
+
+  record.timestamps.push(now);
+  customStore.set(key, record);
+
+  // Cleanup fully-expired entries.
+  for (const [k, rec] of customStore.entries()) {
+    if (rec.timestamps.every((t) => t <= windowStart)) {
+      customStore.delete(k);
+    }
+  }
+
+  return false;
+}

@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { parseBodyJson, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
-import { logAudit } from "@/lib/audit";
+import { logAudit, logSecurityEvent } from "@/lib/audit";
 import { sendProjectInvitationEmail } from "@/lib/email";
-import { getClientIp, rateLimitResponse } from "@/lib/rate-limit";
+import { getClientIp, rateLimitResponse, isRateLimitedCustom } from "@/lib/rate-limit";
 
 const MAX_ACTIVE_INVITATIONS = 20;
 
@@ -40,6 +40,26 @@ export async function POST(
     const result = await parseBodyJson(req, InviteSchema);
     if (!result.success) return result.response;
     const { email } = result.data;
+
+    // Rate limit: max 10 invitations per user per project per hour
+    const userProjectKey = `invite:user:${profileId}:project:${project.id}`;
+    if (isRateLimitedCustom(userProjectKey, 10, 60 * 60 * 1000)) {
+      logSecurityEvent("RATE_LIMIT_HIT", profileId, { key: userProjectKey, limit: "10/hour" });
+      return NextResponse.json(
+        { error: "Trop d'invitations envoyées. Réessayez dans une heure." },
+        { status: 429 }
+      );
+    }
+
+    // Rate limit: max 3 invitations to the same email address per 24 hours
+    const emailKey = `invite:email:${email.toLowerCase()}`;
+    if (isRateLimitedCustom(emailKey, 3, 24 * 60 * 60 * 1000)) {
+      logSecurityEvent("RATE_LIMIT_HIT", profileId, { key: emailKey, limit: "3/24h" });
+      return NextResponse.json(
+        { error: "Cet email a reçu trop d'invitations récemment. Réessayez demain." },
+        { status: 429 }
+      );
+    }
 
     // Owner cannot invite themselves
     const owner = await prisma.profile.findUnique({ where: { id: profileId } });
