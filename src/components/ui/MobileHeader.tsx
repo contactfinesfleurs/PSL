@@ -17,6 +17,7 @@ import {
   FolderKanban,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Logo } from "@/components/ui/Logo";
 
 type Props = {
   userName: string;
@@ -37,12 +38,12 @@ export function MobileHeader({ userName, userEmail, userRole }: Props) {
   // Prevent body scroll when drawer is open
   useEffect(() => {
     if (open) {
-      document.body.style.overflow = "hidden";
+      document.body.classList.add("overflow-hidden");
     } else {
-      document.body.style.overflow = "";
+      document.body.classList.remove("overflow-hidden");
     }
     return () => {
-      document.body.style.overflow = "";
+      document.body.classList.remove("overflow-hidden");
     };
   }, [open]);
 
@@ -93,10 +94,7 @@ export function MobileHeader({ userName, userEmail, userRole }: Props) {
       {/* Top bar — mobile only */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-40 h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4">
         <div className="flex items-center gap-2.5">
-          <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
-            <rect width="32" height="32" rx="6" fill="#1B3A6B" />
-            <text x="16" y="22" textAnchor="middle" fontFamily="Arial Black, Arial" fontWeight="900" fontSize="13" fill="white" stroke="white" strokeWidth="0.3">PSL</text>
-          </svg>
+          <Logo size={28} className="shrink-0" />
           <span className="font-semibold text-gray-900 text-[14px] tracking-tight">
             PSL Studio
           </span>
@@ -129,10 +127,7 @@ export function MobileHeader({ userName, userEmail, userRole }: Props) {
         {/* Drawer header */}
         <div className="flex items-center justify-between px-5 h-14 border-b border-gray-100 shrink-0">
           <div className="flex items-center gap-2.5">
-            <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
-              <rect width="32" height="32" rx="6" fill="#1B3A6B" />
-              <text x="16" y="22" textAnchor="middle" fontFamily="Arial Black, Arial" fontWeight="900" fontSize="13" fill="white" stroke="white" strokeWidth="0.3">PSL</text>
-            </svg>
+            <Logo size={28} className="shrink-0" />
             <span className="font-semibold text-gray-900 text-[14px] tracking-tight">
               PSL Studio
             </span>
