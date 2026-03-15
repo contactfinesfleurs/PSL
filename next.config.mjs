@@ -3,16 +3,7 @@ import { withSentryConfig } from "@sentry/nextjs";
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "*.vercel-storage.com",
-      },
-      {
-        protocol: "https",
-        hostname: "*.public.blob.vercel-storage.com",
-      },
-    ],
+    remotePatterns: [],
   },
   serverExternalPackages: ["@prisma/client", "prisma"],
 
@@ -59,10 +50,10 @@ const nextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline'",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob: https://*.vercel-storage.com https://*.public.blob.vercel-storage.com",
+              "img-src 'self' data: blob:",
               "font-src 'self'",
               // /monitoring is the Sentry tunnel route (same-origin proxy)
-              "connect-src 'self' https://*.vercel-storage.com",
+              "connect-src 'self'",
               "worker-src 'self' blob:",
               "object-src 'none'",
               "base-uri 'self'",

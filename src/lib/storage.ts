@@ -109,20 +109,6 @@ export function isVercelBlobHostname(raw: string): boolean {
   }
 }
 
-/**
- * Returns true for raw Vercel Blob URLs that pre-date the private migration
- * (i.e. stored directly as https://…vercel-storage.com/…).
- *
- * Used ONLY in isTrustedImageUrl() for legacy compatibility.
- * Remove this function (and its call site) once migrate-blobs-to-private
- * has been successfully run against production.
- *
- * @deprecated Remove after running npm run blob:migrate in production.
- */
-export function isLegacyPublicBlobUrl(s: string): boolean {
-  return isVercelBlobHostname(s);
-}
-
 // ─── Store a file ─────────────────────────────────────────────────────────────
 
 export interface StoredFile {
