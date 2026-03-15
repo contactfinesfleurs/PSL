@@ -1,5 +1,6 @@
-/** @type {import('next').NextConfig} */
+import { withSentryConfig } from "@sentry/nextjs";
 
+/** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
     remotePatterns: [
@@ -51,6 +52,7 @@ const nextConfig = {
           // and leaves the page non-interactive.
           // 'upgrade-insecure-requests' instructs browsers to silently upgrade
           // any HTTP sub-resource requests to HTTPS before making them.
+          // Sentry SDK uses worker-src for Session Replay.
           {
             key: "Content-Security-Policy",
             value: [
@@ -59,7 +61,9 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https://*.vercel-storage.com https://*.public.blob.vercel-storage.com",
               "font-src 'self'",
+              // /monitoring is the Sentry tunnel route (same-origin proxy)
               "connect-src 'self' https://*.vercel-storage.com",
+              "worker-src 'self' blob:",
               "object-src 'none'",
               "base-uri 'self'",
               "form-action 'self'",
@@ -73,4 +77,22 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  org: "contactfinesfleurs",
+  project: "javascript-nextjs",
+
+  // Tunnel Sentry requests through /monitoring to bypass ad-blockers
+  tunnelRoute: "/monitoring",
+
+  // Upload source maps for readable production stack traces
+  // Requires SENTRY_AUTH_TOKEN env variable
+  sourcemaps: {
+    deleteSourcemapsAfterUpload: true,
+  },
+
+  // Disable Sentry telemetry
+  telemetry: false,
+
+  // Suppress build logs
+  silent: !process.env.CI,
+});
