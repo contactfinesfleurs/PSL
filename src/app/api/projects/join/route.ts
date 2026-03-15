@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { parseBodyJson, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 import { logAudit } from "@/lib/audit";
+import { getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,10 @@ const JoinSchema = z.object({
 // POST /api/projects/join — join a project by code (invitation required)
 export async function POST(req: NextRequest) {
   try {
+    // Rate limiting: prevents brute-force enumeration of project codes.
+    const limited = await rateLimitResponse(`projects-join:${getClientIp(req)}`, "moderate");
+    if (limited) return limited;
+
     const profileId = getProfileId(req);
     if (!profileId) return unauthorizedResponse();
 

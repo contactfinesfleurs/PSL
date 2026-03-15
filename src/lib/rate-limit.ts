@@ -1,5 +1,10 @@
 /**
- * Sliding window rate limiter.
+ * Sliding window rate limiter with configurable tiers.
+ *
+ * Tiers:
+ *  - "strict"   →  5 requests / 15 min  (login, register)
+ *  - "moderate" → 20 requests / 15 min  (upload, share contributions, invitations)
+ *  - "loose"    → 60 requests / 15 min  (admin reads, general API)
  *
  * - Production / multi-instance: uses Upstash Redis when UPSTASH_REDIS_REST_URL
  *   and UPSTASH_REDIS_REST_TOKEN are set. Counters are shared across all
@@ -7,15 +12,23 @@
  *
  * - Development / single-instance fallback: in-memory Map when Upstash env
  *   vars are absent.
- *
- * Limits: max 5 requests per key within a 15-minute sliding window.
  */
 
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
+import { logSecurityEvent } from "@/lib/audit";
 
-const WINDOW_MS = 15 * 60 * 1000; // 15 minutes
-const MAX_REQUESTS = 5;
+// ---------------------------------------------------------------------------
+// Tier definitions
+// ---------------------------------------------------------------------------
+
+export type RateLimitTier = "strict" | "moderate" | "loose";
+
+const TIER_CONFIG: Record<RateLimitTier, { max: number; windowMs: number; windowStr: string }> = {
+  strict:   { max: 5,  windowMs: 15 * 60 * 1000, windowStr: "15 m" },
+  moderate: { max: 20, windowMs: 15 * 60 * 1000, windowStr: "15 m" },
+  loose:    { max: 60, windowMs: 15 * 60 * 1000, windowStr: "15 m" },
+};
 
 // ---------------------------------------------------------------------------
 // In-memory fallback (single-process / dev)
@@ -27,14 +40,15 @@ interface RequestRecord {
 
 const store = new Map<string, RequestRecord>();
 
-function isRateLimitedMemory(key: string): boolean {
+function isRateLimitedMemory(key: string, tier: RateLimitTier): boolean {
+  const { max, windowMs } = TIER_CONFIG[tier];
   const now = Date.now();
-  const windowStart = now - WINDOW_MS;
+  const windowStart = now - windowMs;
 
   const record = store.get(key) ?? { timestamps: [] };
   record.timestamps = record.timestamps.filter((t) => t > windowStart);
 
-  if (record.timestamps.length >= MAX_REQUESTS) {
+  if (record.timestamps.length >= max) {
     store.set(key, record);
     return true;
   }
@@ -56,22 +70,24 @@ function isRateLimitedMemory(key: string): boolean {
 // Upstash Redis rate limiter (multi-instance / prod)
 // ---------------------------------------------------------------------------
 
-let _upstashLimiter: Ratelimit | null = null;
+const _upstashLimiters = new Map<RateLimitTier, Ratelimit>();
 
-function getUpstashLimiter(): Ratelimit | null {
-  if (_upstashLimiter) return _upstashLimiter;
+function getUpstashLimiter(tier: RateLimitTier): Ratelimit | null {
+  if (_upstashLimiters.has(tier)) return _upstashLimiters.get(tier)!;
 
   const url = process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
   if (!url || !token) return null;
 
-  _upstashLimiter = new Ratelimit({
+  const { max, windowStr } = TIER_CONFIG[tier];
+  const limiter = new Ratelimit({
     redis: new Redis({ url, token }),
-    limiter: Ratelimit.slidingWindow(MAX_REQUESTS, "15 m"),
-    prefix: "psl:rl",
+    limiter: Ratelimit.slidingWindow(max, windowStr as Parameters<typeof Ratelimit.slidingWindow>[1]),
+    prefix: `psl:rl:${tier}`,
   });
 
-  return _upstashLimiter;
+  _upstashLimiters.set(tier, limiter);
+  return limiter;
 }
 
 // ---------------------------------------------------------------------------
@@ -97,21 +113,28 @@ export function getClientIp(req: Request): string {
  * Returns `true` when the request should be blocked (rate limit exceeded).
  * Uses Upstash Redis in production, in-memory Map in development.
  */
-export async function isRateLimited(key: string): Promise<boolean> {
-  const limiter = getUpstashLimiter();
+export async function isRateLimited(
+  key: string,
+  tier: RateLimitTier = "strict"
+): Promise<boolean> {
+  const limiter = getUpstashLimiter(tier);
   if (limiter) {
     const { success } = await limiter.limit(key);
     return !success;
   }
-  return isRateLimitedMemory(key);
+  return isRateLimitedMemory(key, tier);
 }
 
 /**
  * Convenience helper: returns a 429 Response when rate-limited, or null
- * when the request is allowed through.
+ * when the request is allowed through. Logs a security event on block.
  */
-export async function rateLimitResponse(key: string): Promise<Response | null> {
-  if (await isRateLimited(key)) {
+export async function rateLimitResponse(
+  key: string,
+  tier: RateLimitTier = "strict"
+): Promise<Response | null> {
+  if (await isRateLimited(key, tier)) {
+    logSecurityEvent("RATE_LIMIT_HIT", null, { key, tier });
     return new Response(
       JSON.stringify({ error: "Too many requests, please try again later" }),
       {

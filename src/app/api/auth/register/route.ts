@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { signToken, setSessionCookie } from "@/lib/auth";
 import { parseBodyJson } from "@/lib/api-helpers";
 import { getClientIp, rateLimitResponse } from "@/lib/rate-limit";
+import { logAudit, logSecurityEvent } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +39,7 @@ export async function POST(req: NextRequest) {
     const existing = await prisma.profile.findUnique({ where: { email } });
     if (existing) {
       // Message volontairement vague pour éviter l'énumération d'emails
+      logSecurityEvent("REGISTER_DUPLICATE_EMAIL", null, { email, ip: getClientIp(req) });
       return NextResponse.json(
         { error: "Impossible de créer le compte avec ces informations" },
         { status: 409 }
@@ -56,6 +58,8 @@ export async function POST(req: NextRequest) {
     });
 
     await setSessionCookie(token);
+
+    logAudit("REGISTER_SUCCESS", profile.id, "profile", profile.id, { ip: getClientIp(req) });
 
     return NextResponse.json(
       { name: profile.name, email: profile.email },

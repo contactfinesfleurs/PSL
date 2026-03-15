@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { signToken, setSessionCookie } from "@/lib/auth";
 import { parseBodyJson } from "@/lib/api-helpers";
 import { getClientIp, rateLimitResponse } from "@/lib/rate-limit";
+import { logAudit, logSecurityEvent } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,7 @@ export async function POST(req: NextRequest) {
     const valid = await compare(password, profile?.passwordHash ?? DUMMY_HASH);
 
     if (!profile || !valid) {
+      logSecurityEvent("LOGIN_FAILURE", null, { email, ip: getClientIp(req) });
       return NextResponse.json(
         { error: "Email ou mot de passe incorrect" },
         { status: 401 }
@@ -46,6 +48,8 @@ export async function POST(req: NextRequest) {
     });
 
     await setSessionCookie(token);
+
+    logAudit("LOGIN_SUCCESS", profile.id, "profile", profile.id, { ip: getClientIp(req) });
 
     return NextResponse.json({ name: profile.name, email: profile.email });
   } catch (error) {

@@ -30,7 +30,7 @@ const ProfileCreateSchema = z.object({
 
 export async function GET(req: NextRequest) {
   try {
-    const limited = await rateLimitResponse(`admin-profiles:${getClientIp(req)}`);
+    const limited = await rateLimitResponse(`admin-profiles:${getClientIp(req)}`, "loose");
     if (limited) return limited;
 
     const auth = await requireAdmin(req);
@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const limited = await rateLimitResponse(`admin-profiles:${getClientIp(req)}`);
+    const limited = await rateLimitResponse(`admin-profiles:${getClientIp(req)}`, "moderate");
     if (limited) return limited;
 
     const auth = await requireSuperAdmin(req);

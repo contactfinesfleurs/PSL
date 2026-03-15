@@ -19,7 +19,7 @@ export async function POST(
 ) {
   try {
     const ip = getClientIp(req);
-    const limited = await rateLimitResponse(`share-notes:${ip}`);
+    const limited = await rateLimitResponse(`share-notes:${ip}`, "moderate");
     if (limited) return limited;
 
     const { code } = await params;

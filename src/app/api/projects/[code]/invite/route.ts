@@ -20,7 +20,7 @@ export async function POST(
 ) {
   try {
     const ip = getClientIp(req);
-    const limited = await rateLimitResponse(`invite:${ip}`);
+    const limited = await rateLimitResponse(`invite:${ip}`, "moderate");
     if (limited) return limited;
 
     const profileId = getProfileId(req);

@@ -40,12 +40,17 @@ const nextConfig = {
           },
           // Prevent cross-origin window interactions (e.g. Spectre-style attacks)
           { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
+          // Prevent cross-origin reads of our resources (e.g. images) by
+          // other origins — complements frame-ancestors and CORS.
+          { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
           // Content Security Policy
           // 'unsafe-inline' is required for script-src because Next.js 15
           // injects inline scripts for hydration and Server Components without
           // nonces. 'strict-dynamic' is intentionally absent: it overrides
           // 'unsafe-inline' in modern browsers, which blocks all Next.js scripts
           // and leaves the page non-interactive.
+          // 'upgrade-insecure-requests' instructs browsers to silently upgrade
+          // any HTTP sub-resource requests to HTTPS before making them.
           {
             key: "Content-Security-Policy",
             value: [
@@ -59,6 +64,7 @@ const nextConfig = {
               "base-uri 'self'",
               "form-action 'self'",
               "frame-ancestors 'self'",
+              "upgrade-insecure-requests",
             ].join("; "),
           },
         ],
