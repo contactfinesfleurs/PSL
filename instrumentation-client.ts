@@ -1,5 +1,7 @@
 import * as Sentry from "@sentry/nextjs";
 
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
+
 Sentry.init({
   dsn: "https://32fa9be0085a181722ad3e3c70654267@o4511048282865664.ingest.de.sentry.io/4511048288567376",
 
@@ -11,7 +13,10 @@ Sentry.init({
   replaysOnErrorSampleRate: 1.0,
 
   integrations: [
-    Sentry.replayIntegration(),
+    Sentry.replayIntegration({
+      maskAllText: true,
+      blockAllMedia: true,
+    }),
   ],
 
   // Tunnel route to avoid ad-blockers and stay within CSP
