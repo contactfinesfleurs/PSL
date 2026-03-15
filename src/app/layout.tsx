@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/ui/Sidebar";
+import { MobileHeader } from "@/components/ui/MobileHeader";
 import { getSession } from "@/lib/auth";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -22,11 +23,14 @@ export default async function RootLayout({
   return (
     <html lang="fr" className={inter.variable}>
       <body className="font-sans bg-[#f4f4f6]">
-        <div className="flex h-screen">
+        {session && (
+          <MobileHeader userName={session.name} userEmail={session.email} userRole={userRole} />
+        )}
+        <div className="md:flex md:h-screen">
           {session && (
             <Sidebar userName={session.name} userEmail={session.email} userRole={userRole} />
           )}
-          <main className="flex-1 overflow-auto">
+          <main className={`flex-1 overflow-auto${session ? " pt-14 md:pt-0" : ""}`}>
             {children}
           </main>
         </div>

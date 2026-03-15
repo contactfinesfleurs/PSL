@@ -72,7 +72,7 @@ export function Sidebar({ userName, userEmail, userRole }: SidebarProps) {
     .join("");
 
   return (
-    <aside className="w-[210px] shrink-0 bg-white flex flex-col border-r border-gray-200">
+    <aside className="hidden md:flex flex-col w-[210px] shrink-0 bg-white border-r border-gray-200">
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-5 h-14">
         <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">

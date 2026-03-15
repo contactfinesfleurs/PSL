@@ -44,7 +44,7 @@ export default async function DashboardPage() {
       <div className="space-y-10">
         {/* Header */}
         <div>
-          <h1 className="text-5xl font-light text-gray-900 tracking-tight">
+          <h1 className="text-3xl sm:text-5xl font-light text-gray-900 tracking-tight">
             Vue d&apos;ensemble
           </h1>
           <p className="mt-2 text-sm text-gray-500">
@@ -53,7 +53,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 gap-5 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           <StatCard
             label="Produits"
             value={productCount}
@@ -185,7 +185,7 @@ export default async function DashboardPage() {
     return (
       <div className="space-y-8">
         <div>
-          <h1 className="text-5xl font-light text-gray-900 tracking-tight">
+          <h1 className="text-3xl sm:text-5xl font-light text-gray-900 tracking-tight">
             Vue d&apos;ensemble
           </h1>
         </div>
