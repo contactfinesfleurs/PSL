@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, X, Link2 } from "lucide-react";
 import { COLOR_CODES } from "@/lib/utils";
+import { safeParseArray } from "@/lib/formatters";
 
 type Variant = {
   id: string;
@@ -20,22 +21,15 @@ function colorLabel(code: string) {
 }
 
 function colorDot(colors: string | null) {
-  try {
-    const codes: string[] = colors ? JSON.parse(colors) : [];
-    if (!codes.length) return null;
-    const label = codes.map(colorLabel).join(" / ");
-    return (
-      <span
-        title={label}
-        className="inline-flex items-center gap-1 text-xs text-gray-500"
-      >
-        <span className="w-2.5 h-2.5 rounded-full bg-gray-400 shrink-0" />
-        {label}
-      </span>
-    );
-  } catch {
-    return null;
-  }
+  const codes = safeParseArray(colors);
+  if (!codes.length) return null;
+  const label = codes.map(colorLabel).join(" / ");
+  return (
+    <span title={label} className="inline-flex items-center gap-1 text-xs text-gray-500">
+      <span className="w-2.5 h-2.5 rounded-full bg-gray-400 shrink-0" />
+      {label}
+    </span>
+  );
 }
 
 export function VariantsSection({
@@ -50,7 +44,6 @@ export function VariantsSection({
   const [loading, setLoading] = useState(true);
   const [showSearch, setShowSearch] = useState(false);
   const [search, setSearch] = useState("");
-  const [suggestions, setSuggestions] = useState<ProductSuggestion[]>([]);
   const [allProducts, setAllProducts] = useState<ProductSuggestion[]>([]);
   const [linking, setLinking] = useState(false);
   const [unlinking, setUnlinking] = useState<string | null>(null);
@@ -65,12 +58,12 @@ export function VariantsSection({
 
   useEffect(() => { fetchVariants(); }, [fetchVariants]);
 
-  // Fetch all products for suggestion list (once, when search opens)
+  // Fetch all products for suggestion list (once, when search opens) — slim=1 skips samples
   async function openSearch() {
     setShowSearch(true);
     setTimeout(() => inputRef.current?.focus(), 50);
     if (allProducts.length === 0) {
-      const res = await fetch(`/api/products?limit=500`);
+      const res = await fetch(`/api/products?limit=500&slim=1`);
       if (res.ok) {
         const body = await res.json();
         setAllProducts(body.data ?? []);
@@ -78,20 +71,14 @@ export function VariantsSection({
     }
   }
 
-  // Filter suggestions client-side
-  useEffect(() => {
+  // Derive suggestions directly — no extra state, no effect
+  const suggestions = useMemo(() => {
     const q = search.toLowerCase().trim();
     const linkedIds = new Set([productId, ...variants.map((v) => v.id)]);
-    const filtered = allProducts
+    return allProducts
       .filter((p) => !linkedIds.has(p.id))
-      .filter(
-        (p) =>
-          !q ||
-          p.name.toLowerCase().includes(q) ||
-          p.sku.toLowerCase().includes(q)
-      )
+      .filter((p) => !q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q))
       .slice(0, 8);
-    setSuggestions(filtered);
   }, [search, allProducts, variants, productId]);
 
   async function handleLink(variantId: string) {
