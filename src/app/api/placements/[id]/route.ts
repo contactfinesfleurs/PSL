@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { parseBodyJson, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 import { logAudit } from "@/lib/audit";
-import { deleteStoredFile } from "@/lib/storage";
+import { deleteStoredFile, isStoredPath } from "@/lib/storage";
 import { PLACEMENT_TYPE_VALUES } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
@@ -44,6 +44,14 @@ export async function PATCH(
     const result = await parseBodyJson(req, PlacementPatchSchema);
     if (!result.success) return result.response;
     const body = result.data;
+
+    // Validate screenshotPath routes through our authenticated proxy
+    if (body.screenshotPath != null && !isStoredPath(body.screenshotPath)) {
+      return NextResponse.json(
+        { error: "Chemin de fichier invalide" },
+        { status: 400 }
+      );
+    }
 
     const updated = await prisma.mediaPlacement.update({
       where: { id },

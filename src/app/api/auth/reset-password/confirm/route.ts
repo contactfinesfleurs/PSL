@@ -6,19 +6,9 @@ import { prisma } from "@/lib/prisma";
 import { parseBodyJson } from "@/lib/api-helpers";
 import { getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 import { logAudit, logSecurityEvent } from "@/lib/audit";
+import { COMMON_PASSWORDS } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
-
-// Top-100 most commonly used passwords (HIBP / NCSC list) — kept in sync with register route
-const COMMON_PASSWORDS = new Set([
-  "password","password1","password123","123456","12345678","123456789","1234567890",
-  "qwerty","qwerty123","azerty","azerty123","111111","000000","iloveyou","admin",
-  "welcome","monkey","dragon","master","letmein","login","pass","test","abc123",
-  "sunshine","princess","shadow","superman","michael","football","baseball","solo",
-  "charlie","donald","batman","trustno1","hello","jesus","ninja","mustang","access",
-  "696969","passw0rd","starwars","pokemon","2000","1111","12345","1q2w3e","1q2w3e4r",
-  "password!","p@ssword","p@ssw0rd","pass123","pass1234","qwerty!","qwerty1",
-]);
 
 const ConfirmSchema = z.object({
   token: z.string().min(1),
