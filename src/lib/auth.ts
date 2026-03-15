@@ -1,15 +1,21 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
+import { randomBytes } from "crypto";
+
+// Generated once per process start — unpredictable even in dev, sessions
+// are invalidated on server restart which is acceptable in development.
+const DEV_FALLBACK_SECRET = randomBytes(32);
 
 function getJwtSecret(): Uint8Array {
   const secret = process.env.JWT_SECRET;
   // Throw in any non-development environment (production, staging, preview, test…)
-  // so that a missing JWT_SECRET never silently falls back to the hardcoded value.
+  // so that a missing JWT_SECRET never silently falls back to the random value.
   if (!secret && process.env.NODE_ENV !== "development") {
     throw new Error("JWT_SECRET environment variable must be set");
   }
-  return new TextEncoder().encode(secret ?? "psl-dev-secret-change-in-production-32chars");
+  if (!secret) return DEV_FALLBACK_SECRET;
+  return new TextEncoder().encode(secret);
 }
 
 const COOKIE_NAME = "psl_session";

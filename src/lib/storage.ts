@@ -149,10 +149,16 @@ export interface StoredFile {
  *   → Saves to private-uploads/<folder>/<timestamp>_<filename>
  *   → Returns /api/files/<folder>/<timestamp>_<filename>
  *
- * NOTE: This function does NOT validate MIME type or file size.
- *       Callers must check against ALLOWED_MIME_TYPES and MAX_FILE_SIZE first.
+ * Validates MIME type and file size as defense-in-depth (callers should also
+ * validate before calling, but this ensures the invariant is always enforced).
  */
 export async function storeFile(file: File, folder: string): Promise<StoredFile> {
+  if (!ALLOWED_MIME_TYPES.has(file.type)) {
+    throw new Error(`Type de fichier non autorisé : ${file.type}`);
+  }
+  if (file.size > MAX_FILE_SIZE) {
+    throw new Error(`Fichier trop volumineux (max ${MAX_FILE_SIZE / 1024 / 1024} Mo)`);
+  }
   const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
   const safeFolder = folder.replace(/[^a-zA-Z0-9_-]/g, "_");
   const timestamp = Date.now();

@@ -71,11 +71,13 @@ export async function sendProjectInvitationEmail(
 </body>
 </html>`;
 
-  // Subject: strip HTML tags as a safety measure (email subject is plain-text)
+  // Subject is plain-text: strip all angle brackets to prevent any HTML injection.
+  // Using safeName/safeProject (already escapeHtml'd) would produce visible HTML
+  // entities in subject lines, so we strip < and > from the originals instead.
   await resend.emails.send({
     from: FROM_ADDRESS,
     to: params.to,
-    subject: `${params.inviterName.replace(/<[^>]*>/g, "")} vous invite sur le projet "${params.projectName.replace(/<[^>]*>/g, "")}"`,
+    subject: `${params.inviterName.replace(/[<>]/g, "")} vous invite sur le projet "${params.projectName.replace(/[<>]/g, "")}"`,
     html,
   });
 }

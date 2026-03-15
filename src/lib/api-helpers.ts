@@ -33,10 +33,20 @@ export function forbiddenResponse(message = "Accès interdit") {
  * if (!result.success) return result.response;
  * const data = result.data;
  */
+const MAX_JSON_BODY_BYTES = 512 * 1024; // 512 KB
+
 export async function parseBodyJson<T>(
   req: Request,
   schema: z.ZodSchema<T>
 ): Promise<{ success: true; data: T } | { success: false; response: NextResponse }> {
+  const contentLength = (req.headers as Headers).get("content-length");
+  if (contentLength && parseInt(contentLength, 10) > MAX_JSON_BODY_BYTES) {
+    return {
+      success: false,
+      response: NextResponse.json({ error: "Corps de requête trop volumineux." }, { status: 413 }),
+    };
+  }
+
   let body: unknown;
   try {
     body = await req.json();

@@ -8,7 +8,7 @@ import { randomBytes } from "crypto";
 export const dynamic = "force-dynamic";
 
 function generateProjectCode(): string {
-  return randomBytes(4).toString("hex"); // 8 hex chars
+  return randomBytes(8).toString("hex"); // 16 hex chars — 64 bits of entropy
 }
 
 const CreateProjectSchema = z.object({

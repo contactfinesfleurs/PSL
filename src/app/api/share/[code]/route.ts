@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { safeParseArray } from "@/lib/formatters";
+import { rateLimitResponse, getClientIp } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -11,10 +12,13 @@ function toShareProxyPath(code: string, storedPath: string): string {
 
 // GET /api/share/[code] — public: product info + contributions
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ code: string }> }
 ) {
   try {
+    const limited = await rateLimitResponse(`share-get:${getClientIp(req)}`, "loose");
+    if (limited) return limited;
+
     const { code } = await params;
 
     if (!code || code.length > 20) {

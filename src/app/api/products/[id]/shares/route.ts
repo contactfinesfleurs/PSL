@@ -8,7 +8,7 @@ import { randomBytes } from "crypto";
 export const dynamic = "force-dynamic";
 
 function generateShareCode(): string {
-  return randomBytes(5).toString("hex"); // 10 hex chars, URL-safe
+  return randomBytes(8).toString("hex"); // 16 hex chars — 64 bits of entropy, URL-safe
 }
 
 const CreateShareSchema = z.object({
