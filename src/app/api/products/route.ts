@@ -39,6 +39,8 @@ export async function GET(req: NextRequest) {
     const family = rawFamily ? rawFamily.trim().slice(0, 100) || undefined : undefined;
     const season = rawSeason ? rawSeason.trim().slice(0, 100) || undefined : undefined;
     const { skip, take, page, limit } = parsePagination(searchParams);
+    // slim=1: skip sample relation — used by lightweight autocompletes (e.g. variant search)
+    const slim = searchParams.get("slim") === "1";
 
     const where = {
       profileId,
@@ -53,7 +55,8 @@ export async function GET(req: NextRequest) {
         where,
         // Only include the lightweight sample count needed for list display.
         // Deep relations (campaigns, events) are loaded on the detail route to avoid N+1.
-        include: { samples: true },
+        // slim=1 callers (e.g. variant autocomplete) skip this entirely.
+        ...(!slim ? { include: { samples: true } } : {}),
         orderBy: { createdAt: "desc" },
         skip,
         take,

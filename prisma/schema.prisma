@@ -118,6 +118,7 @@ model Product {
   @@index([profileId, family])
   @@index([sampleStatus])
   @@index([variantGroupId])
+  @@index([profileId, variantGroupId])
 }
 
 // ─── SAMPLE ──────────────────────────────────────────────────────────────────
