@@ -53,7 +53,9 @@ export async function signToken(payload: Omit<SessionPayload, "jti">): Promise<s
 
 export async function verifyToken(token: string): Promise<SessionPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, getJwtSecret());
+    const { payload } = await jwtVerify(token, getJwtSecret(), {
+      algorithms: ["HS256"],
+    });
     return payload as unknown as SessionPayload;
   } catch {
     return null;
@@ -109,7 +111,7 @@ export async function setSessionCookie(token: string, role?: string) {
   jar.set(COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    sameSite: "strict",
     maxAge: isAdminRole(role) ? ADMIN_COOKIE_MAX_AGE : COOKIE_MAX_AGE,
     path: "/",
   });
