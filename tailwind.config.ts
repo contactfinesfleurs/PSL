@@ -28,6 +28,9 @@ const config: Config = {
       },
     },
   },
+  // overflow-hidden is applied dynamically to document.body via JS
+  // (e.g. when a modal is open) and would otherwise be purged by Tailwind.
+  safelist: ["overflow-hidden"],
   plugins: [],
 };
 export default config;

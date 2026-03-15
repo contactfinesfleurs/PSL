@@ -146,6 +146,22 @@ export async function rateLimitResponse(
   return null;
 }
 
+/**
+ * Rate limit by authenticated profile ID instead of (or in addition to) IP.
+ * Uses `profileId:key` as the rate limit key so each user has their own
+ * counter regardless of shared IPs (proxies, corporate networks, etc.).
+ *
+ * Returns a 429 Response when the limit is exceeded, or null when allowed.
+ */
+export async function rateLimitByProfile(
+  profileId: string,
+  key: string,
+  tier: RateLimitTier = "moderate"
+): Promise<Response | null> {
+  const compositeKey = `profile:${profileId}:${key}`;
+  return rateLimitResponse(compositeKey, tier);
+}
+
 // ---------------------------------------------------------------------------
 // Custom window rate limiter (arbitrary max / windowMs)
 // ---------------------------------------------------------------------------

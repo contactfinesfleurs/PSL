@@ -4,7 +4,7 @@ import { z } from "zod";
 import { parseBodyJson, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 import { logAudit, logSecurityEvent } from "@/lib/audit";
 import { sendProjectInvitationEmail } from "@/lib/email";
-import { getClientIp, rateLimitResponse, isRateLimitedCustom } from "@/lib/rate-limit";
+import { getClientIp, rateLimitResponse, rateLimitByProfile, isRateLimitedCustom } from "@/lib/rate-limit";
 
 const MAX_ACTIVE_INVITATIONS = 20;
 
@@ -25,6 +25,11 @@ export async function POST(
 
     const profileId = getProfileId(req);
     if (!profileId) return unauthorizedResponse();
+
+    // Rate limit by profileId so authenticated users behind shared IPs each
+    // have their own counter (prevents proxy bypass of the IP-based check above).
+    const profileLimited = await rateLimitByProfile(profileId, "invite", "moderate");
+    if (profileLimited) return profileLimited;
 
     const { code } = await params;
 

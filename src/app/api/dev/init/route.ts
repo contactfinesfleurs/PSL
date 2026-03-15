@@ -23,7 +23,7 @@ export async function GET() {
     return NextResponse.json({ ok: true, message: "Profil dev déjà présent", id: existing.id });
   }
 
-  const passwordHash = await hash("Dev-bypass-not-used", 10);
+  const passwordHash = await hash("Dev-bypass-not-used", 12);
   const profile = await prisma.profile.create({
     data: {
       id: DEV_PROFILE_ID,
