@@ -1,6 +1,8 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
+import { prisma } from "@/lib/prisma";
+import "@/lib/env"; // validate required env vars at startup
 
 // Generated once per process start using Web Crypto API (Edge-runtime compatible).
 // Sessions are invalidated on server restart which is acceptable in development.
@@ -24,10 +26,12 @@ const ADMIN_COOKIE_MAX_AGE = 60 * 60 * 1; // 1 hour for admin/super-admin accoun
 // ─── Token payload ────────────────────────────────────────────────────────────
 
 export type SessionPayload = {
+  jti: string;
   profileId: string;
   email: string;
   name: string;
   role?: string;
+  exp?: number;
 };
 
 // ─── Sign & verify ────────────────────────────────────────────────────────────
@@ -36,12 +40,14 @@ function isAdminRole(role?: string): boolean {
   return role === "ADMIN" || role === "SUPER_ADMIN";
 }
 
-export async function signToken(payload: SessionPayload): Promise<string> {
+export async function signToken(payload: Omit<SessionPayload, "jti">): Promise<string> {
   const expiresIn = isAdminRole(payload.role) ? "1h" : "8h";
-  return new SignJWT(payload as Record<string, unknown>)
+  const jti = crypto.randomUUID();
+  return new SignJWT({ ...payload, jti } as Record<string, unknown>)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(expiresIn)
+    .setJti(jti)
     .sign(getJwtSecret());
 }
 
@@ -54,13 +60,48 @@ export async function verifyToken(token: string): Promise<SessionPayload | null>
   }
 }
 
+// ─── Token revocation ─────────────────────────────────────────────────────────
+
+/**
+ * Inserts a revoked token record so it can no longer be used.
+ * Must be called on logout before clearing the cookie.
+ */
+export async function revokeToken(jti: string, expiresAt: Date): Promise<void> {
+  await prisma.revokedToken.create({ data: { jti, expiresAt } });
+}
+
+/**
+ * Deletes expired revoked-token rows. Call periodically (e.g. from a cron job)
+ * to prevent unbounded table growth.
+ */
+export async function cleanupExpiredTokens(): Promise<void> {
+  await prisma.revokedToken.deleteMany({ where: { expiresAt: { lt: new Date() } } });
+}
+
 // ─── Cookie helpers (Server Components / Route Handlers) ──────────────────────
 
+/**
+ * Returns the session for the current request.
+ * Runs in Node runtime (Route Handlers / Server Components) — performs the
+ * DB-backed blacklist check that cannot run in Edge middleware.
+ */
 export async function getSession(): Promise<SessionPayload | null> {
   const jar = await cookies();
   const token = jar.get(COOKIE_NAME)?.value;
   if (!token) return null;
-  return verifyToken(token);
+
+  const payload = await verifyToken(token);
+  if (!payload) return null;
+
+  // Check token blacklist (revoked on logout)
+  if (payload.jti) {
+    const revoked = await prisma.revokedToken.findUnique({
+      where: { jti: payload.jti },
+    });
+    if (revoked) return null;
+  }
+
+  return payload;
 }
 
 export async function setSessionCookie(token: string, role?: string) {
@@ -81,6 +122,10 @@ export async function clearSessionCookie() {
 
 // ─── Middleware helper (Edge runtime — reads from request) ────────────────────
 
+/**
+ * Lightweight session check for middleware (Edge runtime).
+ * Does NOT perform the DB blacklist check — that happens in getSession() only.
+ */
 export async function getSessionFromRequest(
   req: NextRequest
 ): Promise<SessionPayload | null> {

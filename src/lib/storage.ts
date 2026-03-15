@@ -37,6 +37,7 @@
 import { put, del as blobDel, get as blobGet } from "@vercel/blob";
 import { writeFile, mkdir, unlink } from "fs/promises";
 import path from "path";
+import "@/lib/env"; // validate required env vars at startup
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 

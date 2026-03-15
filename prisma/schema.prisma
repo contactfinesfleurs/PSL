@@ -53,6 +53,7 @@ model Profile {
   projectContributions ProjectContribution[]
   sentInvitations      ProjectInvitation[] @relation("InvitationsSent")
   receivedInvitations  ProjectInvitation[] @relation("InvitationsReceived")
+  passwordResetTokens  PasswordResetToken[]
 
   @@index([role])
   @@index([teamId])
@@ -495,5 +496,31 @@ model ProjectInvitation {
   @@index([projectId])
   @@index([invitedEmail])
   @@index([invitedProfileId])
+  @@index([expiresAt])
+}
+
+// ─── REVOKED TOKEN ────────────────────────────────────────────────────────────
+// Tracks JWT IDs (jti) that have been revoked on logout before their expiry.
+
+model RevokedToken {
+  id        String   @id @default(cuid())
+  jti       String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+// ─── PASSWORD RESET TOKEN ─────────────────────────────────────────────────────
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  profileId String
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  profile   Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
   @@index([expiresAt])
 }
