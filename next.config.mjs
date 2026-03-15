@@ -41,18 +41,16 @@ const nextConfig = {
           // Prevent cross-origin window interactions (e.g. Spectre-style attacks)
           { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
           // Content Security Policy
-          // NOTE: 'unsafe-inline' is required for script-src because Next.js 15
-          // injects inline scripts for hydration and Server Components. Removing it
-          // would break the app. Using 'strict-dynamic' as a forward-compatible
-          // addition: browsers that support it will honour the hash/nonce list and
-          // ignore 'unsafe-inline'; older browsers fall back to 'unsafe-inline'.
-          // TODO: generate per-request nonces via middleware and remove
-          //       'unsafe-inline' entirely once nonce support is wired up.
+          // 'unsafe-inline' is required for script-src because Next.js 15
+          // injects inline scripts for hydration and Server Components without
+          // nonces. 'strict-dynamic' is intentionally absent: it overrides
+          // 'unsafe-inline' in modern browsers, which blocks all Next.js scripts
+          // and leaves the page non-interactive.
           {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'strict-dynamic'",
+              "script-src 'self' 'unsafe-inline'",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https://*.vercel-storage.com https://*.public.blob.vercel-storage.com",
               "font-src 'self'",
