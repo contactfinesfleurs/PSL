@@ -8,4 +8,9 @@ export async function register() {
   }
 }
 
-export { onRequestError } from "@sentry/nextjs";
+export async function onRequestError(
+  ...args: Parameters<typeof import("@sentry/nextjs").captureRequestError>
+) {
+  const Sentry = await import("@sentry/nextjs");
+  Sentry.captureRequestError(...args);
+}
