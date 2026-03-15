@@ -124,7 +124,7 @@ export async function runOrchestrator(
     apiKey,
   } = options;
 
-  const client = new Anthropic({ apiKey });
+  const client = new Anthropic({ apiKey, timeout: 20 * 60 * 1000 });
   const globalStart = Date.now();
 
   console.log("\n╔════════════════════════════════════════╗");
