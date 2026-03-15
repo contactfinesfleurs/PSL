@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { parseBodyJson, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 import { PLACEMENT_TYPE_VALUES } from "@/lib/constants";
+import { isStoredPath } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
 
@@ -76,6 +77,14 @@ export async function POST(
         where: { id: data.sampleLoanId, productId: id },
       });
       if (!loan) return NextResponse.json({ error: "Loan introuvable" }, { status: 404 });
+    }
+
+    // Validate screenshotPath routes through our authenticated proxy
+    if (data.screenshotPath != null && !isStoredPath(data.screenshotPath)) {
+      return NextResponse.json(
+        { error: "Chemin de fichier invalide" },
+        { status: 400 }
+      );
     }
 
     const placement = await prisma.mediaPlacement.create({
