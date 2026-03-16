@@ -124,6 +124,7 @@ export async function middleware(req: NextRequest) {
   // et aux routes de partage public (code uniquement, pas de session)
   if (
     pathname === "/login" ||
+    pathname === "/landing" ||
     pathname.startsWith("/api/auth/") ||
     pathname.startsWith("/api/share/") ||
     pathname.startsWith("/share/")
