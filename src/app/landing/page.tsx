@@ -131,39 +131,39 @@ function ProductSVG() {
       {/* Dress body fill */}
       <path
         d="M60,38 L55,90 L48,155 Q80,163 112,155 L105,90 L100,38 Q92,28 80,18 Q68,28 60,38 Z"
-        fill="#7c3aed"
-        stroke="#5b21b6"
+        fill="#374151"
+        stroke="#1f2937"
         strokeWidth="1.5"
         strokeLinejoin="round"
       />
       {/* Left sleeve */}
       <path
         d="M60,38 L38,55 Q32,62 35,74 L42,90 L55,90 Z"
-        fill="#6d28d9"
-        stroke="#5b21b6"
+        fill="#1f2937"
+        stroke="#111827"
         strokeWidth="1.5"
         strokeLinejoin="round"
       />
       {/* Right sleeve */}
       <path
         d="M100,38 L122,55 Q128,62 125,74 L118,90 L105,90 Z"
-        fill="#6d28d9"
-        stroke="#5b21b6"
+        fill="#1f2937"
+        stroke="#111827"
         strokeWidth="1.5"
         strokeLinejoin="round"
       />
       {/* Neckline accent */}
       <path
         d="M80,18 Q68,28 60,38 Q80,44 100,38 Q92,28 80,18 Z"
-        fill="#5b21b6"
-        stroke="#4c1d95"
+        fill="#111827"
+        stroke="#030712"
         strokeWidth="1"
       />
       {/* Waist belt */}
       <path
         d="M55,90 Q80,96 105,90 L105,98 Q80,104 55,98 Z"
-        fill="#4c1d95"
-        stroke="#3b1375"
+        fill="#111827"
+        stroke="#030712"
         strokeWidth="1"
       />
       {/* Fabric sheen / highlight */}
@@ -185,8 +185,8 @@ function ProductSVG() {
         width="8"
         height="5"
         rx="1"
-        fill="#a78bfa"
-        stroke="#7c3aed"
+        fill="#9ca3af"
+        stroke="#6b7280"
         strokeWidth="0.5"
       />
       {/* Price tag */}
@@ -197,20 +197,20 @@ function ProductSVG() {
         height="20"
         rx="3"
         fill="white"
-        stroke="#ede9fe"
+        stroke="#e5e7eb"
         strokeWidth="1"
       />
       <text
         x="121"
         y="61"
         fontSize="6.5"
-        fill="#7c3aed"
+        fill="#111827"
         fontFamily="monospace"
         fontWeight="bold"
       >
         REF-001
       </text>
-      <text x="121" y="68" fontSize="5.5" fill="#a78bfa" fontFamily="monospace">
+      <text x="121" y="68" fontSize="5.5" fill="#6b7280" fontFamily="monospace">
         SS-2025
       </text>
       {/* Approval stamp */}
@@ -218,7 +218,7 @@ function ProductSVG() {
         x="20"
         y="170"
         fontSize="7"
-        fill="#7c3aed"
+        fill="#374151"
         fontFamily="monospace"
         letterSpacing="0.5"
         fontWeight="bold"
@@ -266,8 +266,8 @@ export default function LandingPage() {
       <section className="pt-28 pb-20 px-6 text-center">
         <div className="max-w-4xl mx-auto">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 bg-purple-50 text-purple-700 text-xs font-semibold px-4 py-1.5 rounded-full mb-8 tracking-wide uppercase">
-            <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse" />
+          <div className="inline-flex items-center gap-2 bg-gray-100 text-gray-700 text-xs font-semibold px-4 py-1.5 rounded-full mb-8 tracking-wide uppercase">
+            <span className="w-1.5 h-1.5 bg-gray-900 rounded-full animate-pulse" />
             Du croquis au produit fini
           </div>
 
@@ -275,7 +275,7 @@ export default function LandingPage() {
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-tight mb-6">
             Gérez vos collections
             <br />
-            <span className="text-purple-600">de A à Z.</span>
+            <span className="text-gray-900">de A à Z.</span>
           </h1>
 
           <p className="text-xl text-gray-500 max-w-2xl mx-auto mb-10 leading-relaxed">
@@ -334,7 +334,7 @@ export default function LandingPage() {
 
             {/* Card */}
             <div
-              className={`relative h-64 rounded-3xl overflow-hidden border-2 shadow-2xl transition-colors duration-1000 ${isSketch ? "border-gray-200 bg-gray-50/80" : "border-purple-200 bg-purple-50/60"}`}
+              className={`relative h-64 rounded-3xl overflow-hidden border-2 shadow-2xl transition-colors duration-1000 ${isSketch ? "border-gray-200 bg-gray-50/80" : "border-gray-300 bg-gray-100/60"}`}
             >
               {/* Sketch */}
               <div
@@ -372,7 +372,7 @@ export default function LandingPage() {
             {/* Progress bar */}
             <div className="mt-3 h-1 bg-gray-100 rounded-full overflow-hidden">
               <div
-                className={`h-full bg-purple-500 rounded-full transition-all duration-1000 ease-in-out ${!isSketch ? "w-full" : "w-0"}`}
+                className={`h-full bg-gray-900 rounded-full transition-all duration-1000 ease-in-out ${!isSketch ? "w-full" : "w-0"}`}
               />
             </div>
           </div>
@@ -386,7 +386,7 @@ export default function LandingPage() {
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
               Un flux de travail complet,
               <br />
-              <span className="text-purple-600">sans changer d&apos;outil</span>
+              <span className="text-gray-900">sans changer d&apos;outil</span>
             </h2>
             <p className="text-gray-500 text-lg max-w-xl mx-auto">
               PSL Studio centralise chaque étape de la vie d&apos;un produit de
@@ -397,9 +397,9 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Products */}
             <div className="bg-white rounded-2xl p-7 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
-              <div className="w-11 h-11 bg-purple-50 rounded-xl flex items-center justify-center mb-5">
+              <div className="w-11 h-11 bg-gray-100 rounded-xl flex items-center justify-center mb-5">
                 <svg
-                  className="w-5 h-5 text-purple-600"
+                  className="w-5 h-5 text-gray-900"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -485,7 +485,7 @@ export default function LandingPage() {
           <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 leading-tight mb-8">
             Du croquis.
             <br />
-            <span className="text-purple-600">Au produit fini.</span>
+            <span className="text-gray-900">Au produit fini.</span>
             <br />
             <span className="text-gray-400">En un seul endroit.</span>
           </h2>
@@ -508,7 +508,7 @@ export default function LandingPage() {
                 className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-full px-4 py-1.5 text-sm text-gray-600"
               >
                 <svg
-                  className="w-3.5 h-3.5 text-purple-500 flex-shrink-0"
+                  className="w-3.5 h-3.5 text-gray-500 flex-shrink-0"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -596,7 +596,7 @@ export default function LandingPage() {
             {/* ─ Pro ─ */}
             <div className="bg-gray-900 rounded-3xl p-8 border border-gray-800 shadow-2xl flex flex-col relative overflow-hidden">
               <div
-                className="absolute top-0 right-0 bg-purple-500 text-white text-xs font-bold px-4 py-1.5 rounded-bl-2xl tracking-wide"
+                className="absolute top-0 right-0 bg-gray-700 text-white text-xs font-bold px-4 py-1.5 rounded-bl-2xl tracking-wide"
                 style={{ borderRadius: "0 1.5rem 0 1rem" }}
               >
                 Recommandé
@@ -633,7 +633,7 @@ export default function LandingPage() {
                     className="flex items-start gap-3 text-sm text-gray-300"
                   >
                     <svg
-                      className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5"
+                      className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
