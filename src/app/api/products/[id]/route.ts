@@ -21,8 +21,8 @@ const ProductPatchSchema = z.object({
   colors: z.array(z.string().max(100)).nullable().optional(),
   colorPrimary: z.string().max(10).nullable().optional(),
   colorSecondary: z.string().max(10).nullable().optional(),
-  sketchPaths: z.array(z.string()).nullable().optional(),
-  techPackPath: z.string().max(500).nullable().optional(),
+  sketchPaths: z.array(z.string().refine(isStoredPath, { message: "Invalid stored path" })).nullable().optional(),
+  techPackPath: z.string().max(500).refine(isStoredPath, { message: "Invalid stored path" }).nullable().optional(),
   sampleStatus: z.enum(["PENDING", "VALIDATED", "NOT_VALIDATED"]).optional(),
   description: z.string().max(5000).nullable().optional(),
   metaTags: z.array(z.string().max(100)).nullable().optional(),
@@ -88,14 +88,6 @@ export async function PATCH(
     const result = await parseBodyJson(req, ProductPatchSchema);
     if (!result.success) return result.response;
     const body = result.data;
-
-    // Validate file paths before writing to DB (invariant: all paths must satisfy isStoredPath)
-    if (body.sketchPaths && !body.sketchPaths.every(isStoredPath)) {
-      return NextResponse.json({ error: "Chemin de fichier invalide" }, { status: 400 });
-    }
-    if (body.techPackPath && !isStoredPath(body.techPackPath)) {
-      return NextResponse.json({ error: "Chemin de fichier invalide" }, { status: 400 });
-    }
 
     // Delete orphaned files when paths are removed from arrays or replaced
     if (body.sketchPaths !== undefined) {

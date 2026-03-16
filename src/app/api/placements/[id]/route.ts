@@ -14,7 +14,7 @@ const PlacementPatchSchema = z.object({
   type: z.enum(PLACEMENT_TYPE_VALUES).optional(),
   publishedAt: z.string().datetime().optional(),
   url: z.string().url().nullable().optional(),
-  screenshotPath: z.string().nullable().optional(),
+  screenshotPath: z.string().refine(isStoredPath, { message: "Invalid stored path" }).nullable().optional(),
   notes: z.string().max(1000).nullable().optional(),
   reach: z.number().int().positive().nullable().optional(),
   sampleLoanId: z.string().nullable().optional(),
@@ -47,14 +47,6 @@ export async function PATCH(
     const result = await parseBodyJson(req, PlacementPatchSchema);
     if (!result.success) return result.response;
     const body = result.data;
-
-    // Validate screenshotPath routes through our authenticated proxy
-    if (body.screenshotPath && !isStoredPath(body.screenshotPath)) {
-      return NextResponse.json(
-        { error: "Chemin de fichier invalide" },
-        { status: 400 }
-      );
-    }
 
     // Delete orphaned screenshot before replacing
     if (

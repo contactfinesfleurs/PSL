@@ -13,7 +13,7 @@ const PlacementCreateSchema = z.object({
   type: z.enum(PLACEMENT_TYPE_VALUES),
   publishedAt: z.string().datetime(),
   url: z.string().url().optional().nullable(),
-  screenshotPath: z.string().optional().nullable(),
+  screenshotPath: z.string().refine(isStoredPath, { message: "Invalid stored path" }).optional().nullable(),
   notes: z.string().max(1000).optional().nullable(),
   reach: z.number().int().positive().optional().nullable(),
   sampleLoanId: z.string().optional().nullable(),
@@ -80,14 +80,6 @@ export async function POST(
         where: { id: data.sampleLoanId, productId: id },
       });
       if (!loan) return NextResponse.json({ error: "Loan introuvable" }, { status: 404 });
-    }
-
-    // Validate screenshotPath routes through our authenticated proxy
-    if (data.screenshotPath != null && !isStoredPath(data.screenshotPath)) {
-      return NextResponse.json(
-        { error: "Chemin de fichier invalide" },
-        { status: 400 }
-      );
     }
 
     const placement = await prisma.mediaPlacement.create({
