@@ -77,7 +77,7 @@ export async function sendProjectInvitationEmail(
   await resend.emails.send({
     from: FROM_ADDRESS,
     to: params.to,
-    subject: `${params.inviterName.replace(/[<>]/g, "")} vous invite sur le projet "${params.projectName.replace(/[<>]/g, "")}"`,
+    subject: `${params.inviterName.replace(/[\r\n\t<>]/g, "")} vous invite sur le projet "${params.projectName.replace(/[\r\n\t<>]/g, "")}"`,
     html,
   });
 }

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { parseBodyJson, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 import { logAudit } from "@/lib/audit";
+import { getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const limited = await rateLimitResponse(`shares:${getClientIp(req)}`, "loose");
+    if (limited) return limited;
     const profileId = getProfileId(req);
     if (!profileId) return unauthorizedResponse();
 

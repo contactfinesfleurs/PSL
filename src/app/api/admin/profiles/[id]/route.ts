@@ -4,6 +4,7 @@ import { z } from "zod";
 import { parseBodyJson } from "@/lib/api-helpers";
 import { requireAdmin } from "@/lib/admin-auth";
 import { logAudit } from "@/lib/audit";
+import { getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 import { PROFILE_ROLE_VALUES } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +30,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const limited = await rateLimitResponse(`admin-profiles-id:${getClientIp(req)}`, "strict");
+    if (limited) return limited;
     const auth = await requireAdmin(req);
     if (!auth.ok) return auth.response;
 

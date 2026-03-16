@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { parseBodyJson, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 import { logAudit } from "@/lib/audit";
-import { deleteStoredFile } from "@/lib/storage";
+import { deleteStoredFile, isStoredPath } from "@/lib/storage";
 import { safeParseArray } from "@/lib/formatters";
 import { getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
@@ -88,6 +88,14 @@ export async function PATCH(
     const result = await parseBodyJson(req, ProductPatchSchema);
     if (!result.success) return result.response;
     const body = result.data;
+
+    // Validate file paths before writing to DB (invariant: all paths must satisfy isStoredPath)
+    if (body.sketchPaths && !body.sketchPaths.every(isStoredPath)) {
+      return NextResponse.json({ error: "Chemin de fichier invalide" }, { status: 400 });
+    }
+    if (body.techPackPath && !isStoredPath(body.techPackPath)) {
+      return NextResponse.json({ error: "Chemin de fichier invalide" }, { status: 400 });
+    }
 
     // Delete orphaned files when paths are removed from arrays or replaced
     if (body.sketchPaths !== undefined) {

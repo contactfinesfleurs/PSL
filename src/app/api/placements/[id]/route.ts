@@ -4,6 +4,7 @@ import { z } from "zod";
 import { parseBodyJson, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 import { logAudit } from "@/lib/audit";
 import { deleteStoredFile, isStoredPath } from "@/lib/storage";
+import { getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 import { PLACEMENT_TYPE_VALUES } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +25,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const limited = await rateLimitResponse(`placements:${getClientIp(req)}`, "moderate");
+    if (limited) return limited;
     const profileId = getProfileId(req);
     if (!profileId) return unauthorizedResponse();
 
@@ -46,11 +49,20 @@ export async function PATCH(
     const body = result.data;
 
     // Validate screenshotPath routes through our authenticated proxy
-    if (body.screenshotPath != null && !isStoredPath(body.screenshotPath)) {
+    if (body.screenshotPath && !isStoredPath(body.screenshotPath)) {
       return NextResponse.json(
         { error: "Chemin de fichier invalide" },
         { status: 400 }
       );
+    }
+
+    // Delete orphaned screenshot before replacing
+    if (
+      body.screenshotPath !== undefined &&
+      placement.screenshotPath &&
+      body.screenshotPath !== placement.screenshotPath
+    ) {
+      await deleteStoredFile(placement.screenshotPath);
     }
 
     const updated = await prisma.mediaPlacement.update({
@@ -92,6 +104,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const limited = await rateLimitResponse(`placements:${getClientIp(req)}`, "moderate");
+    if (limited) return limited;
     const profileId = getProfileId(req);
     if (!profileId) return unauthorizedResponse();
 

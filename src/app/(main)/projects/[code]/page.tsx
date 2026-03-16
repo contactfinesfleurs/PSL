@@ -64,7 +64,9 @@ type ProjectData = {
 function parsePhotoPaths(raw: string | null): string[] {
   if (!raw) return [];
   try {
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((p): p is string => typeof p === "string" && (p.startsWith("/api/blob?url=") || p.startsWith("/api/files/")));
   } catch {
     return [];
   }

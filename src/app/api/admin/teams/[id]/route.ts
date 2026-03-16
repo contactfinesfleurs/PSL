@@ -4,6 +4,7 @@ import { z } from "zod";
 import { parseBodyJson } from "@/lib/api-helpers";
 import { requireSuperAdmin } from "@/lib/admin-auth";
 import { logAudit } from "@/lib/audit";
+import { getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const limited = await rateLimitResponse(`admin-teams-id:${getClientIp(req)}`, "moderate");
+    if (limited) return limited;
     const auth = await requireSuperAdmin(req);
     if (!auth.ok) return auth.response;
 
@@ -55,6 +58,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const limited = await rateLimitResponse(`admin-teams-id:${getClientIp(req)}`, "moderate");
+    if (limited) return limited;
     const auth = await requireSuperAdmin(req);
     if (!auth.ok) return auth.response;
 
