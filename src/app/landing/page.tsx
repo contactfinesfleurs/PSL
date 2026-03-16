@@ -564,11 +564,12 @@ export default function LandingPage() {
               </Link>
               <ul className="space-y-3.5 mt-auto">
                 {[
-                  "Jusqu'à 10 produits",
-                  "5 événements par mois",
-                  "2 campagnes actives",
+                  "1 produit",
+                  "1 événement",
+                  "1 campagne",
                   "Gestion des croquis",
-                  "Fiches techniques de base",
+                  "Fiche technique de base",
+                  "Collaboration limitée à 1 invité",
                 ].map((feature) => (
                   <li
                     key={feature}
@@ -622,9 +623,9 @@ export default function LandingPage() {
                   "Produits illimités",
                   "Événements illimités",
                   "Campagnes illimitées",
+                  "Collaboration illimitée sur un nombre de projets illimités",
                   "Suivi d'échantillons avancé",
                   "Look Books & partage",
-                  "Projets collaboratifs",
                   "Intégration suivi colis",
                   "Support prioritaire",
                 ].map((feature) => (
