@@ -53,6 +53,7 @@ export type SessionPayload = {
   name: string;
   role?: string;
   exp?: number;
+  iat?: number;
 };
 
 // ─── Sign & verify ────────────────────────────────────────────────────────────
