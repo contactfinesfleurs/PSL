@@ -10,7 +10,7 @@
  */
 
 // Required in production / staging / preview / test
-const required = ["JWT_SECRET", "DATABASE_URL", "BLOB_READ_WRITE_TOKEN", "CRON_SECRET"];
+const required = ["JWT_SECRET", "DATABASE_URL", "BLOB_READ_WRITE_TOKEN"];
 
 if (process.env.NODE_ENV !== "development") {
   for (const key of required) {
