@@ -35,33 +35,9 @@ const nextConfig = {
           // Prevent cross-origin reads of our resources (e.g. images) by
           // other origins — complements frame-ancestors and CORS.
           { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
-          // Content Security Policy
-          // 'unsafe-inline' is required for script-src because Next.js 15
-          // injects inline scripts for hydration and Server Components without
-          // nonces. 'strict-dynamic' is intentionally absent: it overrides
-          // 'unsafe-inline' in modern browsers, which blocks all Next.js scripts
-          // and leaves the page non-interactive.
-          // 'upgrade-insecure-requests' instructs browsers to silently upgrade
-          // any HTTP sub-resource requests to HTTPS before making them.
-          // Sentry SDK uses worker-src for Session Replay.
-          {
-            key: "Content-Security-Policy",
-            value: [
-              "default-src 'self'",
-              "script-src 'self' 'unsafe-inline'",
-              "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob:",
-              "font-src 'self'",
-              // /monitoring is the Sentry tunnel route (same-origin proxy)
-              "connect-src 'self'",
-              "worker-src 'self' blob:",
-              "object-src 'none'",
-              "base-uri 'self'",
-              "form-action 'self'",
-              "frame-ancestors 'self'",
-              "upgrade-insecure-requests",
-            ].join("; "),
-          },
+          // Content-Security-Policy is set dynamically per-request in
+          // src/middleware.ts with a per-request nonce so that
+          // 'strict-dynamic' can replace 'unsafe-inline' in modern browsers.
         ],
       },
     ];
