@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 import { logAudit } from "@/lib/audit";
+import { getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 import { safeParseArray } from "@/lib/formatters";
 import { deleteStoredFile } from "@/lib/storage";
 
@@ -15,6 +16,8 @@ type Params = { params: Promise<{ code: string }> };
  */
 export async function GET(req: NextRequest, { params }: Params) {
   try {
+    const limited = await rateLimitResponse(`projects:${getClientIp(req)}`, "loose");
+    if (limited) return limited;
     const profileId = getProfileId(req);
     if (!profileId) return unauthorizedResponse();
 
@@ -83,6 +86,8 @@ export async function GET(req: NextRequest, { params }: Params) {
  */
 export async function DELETE(req: NextRequest, { params }: Params) {
   try {
+    const limited = await rateLimitResponse(`projects:${getClientIp(req)}`, "moderate");
+    if (limited) return limited;
     const profileId = getProfileId(req);
     if (!profileId) return unauthorizedResponse();
 

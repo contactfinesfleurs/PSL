@@ -13,10 +13,14 @@ export async function POST(
 ) {
   try {
     const ip = getClientIp(req);
-    const limited = await rateLimitResponse(`share-photos:${ip}`, "moderate");
-    if (limited) return limited;
+    const ipLimited = await rateLimitResponse(`share-photos:${ip}`, "moderate");
+    if (ipLimited) return ipLimited;
 
     const { code } = await params;
+
+    // Rate limit par code pour éviter l'abus de stockage même via IPs différentes
+    const codeLimited = await rateLimitResponse(`share-photos:code:${code}`, "strict");
+    if (codeLimited) return codeLimited;
 
     const share = await prisma.productShare.findUnique({
       where: { code },

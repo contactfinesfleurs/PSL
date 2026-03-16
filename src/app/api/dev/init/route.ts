@@ -11,10 +11,11 @@ const DEV_PROFILE_EMAIL = "dev@psl.local";
 const DEV_PROFILE_NAME = "Développeur";
 
 export async function GET() {
-  if (
-    process.env.NODE_ENV !== "development" ||
-    process.env.BYPASS_AUTH !== "1"
-  ) {
+  // Block unconditionally in production — never trust NODE_ENV alone
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Non disponible" }, { status: 404 });
+  }
+  if (process.env.BYPASS_AUTH !== "1") {
     return NextResponse.json({ error: "Non disponible" }, { status: 404 });
   }
 

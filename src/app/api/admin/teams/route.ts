@@ -4,6 +4,7 @@ import { z } from "zod";
 import { parseBodyJson } from "@/lib/api-helpers";
 import { requireAdmin, requireSuperAdmin } from "@/lib/admin-auth";
 import { logAudit } from "@/lib/audit";
+import { getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,8 @@ const TeamCreateSchema = z.object({
 
 export async function GET(req: NextRequest) {
   try {
+    const limited = await rateLimitResponse(`admin-teams:${getClientIp(req)}`, "loose");
+    if (limited) return limited;
     const auth = await requireAdmin(req);
     if (!auth.ok) return auth.response;
 
@@ -40,6 +43,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const limited = await rateLimitResponse(`admin-teams:${getClientIp(req)}`, "moderate");
+    if (limited) return limited;
     const auth = await requireSuperAdmin(req);
     if (!auth.ok) return auth.response;
 
