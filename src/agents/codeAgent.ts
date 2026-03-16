@@ -6,7 +6,15 @@
 import Anthropic from "@anthropic-ai/sdk";
 import * as fs from "fs";
 import * as path from "path";
-import type { AgentConfig, AgentResult, Finding } from "./types";
+import type { AgentConfig, AgentResult } from "./types";
+import {
+  sanitizeFileContent,
+  wrapUntrustedFile,
+  extractAndValidateFindings,
+  logInjectionAttempts,
+  logContextStats,
+  ANTI_INJECTION_SYSTEM_SUFFIX,
+} from "./promptSecurity";
 
 export const CODE_AGENT_CONFIG: AgentConfig = {
   role: "code",
@@ -63,18 +71,9 @@ Retourne un rapport Markdown structuré avec :
 }
 \`\`\`
 
-Fournis du code TypeScript complet, compilable et prêt à l'emploi. Utilise les patterns du projet existant.`,
+Fournis du code TypeScript complet, compilable et prêt à l'emploi. Utilise les patterns du projet existant.${ANTI_INJECTION_SYSTEM_SUFFIX}`,
   scope: ["src/app", "src/lib", "prisma"],
 };
-
-/**
- * Sanitize file content before embedding it in LLM prompts.
- * Replaces triple-backtick sequences (which could close a markdown code block
- * and inject instructions) with a safe visual placeholder.
- */
-function sanitizeForPrompt(content: string): string {
-  return content.replace(/`{3,}/g, (m) => `[${m.length}-BACKTICKS]`);
-}
 
 function collectFiles(
   dir: string,
@@ -98,56 +97,50 @@ function collectFiles(
 
 function buildCodeContext(projectRoot: string): string {
   const sections: string[] = [];
+  let totalBytes = 0;
+  let truncatedCount = 0;
+  let suspiciousCount = 0;
 
-  const MAX_FILE_BYTES = 50_000; // 50 KB per file cap
+  function processFile(relPath: string): void {
+    const absPath = path.join(projectRoot, relPath);
+    const raw = fs.readFileSync(absPath, "utf-8");
+    const { content, suspiciousPatterns, wasTruncated } = sanitizeFileContent(raw);
 
-  function readFileSafe(absPath: string): string {
-    const content = fs.readFileSync(absPath, "utf-8");
-    const truncated = content.length > MAX_FILE_BYTES ? content.slice(0, MAX_FILE_BYTES) + "\n[...TRUNCATED...]" : content;
-    return sanitizeForPrompt(truncated);
+    totalBytes += raw.length;
+    if (wasTruncated) truncatedCount++;
+    if (suspiciousPatterns.length > 0) {
+      suspiciousCount++;
+      logInjectionAttempts(CODE_AGENT_CONFIG.name, relPath, suspiciousPatterns);
+    }
+
+    sections.push(wrapUntrustedFile(relPath, content));
   }
-
-  // Use XML-style tags instead of markdown code blocks to prevent prompt injection
-  // via triple-backticks embedded in source files.
 
   // Prisma schema
-  const prismaSchema = path.join(projectRoot, "prisma/schema.prisma");
-  if (fs.existsSync(prismaSchema)) {
-    sections.push(`<file path="prisma/schema.prisma">\n${readFileSafe(prismaSchema)}\n</file>`);
-  }
+  const prismaSchema = "prisma/schema.prisma";
+  if (fs.existsSync(path.join(projectRoot, prismaSchema))) processFile(prismaSchema);
 
   // API routes
   const apiDir = path.join(projectRoot, "src/app/api");
-  const apiFiles = collectFiles(apiDir, projectRoot, [".ts"]);
-  for (const file of apiFiles) {
-    sections.push(`<file path="${file}">\n${readFileSafe(path.join(projectRoot, file))}\n</file>`);
-  }
+  for (const file of collectFiles(apiDir, projectRoot, [".ts"])) processFile(file);
 
   // Lib utilities
   const libDir = path.join(projectRoot, "src/lib");
-  const libFiles = collectFiles(libDir, projectRoot, [".ts"]);
-  for (const file of libFiles) {
-    sections.push(`<file path="${file}">\n${readFileSafe(path.join(projectRoot, file))}\n</file>`);
-  }
+  for (const file of collectFiles(libDir, projectRoot, [".ts"])) processFile(file);
 
   // Package.json for dependencies context
-  const pkgPath = path.join(projectRoot, "package.json");
-  if (fs.existsSync(pkgPath)) {
-    sections.push(`<file path="package.json">\n${readFileSafe(pkgPath)}\n</file>`);
-  }
+  const pkgPath = "package.json";
+  if (fs.existsSync(path.join(projectRoot, pkgPath))) processFile(pkgPath);
+
+  logContextStats(
+    CODE_AGENT_CONFIG.name,
+    sections.length,
+    totalBytes,
+    truncatedCount,
+    suspiciousCount
+  );
 
   return sections.join("\n\n");
-}
-
-function extractFindings(report: string): Finding[] {
-  const jsonMatch = report.match(/```json\s*([\s\S]*?)\s*```/);
-  if (!jsonMatch) return [];
-  try {
-    const parsed = JSON.parse(jsonMatch[1]);
-    return parsed.findings ?? [];
-  } catch {
-    return [];
-  }
 }
 
 export async function runCodeAgent(
@@ -215,7 +208,7 @@ Produis ton rapport technique complet avec du code d'implémentation prêt à l'
     role: "code",
     name: CODE_AGENT_CONFIG.name,
     report,
-    findings: extractFindings(report),
+    findings: extractAndValidateFindings(report),
     durationMs: Date.now() - start,
     inputTokens: finalMessage.usage.input_tokens,
     outputTokens: finalMessage.usage.output_tokens,

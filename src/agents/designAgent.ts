@@ -6,7 +6,15 @@
 import Anthropic from "@anthropic-ai/sdk";
 import * as fs from "fs";
 import * as path from "path";
-import type { AgentConfig, AgentResult, Finding } from "./types";
+import type { AgentConfig, AgentResult } from "./types";
+import {
+  sanitizeFileContent,
+  wrapUntrustedFile,
+  extractAndValidateFindings,
+  logInjectionAttempts,
+  logContextStats,
+  ANTI_INJECTION_SYSTEM_SUFFIX,
+} from "./promptSecurity";
 
 export const DESIGN_AGENT_CONFIG: AgentConfig = {
   role: "design",
@@ -49,17 +57,9 @@ Retourne un rapport Markdown structuré avec :
 }
 \`\`\`
 
-Sois inspirant et précis. Pense aux besoins d'un directeur artistique ou d'un chef de produit dans une maison de couture.`,
+Sois inspirant et précis. Pense aux besoins d'un directeur artistique ou d'un chef de produit dans une maison de couture.${ANTI_INJECTION_SYSTEM_SUFFIX}`,
   scope: ["src/components", "src/app"],
 };
-
-/**
- * Sanitize file content before embedding it in LLM prompts.
- * Replaces triple-backtick sequences to prevent markdown code-block injection.
- */
-function sanitizeForPrompt(content: string): string {
-  return content.replace(/`{3,}/g, (m) => `[${m.length}-BACKTICKS]`);
-}
 
 function collectFiles(dir: string, root: string, extensions = [".tsx", ".ts"]): string[] {
   const results: string[] = [];
@@ -79,20 +79,28 @@ function collectFiles(dir: string, root: string, extensions = [".tsx", ".ts"]): 
 
 function buildDesignContext(projectRoot: string): string {
   const sections: string[] = [];
-  const MAX_FILE_BYTES = 50_000;
+  let totalBytes = 0;
+  let truncatedCount = 0;
+  let suspiciousCount = 0;
 
-  function readFileSafe(absPath: string): string {
-    const content = fs.readFileSync(absPath, "utf-8");
-    const truncated = content.length > MAX_FILE_BYTES ? content.slice(0, MAX_FILE_BYTES) + "\n[...TRUNCATED...]" : content;
-    return sanitizeForPrompt(truncated);
+  function processFile(relPath: string): void {
+    const absPath = path.join(projectRoot, relPath);
+    const raw = fs.readFileSync(absPath, "utf-8");
+    const { content, suspiciousPatterns, wasTruncated } = sanitizeFileContent(raw);
+
+    totalBytes += raw.length;
+    if (wasTruncated) truncatedCount++;
+    if (suspiciousPatterns.length > 0) {
+      suspiciousCount++;
+      logInjectionAttempts(DESIGN_AGENT_CONFIG.name, relPath, suspiciousPatterns);
+    }
+
+    sections.push(wrapUntrustedFile(relPath, content));
   }
 
-  // All component files — use XML-style tags to prevent prompt injection
+  // All component files
   const componentsDir = path.join(projectRoot, "src/components");
-  const componentFiles = collectFiles(componentsDir, projectRoot);
-  for (const file of componentFiles) {
-    sections.push(`<file path="${file}">\n${readFileSafe(path.join(projectRoot, file))}\n</file>`);
-  }
+  for (const file of collectFiles(componentsDir, projectRoot)) processFile(file);
 
   // App pages (layout + page files — not API routes)
   const appDir = path.join(projectRoot, "src/app");
@@ -101,30 +109,22 @@ function buildDesignContext(projectRoot: string): string {
       !f.includes("/api/") &&
       (f.endsWith("page.tsx") || f.endsWith("layout.tsx") || f.endsWith("page.ts"))
   );
-  for (const file of pageFiles) {
-    sections.push(`<file path="${file}">\n${readFileSafe(path.join(projectRoot, file))}\n</file>`);
-  }
+  for (const file of pageFiles) processFile(file);
 
   // Global CSS / Tailwind config
   for (const cssFile of ["src/app/globals.css", "tailwind.config.ts", "tailwind.config.js"]) {
-    const filePath = path.join(projectRoot, cssFile);
-    if (fs.existsSync(filePath)) {
-      sections.push(`<file path="${cssFile}">\n${readFileSafe(filePath)}\n</file>`);
-    }
+    if (fs.existsSync(path.join(projectRoot, cssFile))) processFile(cssFile);
   }
+
+  logContextStats(
+    DESIGN_AGENT_CONFIG.name,
+    sections.length,
+    totalBytes,
+    truncatedCount,
+    suspiciousCount
+  );
 
   return sections.join("\n\n");
-}
-
-function extractFindings(report: string): Finding[] {
-  const jsonMatch = report.match(/```json\s*([\s\S]*?)\s*```/);
-  if (!jsonMatch) return [];
-  try {
-    const parsed = JSON.parse(jsonMatch[1]);
-    return parsed.findings ?? [];
-  } catch {
-    return [];
-  }
 }
 
 export async function runDesignAgent(
@@ -176,7 +176,7 @@ Produis ton rapport design/UX complet.`;
     role: "design",
     name: DESIGN_AGENT_CONFIG.name,
     report,
-    findings: extractFindings(report),
+    findings: extractAndValidateFindings(report),
     durationMs: Date.now() - start,
     inputTokens: finalMessage.usage.input_tokens,
     outputTokens: finalMessage.usage.output_tokens,

@@ -6,7 +6,15 @@
 import Anthropic from "@anthropic-ai/sdk";
 import * as fs from "fs";
 import * as path from "path";
-import type { AgentConfig, AgentResult, Finding } from "./types";
+import type { AgentConfig, AgentResult } from "./types";
+import {
+  sanitizeFileContent,
+  wrapUntrustedFile,
+  extractAndValidateFindings,
+  logInjectionAttempts,
+  logContextStats,
+  ANTI_INJECTION_SYSTEM_SUFFIX,
+} from "./promptSecurity";
 
 export const SECURITY_AGENT_CONFIG: AgentConfig = {
   role: "security",
@@ -121,7 +129,7 @@ Pour chaque finding, inclure :
 
 ---
 
-Sois factuel, précis et actionnable. Cite TOUJOURS le fichier et la ligne. Ne signale que des failles réelles avec un score de confiance ≥ 7/10.`,
+Sois factuel, précis et actionnable. Cite TOUJOURS le fichier et la ligne. Ne signale que des failles réelles avec un score de confiance ≥ 7/10.${ANTI_INJECTION_SYSTEM_SUFFIX}`,
   scope: [
     "src/app/api",
     "src/app",
@@ -131,14 +139,6 @@ Sois factuel, précis et actionnable. Cite TOUJOURS le fichier et la ligne. Ne s
     "next.config.js",
   ],
 };
-
-/**
- * Sanitize file content before embedding it in LLM prompts.
- * Replaces triple-backtick sequences to prevent markdown code-block injection.
- */
-function sanitizeForPrompt(content: string): string {
-  return content.replace(/`{3,}/g, (m) => `[${m.length}-BACKTICKS]`);
-}
 
 function collectFiles(dir: string, root: string, extensions = [".ts", ".tsx", ".js"]): string[] {
   const results: string[] = [];
@@ -158,59 +158,54 @@ function collectFiles(dir: string, root: string, extensions = [".ts", ".tsx", ".
 
 function buildSecurityContext(projectRoot: string): string {
   const sections: string[] = [];
-  const MAX_FILE_BYTES = 50_000;
+  let totalBytes = 0;
+  let truncatedCount = 0;
+  let suspiciousCount = 0;
 
-  function readFileSafe(absPath: string): string {
-    const content = fs.readFileSync(absPath, "utf-8");
-    const truncated = content.length > MAX_FILE_BYTES ? content.slice(0, MAX_FILE_BYTES) + "\n[...TRUNCATED...]" : content;
-    return sanitizeForPrompt(truncated);
+  function processFile(relPath: string): void {
+    const absPath = path.join(projectRoot, relPath);
+    const raw = fs.readFileSync(absPath, "utf-8");
+    const { content, suspiciousPatterns, wasTruncated } = sanitizeFileContent(raw);
+
+    totalBytes += raw.length;
+    if (wasTruncated) truncatedCount++;
+    if (suspiciousPatterns.length > 0) {
+      suspiciousCount++;
+      logInjectionAttempts(SECURITY_AGENT_CONFIG.name, relPath, suspiciousPatterns);
+    }
+
+    sections.push(wrapUntrustedFile(relPath, content));
   }
-
-  // Use XML-style tags instead of markdown code blocks to prevent prompt injection
 
   // Collect API routes
   const apiDir = path.join(projectRoot, "src/app/api");
-  const apiFiles = collectFiles(apiDir, projectRoot);
-  for (const file of apiFiles) {
-    sections.push(`<file path="${file}">\n${readFileSafe(path.join(projectRoot, file))}\n</file>`);
-  }
+  for (const file of collectFiles(apiDir, projectRoot)) processFile(file);
 
-  // Collect next.config and middleware if they exist
+  // Collect next.config and middleware
   for (const configFile of ["next.config.ts", "next.config.js", "src/middleware.ts", "middleware.ts"]) {
-    const filePath = path.join(projectRoot, configFile);
-    if (fs.existsSync(filePath)) {
-      sections.push(`<file path="${configFile}">\n${readFileSafe(filePath)}\n</file>`);
-    }
+    if (fs.existsSync(path.join(projectRoot, configFile))) processFile(configFile);
   }
 
   // Collect lib utilities
   const libDir = path.join(projectRoot, "src/lib");
-  const libFiles = collectFiles(libDir, projectRoot);
-  for (const file of libFiles) {
-    sections.push(`<file path="${file}">\n${readFileSafe(path.join(projectRoot, file))}\n</file>`);
-  }
+  for (const file of collectFiles(libDir, projectRoot)) processFile(file);
 
-  // Collect page-level files (layouts, pages with potential server actions)
+  // Collect page-level files (limit to 5 to cap context size)
   const appDir = path.join(projectRoot, "src/app");
   const appFiles = collectFiles(appDir, projectRoot).filter(
     (f) => !f.includes("/api/") && (f.endsWith("page.tsx") || f.endsWith("layout.tsx"))
   );
-  for (const file of appFiles.slice(0, 5)) {
-    sections.push(`<file path="${file}">\n${readFileSafe(path.join(projectRoot, file))}\n</file>`);
-  }
+  for (const file of appFiles.slice(0, 5)) processFile(file);
+
+  logContextStats(
+    SECURITY_AGENT_CONFIG.name,
+    sections.length,
+    totalBytes,
+    truncatedCount,
+    suspiciousCount
+  );
 
   return sections.join("\n\n");
-}
-
-function extractFindings(report: string): Finding[] {
-  const jsonMatch = report.match(/```json\s*([\s\S]*?)\s*```/);
-  if (!jsonMatch) return [];
-  try {
-    const parsed = JSON.parse(jsonMatch[1]);
-    return parsed.findings ?? [];
-  } catch {
-    return [];
-  }
 }
 
 export async function runSecurityAgent(
@@ -262,7 +257,7 @@ Produis ton rapport de sécurité complet.`;
     role: "security",
     name: SECURITY_AGENT_CONFIG.name,
     report,
-    findings: extractFindings(report),
+    findings: extractAndValidateFindings(report),
     durationMs: Date.now() - start,
     inputTokens: finalMessage.usage.input_tokens,
     outputTokens: finalMessage.usage.output_tokens,
