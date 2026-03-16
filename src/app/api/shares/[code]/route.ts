@@ -26,11 +26,9 @@ export async function DELETE(
       return NextResponse.json({ error: "Partage introuvable" }, { status: 404 });
     }
 
-    for (const contrib of share.contributions) {
-      for (const p of safeParseArray(contrib.photoPaths)) {
-        await deleteStoredFile(p);
-      }
-    }
+    // Collect all contribution file paths then delete in parallel (Phase 3)
+    const allPaths = share.contributions.flatMap((c) => safeParseArray(c.photoPaths));
+    await Promise.allSettled(allPaths.map(deleteStoredFile));
 
     await prisma.productShare.delete({ where: { code } });
 

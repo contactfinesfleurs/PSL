@@ -44,6 +44,10 @@ model Profile {
   teamId String?
   team   Team?       @relation(fields: [teamId], references: [id], onDelete: SetNull)
 
+  // Set to the current timestamp when the user changes their password (H-16).
+  // Any JWT issued before this moment is considered invalid.
+  tokensInvalidatedAt DateTime?
+
   products  Product[]
   events    Event[]
   campaigns Campaign[]
@@ -54,6 +58,7 @@ model Profile {
   sentInvitations      ProjectInvitation[] @relation("InvitationsSent")
   receivedInvitations  ProjectInvitation[] @relation("InvitationsReceived")
   passwordResetTokens  PasswordResetToken[]
+  productShares        ProductShare[]
 
   @@index([role])
   @@index([teamId])
@@ -362,6 +367,7 @@ model ProductShare {
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   profileId String   // owner who created the share
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
   expiresAt DateTime? // optional expiry
 

@@ -1,8 +1,29 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
+import { Redis } from "@upstash/redis";
 import { prisma } from "@/lib/prisma";
 import "@/lib/env"; // validate required env vars at startup
+
+// ---------------------------------------------------------------------------
+// Redis client for Edge-compatible token blacklist (C-6)
+// Lazily initialised — null when UPSTASH_REDIS_REST_URL/TOKEN are absent.
+// ---------------------------------------------------------------------------
+let _redisClient: Redis | null | undefined = undefined;
+
+function getRedis(): Redis | null {
+  if (_redisClient !== undefined) return _redisClient;
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) {
+    _redisClient = null;
+    return null;
+  }
+  _redisClient = new Redis({ url, token });
+  return _redisClient;
+}
+
+const REVOKED_KEY_PREFIX = "psl:revoked:";
 
 // Generated once per process start using Web Crypto API (Edge-runtime compatible).
 // Sessions are invalidated on server restart which is acceptable in development.
@@ -66,10 +87,21 @@ export async function verifyToken(token: string): Promise<SessionPayload | null>
 
 /**
  * Inserts a revoked token record so it can no longer be used.
- * Must be called on logout before clearing the cookie.
+ * Writes to both Prisma (authoritative, for Node handlers) and Redis
+ * (for Edge middleware — C-6). Must be called on logout before clearing the cookie.
  */
 export async function revokeToken(jti: string, expiresAt: Date): Promise<void> {
-  await prisma.revokedToken.create({ data: { jti, expiresAt } });
+  const ttlSeconds = Math.max(0, Math.ceil((expiresAt.getTime() - Date.now()) / 1000));
+
+  await Promise.all([
+    prisma.revokedToken.create({ data: { jti, expiresAt } }),
+    (async () => {
+      const redis = getRedis();
+      if (redis && ttlSeconds > 0) {
+        await redis.set(`${REVOKED_KEY_PREFIX}${jti}`, "1", { ex: ttlSeconds });
+      }
+    })(),
+  ]);
 }
 
 /**
@@ -85,7 +117,7 @@ export async function cleanupExpiredTokens(): Promise<void> {
 /**
  * Returns the session for the current request.
  * Runs in Node runtime (Route Handlers / Server Components) — performs the
- * DB-backed blacklist check that cannot run in Edge middleware.
+ * DB-backed blacklist check and tokensInvalidatedAt check (H-16).
  */
 export async function getSession(): Promise<SessionPayload | null> {
   const jar = await cookies();
@@ -95,12 +127,24 @@ export async function getSession(): Promise<SessionPayload | null> {
   const payload = await verifyToken(token);
   if (!payload) return null;
 
-  // Check token blacklist (revoked on logout)
-  if (payload.jti) {
-    const revoked = await prisma.revokedToken.findUnique({
-      where: { jti: payload.jti },
-    });
-    if (revoked) return null;
+  // Parallel: check token blacklist (revoked on logout) + tokensInvalidatedAt (H-16)
+  const [revoked, profile] = await Promise.all([
+    payload.jti
+      ? prisma.revokedToken.findUnique({ where: { jti: payload.jti } })
+      : Promise.resolve(null),
+    prisma.profile.findUnique({
+      where: { id: payload.profileId },
+      select: { tokensInvalidatedAt: true },
+    }),
+  ]);
+
+  if (revoked) return null;
+
+  // If the profile invalidated all tokens after this one was issued, reject it (H-16)
+  if (profile?.tokensInvalidatedAt && payload.iat) {
+    if (payload.iat * 1000 < profile.tokensInvalidatedAt.getTime()) {
+      return null;
+    }
   }
 
   return payload;
@@ -126,14 +170,28 @@ export async function clearSessionCookie() {
 
 /**
  * Lightweight session check for middleware (Edge runtime).
- * Does NOT perform the DB blacklist check — that happens in getSession() only.
+ * Verifies JWT signature and checks the Redis revocation blacklist (C-6).
+ * Does NOT perform the Prisma DB check — that happens in getSession() only.
  */
 export async function getSessionFromRequest(
   req: NextRequest
 ): Promise<SessionPayload | null> {
   const token = req.cookies.get(COOKIE_NAME)?.value;
   if (!token) return null;
-  return verifyToken(token);
+
+  const payload = await verifyToken(token);
+  if (!payload) return null;
+
+  // Check Redis revocation blacklist (Edge-compatible — uses REST API)
+  if (payload.jti) {
+    const redis = getRedis();
+    if (redis) {
+      const revoked = await redis.get(`${REVOKED_KEY_PREFIX}${payload.jti}`);
+      if (revoked) return null;
+    }
+  }
+
+  return payload;
 }
 
 export { COOKIE_NAME, COOKIE_MAX_AGE, ADMIN_COOKIE_MAX_AGE };

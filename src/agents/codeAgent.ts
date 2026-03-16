@@ -67,6 +67,15 @@ Fournis du code TypeScript complet, compilable et prêt à l'emploi. Utilise les
   scope: ["src/app", "src/lib", "prisma"],
 };
 
+/**
+ * Sanitize file content before embedding it in LLM prompts.
+ * Replaces triple-backtick sequences (which could close a markdown code block
+ * and inject instructions) with a safe visual placeholder.
+ */
+function sanitizeForPrompt(content: string): string {
+  return content.replace(/`{3,}/g, (m) => `[${m.length}-BACKTICKS]`);
+}
+
 function collectFiles(
   dir: string,
   root: string,
@@ -90,34 +99,41 @@ function collectFiles(
 function buildCodeContext(projectRoot: string): string {
   const sections: string[] = [];
 
+  const MAX_FILE_BYTES = 50_000; // 50 KB per file cap
+
+  function readFileSafe(absPath: string): string {
+    const content = fs.readFileSync(absPath, "utf-8");
+    const truncated = content.length > MAX_FILE_BYTES ? content.slice(0, MAX_FILE_BYTES) + "\n[...TRUNCATED...]" : content;
+    return sanitizeForPrompt(truncated);
+  }
+
+  // Use XML-style tags instead of markdown code blocks to prevent prompt injection
+  // via triple-backticks embedded in source files.
+
   // Prisma schema
   const prismaSchema = path.join(projectRoot, "prisma/schema.prisma");
   if (fs.existsSync(prismaSchema)) {
-    const content = fs.readFileSync(prismaSchema, "utf-8");
-    sections.push(`### prisma/schema.prisma\n\`\`\`prisma\n${content}\n\`\`\``);
+    sections.push(`<file path="prisma/schema.prisma">\n${readFileSafe(prismaSchema)}\n</file>`);
   }
 
   // API routes
   const apiDir = path.join(projectRoot, "src/app/api");
   const apiFiles = collectFiles(apiDir, projectRoot, [".ts"]);
   for (const file of apiFiles) {
-    const content = fs.readFileSync(path.join(projectRoot, file), "utf-8");
-    sections.push(`### ${file}\n\`\`\`typescript\n${content}\n\`\`\``);
+    sections.push(`<file path="${file}">\n${readFileSafe(path.join(projectRoot, file))}\n</file>`);
   }
 
   // Lib utilities
   const libDir = path.join(projectRoot, "src/lib");
   const libFiles = collectFiles(libDir, projectRoot, [".ts"]);
   for (const file of libFiles) {
-    const content = fs.readFileSync(path.join(projectRoot, file), "utf-8");
-    sections.push(`### ${file}\n\`\`\`typescript\n${content}\n\`\`\``);
+    sections.push(`<file path="${file}">\n${readFileSafe(path.join(projectRoot, file))}\n</file>`);
   }
 
   // Package.json for dependencies context
   const pkgPath = path.join(projectRoot, "package.json");
   if (fs.existsSync(pkgPath)) {
-    const content = fs.readFileSync(pkgPath, "utf-8");
-    sections.push(`### package.json\n\`\`\`json\n${content}\n\`\`\``);
+    sections.push(`<file path="package.json">\n${readFileSafe(pkgPath)}\n</file>`);
   }
 
   return sections.join("\n\n");
@@ -140,6 +156,11 @@ export async function runCodeAgent(
   securityFindings?: string,
   designFindings?: string
 ): Promise<AgentResult> {
+  // Validate projectRoot to prevent reading arbitrary filesystem paths
+  if (!projectRoot || !fs.existsSync(projectRoot) || !fs.statSync(projectRoot).isDirectory()) {
+    throw new Error(`Invalid projectRoot: "${projectRoot}"`);
+  }
+
   const start = Date.now();
   const context = buildCodeContext(projectRoot);
 

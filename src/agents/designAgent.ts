@@ -53,6 +53,14 @@ Sois inspirant et précis. Pense aux besoins d'un directeur artistique ou d'un c
   scope: ["src/components", "src/app"],
 };
 
+/**
+ * Sanitize file content before embedding it in LLM prompts.
+ * Replaces triple-backtick sequences to prevent markdown code-block injection.
+ */
+function sanitizeForPrompt(content: string): string {
+  return content.replace(/`{3,}/g, (m) => `[${m.length}-BACKTICKS]`);
+}
+
 function collectFiles(dir: string, root: string, extensions = [".tsx", ".ts"]): string[] {
   const results: string[] = [];
   if (!fs.existsSync(dir)) return results;
@@ -71,13 +79,19 @@ function collectFiles(dir: string, root: string, extensions = [".tsx", ".ts"]): 
 
 function buildDesignContext(projectRoot: string): string {
   const sections: string[] = [];
+  const MAX_FILE_BYTES = 50_000;
 
-  // All component files
+  function readFileSafe(absPath: string): string {
+    const content = fs.readFileSync(absPath, "utf-8");
+    const truncated = content.length > MAX_FILE_BYTES ? content.slice(0, MAX_FILE_BYTES) + "\n[...TRUNCATED...]" : content;
+    return sanitizeForPrompt(truncated);
+  }
+
+  // All component files — use XML-style tags to prevent prompt injection
   const componentsDir = path.join(projectRoot, "src/components");
   const componentFiles = collectFiles(componentsDir, projectRoot);
   for (const file of componentFiles) {
-    const content = fs.readFileSync(path.join(projectRoot, file), "utf-8");
-    sections.push(`### ${file}\n\`\`\`tsx\n${content}\n\`\`\``);
+    sections.push(`<file path="${file}">\n${readFileSafe(path.join(projectRoot, file))}\n</file>`);
   }
 
   // App pages (layout + page files — not API routes)
@@ -88,17 +102,14 @@ function buildDesignContext(projectRoot: string): string {
       (f.endsWith("page.tsx") || f.endsWith("layout.tsx") || f.endsWith("page.ts"))
   );
   for (const file of pageFiles) {
-    const content = fs.readFileSync(path.join(projectRoot, file), "utf-8");
-    sections.push(`### ${file}\n\`\`\`tsx\n${content}\n\`\`\``);
+    sections.push(`<file path="${file}">\n${readFileSafe(path.join(projectRoot, file))}\n</file>`);
   }
 
   // Global CSS / Tailwind config
   for (const cssFile of ["src/app/globals.css", "tailwind.config.ts", "tailwind.config.js"]) {
     const filePath = path.join(projectRoot, cssFile);
     if (fs.existsSync(filePath)) {
-      const content = fs.readFileSync(filePath, "utf-8");
-      const ext = path.extname(cssFile).slice(1);
-      sections.push(`### ${cssFile}\n\`\`\`${ext}\n${content}\n\`\`\``);
+      sections.push(`<file path="${cssFile}">\n${readFileSafe(filePath)}\n</file>`);
     }
   }
 
@@ -120,6 +131,10 @@ export async function runDesignAgent(
   client: Anthropic,
   projectRoot: string
 ): Promise<AgentResult> {
+  if (!projectRoot || !fs.existsSync(projectRoot) || !fs.statSync(projectRoot).isDirectory()) {
+    throw new Error(`Invalid projectRoot: "${projectRoot}"`);
+  }
+
   const start = Date.now();
   const context = buildDesignContext(projectRoot);
 

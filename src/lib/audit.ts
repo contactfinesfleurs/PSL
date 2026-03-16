@@ -43,8 +43,9 @@ export function logAudit(
 
   const logtail = getLogtail();
   if (logtail) {
-    logtail.info(action, entry).catch(() => {
-      // Swallow — never let a logging failure break the request.
+    logtail.info(action, entry).catch((err) => {
+      // Log locally so audit failures are visible even if Logtail is down.
+      console.error("[AUDIT FALLBACK] Logtail send failed:", action, err instanceof Error ? err.message : String(err));
     });
   }
 }
@@ -70,8 +71,8 @@ export function logSecurityEvent(
 
   const logtail = getLogtail();
   if (logtail) {
-    logtail.warn(event, entry).catch(() => {
-      // Swallow — never let a logging failure break the request.
+    logtail.warn(event, entry).catch((err) => {
+      console.error("[AUDIT FALLBACK] Logtail send failed:", event, err instanceof Error ? err.message : String(err));
     });
   }
 }

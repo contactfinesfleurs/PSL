@@ -71,15 +71,16 @@ export async function POST(req: NextRequest) {
 
     const passwordHash = await hash(newPassword, 12);
 
-    // Update password and mark token as used in a transaction
+    // Update password, invalidate all existing sessions (H-16), and mark token as used
+    const now = new Date();
     await prisma.$transaction([
       prisma.profile.update({
         where: { id: resetToken.profileId },
-        data: { passwordHash },
+        data: { passwordHash, tokensInvalidatedAt: now },
       }),
       prisma.passwordResetToken.update({
         where: { id: resetToken.id },
-        data: { usedAt: new Date() },
+        data: { usedAt: now },
       }),
     ]);
 

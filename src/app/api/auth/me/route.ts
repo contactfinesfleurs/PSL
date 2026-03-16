@@ -1,7 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSession, clearSessionCookie } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { logAudit } from "@/lib/audit";
+import { compare } from "bcryptjs";
+import { z } from "zod";
+import { parseBodyJson } from "@/lib/api-helpers";
+import { logAudit, logSecurityEvent } from "@/lib/audit";
 import { deleteStoredFile } from "@/lib/storage";
 import { safeParseArray } from "@/lib/formatters";
 
@@ -24,13 +27,37 @@ export async function GET() {
   }
 }
 
+const DeleteAccountSchema = z.object({
+  password: z.string().min(1, "Le mot de passe est requis pour confirmer la suppression"),
+});
+
 // DELETE /api/auth/me — RGPD right to erasure: permanently delete the account
 // and all associated data (cascaded by Prisma schema).
-export async function DELETE() {
+// Requires password confirmation to prevent CSRF / accidental deletion (H-1).
+export async function DELETE(req: NextRequest) {
   try {
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    }
+
+    // Require explicit password confirmation before destructive action (H-1)
+    const result = await parseBodyJson(req, DeleteAccountSchema);
+    if (!result.success) return result.response;
+    const { password } = result.data;
+
+    const profile = await prisma.profile.findUnique({
+      where: { id: session.profileId },
+      select: { passwordHash: true },
+    });
+    if (!profile) {
+      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    }
+
+    const valid = await compare(password, profile.passwordHash);
+    if (!valid) {
+      logSecurityEvent("ACCOUNT_DELETE_WRONG_PASSWORD", session.profileId, {});
+      return NextResponse.json({ error: "Mot de passe incorrect" }, { status: 403 });
     }
 
     logAudit("ACCOUNT_DELETE", session.profileId, "profile", session.profileId);

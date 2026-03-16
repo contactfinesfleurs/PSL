@@ -84,52 +84,66 @@ export async function POST(
       return NextResponse.json({ error: "Un produit ne peut pas être sa propre variante." }, { status: 400 });
     }
 
-    const [productA, productB] = await Promise.all([
-      prisma.product.findUnique({ where: { id, profileId, deletedAt: null }, select: { id: true, variantGroupId: true } }),
-      prisma.product.findUnique({ where: { id: variantId, profileId, deletedAt: null }, select: { id: true, variantGroupId: true } }),
-    ]);
+    // Wrap reads + writes in a serializable transaction to prevent TOCTTOU
+    // race condition: two concurrent requests could both read null variantGroupId
+    // and assign different UUIDs, resulting in two separate variant groups (H-4).
+    const { groupId, variants } = await prisma.$transaction(async (tx) => {
+      const [productA, productB] = await Promise.all([
+        tx.product.findUnique({ where: { id, profileId, deletedAt: null }, select: { id: true, variantGroupId: true } }),
+        tx.product.findUnique({ where: { id: variantId, profileId, deletedAt: null }, select: { id: true, variantGroupId: true } }),
+      ]);
 
-    if (!productA || !productB) {
-      return NextResponse.json({ error: "Produit introuvable." }, { status: 404 });
-    }
+      if (!productA || !productB) {
+        throw Object.assign(new Error("NOT_FOUND"), { statusCode: 404 });
+      }
 
-    // Determine target group ID
-    const groupId = productA.variantGroupId ?? productB.variantGroupId ?? randomUUID();
+      // Determine target group ID
+      const targetGroupId = productA.variantGroupId ?? productB.variantGroupId ?? randomUUID();
 
-    // If they already share the same group, nothing to do
-    if (productA.variantGroupId === productB.variantGroupId && productA.variantGroupId !== null) {
-      return NextResponse.json({ ok: true });
-    }
+      // If they already share the same group, nothing to do
+      if (productA.variantGroupId === productB.variantGroupId && productA.variantGroupId !== null) {
+        const existingVariants = await tx.product.findMany({
+          where: { variantGroupId: targetGroupId, id: { not: id }, profileId, deletedAt: null },
+          select: VARIANT_SELECT,
+        });
+        return { groupId: targetGroupId, variants: existingVariants };
+      }
 
-    // If B had a different group, migrate all products in B's group to the target group
-    const updates: Promise<unknown>[] = [];
-    if (productB.variantGroupId && productB.variantGroupId !== groupId) {
+      // If B had a different group, migrate all products in B's group to the target group
+      const updates: Promise<unknown>[] = [];
+      if (productB.variantGroupId && productB.variantGroupId !== targetGroupId) {
+        updates.push(
+          tx.product.updateMany({
+            where: { variantGroupId: productB.variantGroupId, profileId },
+            data: { variantGroupId: targetGroupId },
+          })
+        );
+      }
+
       updates.push(
-        prisma.product.updateMany({
-          where: { variantGroupId: productB.variantGroupId, profileId },
-          data: { variantGroupId: groupId },
+        tx.product.updateMany({
+          where: { id: { in: [id, variantId] }, profileId },
+          data: { variantGroupId: targetGroupId },
         })
       );
-    }
 
-    updates.push(
-      prisma.product.updateMany({
-        where: { id: { in: [id, variantId] }, profileId },
-        data: { variantGroupId: groupId },
-      })
-    );
+      await Promise.all(updates);
 
-    await Promise.all(updates);
+      const updatedVariants = await tx.product.findMany({
+        where: { variantGroupId: targetGroupId, id: { not: id }, profileId, deletedAt: null },
+        select: VARIANT_SELECT,
+      });
+
+      return { groupId: targetGroupId, variants: updatedVariants };
+    }, { isolationLevel: "Serializable" });
 
     logAudit("PRODUCT_VARIANT_LINK", profileId, "product", id, { variantId, groupId });
 
-    const variants = await prisma.product.findMany({
-      where: { variantGroupId: groupId, id: { not: id }, profileId, deletedAt: null },
-      select: VARIANT_SELECT,
-    });
-
     return NextResponse.json(variants);
   } catch (error) {
+    if (error instanceof Error && error.message === "NOT_FOUND") {
+      return NextResponse.json({ error: "Produit introuvable." }, { status: 404 });
+    }
     console.error("[POST /api/products/[id]/variants]", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

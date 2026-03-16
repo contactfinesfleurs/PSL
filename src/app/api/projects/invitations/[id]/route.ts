@@ -45,43 +45,57 @@ export async function PATCH(
       );
     }
 
-    // Reject expired invitations
-    if (invitation.expiresAt && invitation.expiresAt < new Date()) {
-      return NextResponse.json(
-        { error: "Cette invitation a expiré." },
-        { status: 410 }
-      );
-    }
-
     const result = await parseBodyJson(req, ActionSchema);
     if (!result.success) return result.response;
     const { action } = result.data;
 
     if (action === "accept") {
-      // Create collaborator entry + mark invitation accepted (in a transaction)
-      await prisma.$transaction([
-        prisma.projectCollaborator.upsert({
+      // Atomically check expiry + create collaborator + mark accepted (H-5/H-7).
+      // The updateMany WHERE includes the expiry condition so that if the
+      // invitation expired between the initial read and now, 0 rows are updated
+      // and we return 410 — no TOCTOU window.
+      const accepted = await prisma.$transaction(async (tx) => {
+        const updated = await tx.projectInvitation.updateMany({
           where: {
-            projectId_profileId: {
-              projectId: invitation.project.id,
-              profileId,
-            },
+            id,
+            status: "PENDING",
+            OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
           },
+          data: { status: "ACCEPTED", invitedProfileId: profileId },
+        });
+
+        if (updated.count === 0) return false;
+
+        await tx.projectCollaborator.upsert({
+          where: { projectId_profileId: { projectId: invitation.project.id, profileId } },
           create: { projectId: invitation.project.id, profileId },
           update: {},
-        }),
-        prisma.projectInvitation.update({
-          where: { id },
-          data: { status: "ACCEPTED", invitedProfileId: profileId },
-        }),
-      ]);
+        });
+
+        return true;
+      });
+
+      if (!accepted) {
+        return NextResponse.json({ error: "Cette invitation a expiré." }, { status: 410 });
+      }
+
       logAudit("PROJECT_INVITE_ACCEPT", profileId, "project", invitation.project.id);
       return NextResponse.json({ success: true, action: "accepted" });
     } else {
-      await prisma.projectInvitation.update({
-        where: { id },
+      // Decline: also check expiry atomically (H-7)
+      const declined = await prisma.projectInvitation.updateMany({
+        where: {
+          id,
+          status: "PENDING",
+          OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+        },
         data: { status: "DECLINED", invitedProfileId: profileId },
       });
+
+      if (declined.count === 0) {
+        return NextResponse.json({ error: "Cette invitation a expiré." }, { status: 410 });
+      }
+
       logAudit("PROJECT_INVITE_DECLINE", profileId, "project", invitation.project.id);
       return NextResponse.json({ success: true, action: "declined" });
     }

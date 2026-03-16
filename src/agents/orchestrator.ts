@@ -124,7 +124,7 @@ export async function runOrchestrator(
     apiKey,
   } = options;
 
-  const client = new Anthropic({ apiKey, timeout: 20 * 60 * 1000 });
+  const client = new Anthropic({ apiKey, timeout: 10 * 60 * 1000 });
   const globalStart = Date.now();
 
   console.log("\n╔════════════════════════════════════════╗");
@@ -191,7 +191,8 @@ export async function runOrchestrator(
     fs.mkdirSync(outputDir, { recursive: true });
   }
 
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+  // Include milliseconds to avoid filename collision when two reports are generated within the same second
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 23);
   const reportPath = path.join(outputDir, `psl-report-${timestamp}.md`);
   const jsonPath = path.join(outputDir, `psl-report-${timestamp}.json`);
 

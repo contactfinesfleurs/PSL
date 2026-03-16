@@ -132,6 +132,14 @@ Sois factuel, précis et actionnable. Cite TOUJOURS le fichier et la ligne. Ne s
   ],
 };
 
+/**
+ * Sanitize file content before embedding it in LLM prompts.
+ * Replaces triple-backtick sequences to prevent markdown code-block injection.
+ */
+function sanitizeForPrompt(content: string): string {
+  return content.replace(/`{3,}/g, (m) => `[${m.length}-BACKTICKS]`);
+}
+
 function collectFiles(dir: string, root: string, extensions = [".ts", ".tsx", ".js"]): string[] {
   const results: string[] = [];
   if (!fs.existsSync(dir)) return results;
@@ -150,21 +158,28 @@ function collectFiles(dir: string, root: string, extensions = [".ts", ".tsx", ".
 
 function buildSecurityContext(projectRoot: string): string {
   const sections: string[] = [];
+  const MAX_FILE_BYTES = 50_000;
+
+  function readFileSafe(absPath: string): string {
+    const content = fs.readFileSync(absPath, "utf-8");
+    const truncated = content.length > MAX_FILE_BYTES ? content.slice(0, MAX_FILE_BYTES) + "\n[...TRUNCATED...]" : content;
+    return sanitizeForPrompt(truncated);
+  }
+
+  // Use XML-style tags instead of markdown code blocks to prevent prompt injection
 
   // Collect API routes
   const apiDir = path.join(projectRoot, "src/app/api");
   const apiFiles = collectFiles(apiDir, projectRoot);
   for (const file of apiFiles) {
-    const content = fs.readFileSync(path.join(projectRoot, file), "utf-8");
-    sections.push(`### ${file}\n\`\`\`typescript\n${content}\n\`\`\``);
+    sections.push(`<file path="${file}">\n${readFileSafe(path.join(projectRoot, file))}\n</file>`);
   }
 
   // Collect next.config and middleware if they exist
   for (const configFile of ["next.config.ts", "next.config.js", "src/middleware.ts", "middleware.ts"]) {
     const filePath = path.join(projectRoot, configFile);
     if (fs.existsSync(filePath)) {
-      const content = fs.readFileSync(filePath, "utf-8");
-      sections.push(`### ${configFile}\n\`\`\`typescript\n${content}\n\`\`\``);
+      sections.push(`<file path="${configFile}">\n${readFileSafe(filePath)}\n</file>`);
     }
   }
 
@@ -172,8 +187,7 @@ function buildSecurityContext(projectRoot: string): string {
   const libDir = path.join(projectRoot, "src/lib");
   const libFiles = collectFiles(libDir, projectRoot);
   for (const file of libFiles) {
-    const content = fs.readFileSync(path.join(projectRoot, file), "utf-8");
-    sections.push(`### ${file}\n\`\`\`typescript\n${content}\n\`\`\``);
+    sections.push(`<file path="${file}">\n${readFileSafe(path.join(projectRoot, file))}\n</file>`);
   }
 
   // Collect page-level files (layouts, pages with potential server actions)
@@ -182,8 +196,7 @@ function buildSecurityContext(projectRoot: string): string {
     (f) => !f.includes("/api/") && (f.endsWith("page.tsx") || f.endsWith("layout.tsx"))
   );
   for (const file of appFiles.slice(0, 5)) {
-    const content = fs.readFileSync(path.join(projectRoot, file), "utf-8");
-    sections.push(`### ${file}\n\`\`\`typescript\n${content}\n\`\`\``);
+    sections.push(`<file path="${file}">\n${readFileSafe(path.join(projectRoot, file))}\n</file>`);
   }
 
   return sections.join("\n\n");
@@ -204,6 +217,10 @@ export async function runSecurityAgent(
   client: Anthropic,
   projectRoot: string
 ): Promise<AgentResult> {
+  if (!projectRoot || !fs.existsSync(projectRoot) || !fs.statSync(projectRoot).isDirectory()) {
+    throw new Error(`Invalid projectRoot: "${projectRoot}"`);
+  }
+
   const start = Date.now();
   const context = buildSecurityContext(projectRoot);
 

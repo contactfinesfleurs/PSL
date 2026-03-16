@@ -40,7 +40,8 @@ export async function parseBodyJson<T>(
   schema: z.ZodSchema<T>
 ): Promise<{ success: true; data: T } | { success: false; response: NextResponse }> {
   const contentLength = (req.headers as Headers).get("content-length");
-  if (contentLength && parseInt(contentLength, 10) > MAX_JSON_BODY_BYTES) {
+  const contentLengthNum = contentLength ? Number(contentLength) : NaN;
+  if (Number.isFinite(contentLengthNum) && contentLengthNum > MAX_JSON_BODY_BYTES) {
     return {
       success: false,
       response: NextResponse.json({ error: "Corps de requête trop volumineux." }, { status: 413 }),

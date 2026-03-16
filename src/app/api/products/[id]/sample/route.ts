@@ -89,7 +89,9 @@ export async function PUT(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    // Delete orphaned photo files when path arrays are replaced
+    // Compute orphaned files BEFORE the DB update (H-3: update DB first, delete files after
+    // so a DB failure doesn't leave files deleted but paths still in the DB).
+    const orphanedFiles: string[] = [];
     if (existingSample) {
       const photoFields = [
         [existingSample.samplePhotoPaths, body.samplePhotoPaths],
@@ -100,7 +102,7 @@ export async function PUT(
       for (const [oldRaw, newPaths] of photoFields) {
         if (newPaths === undefined) continue;
         const newSet = new Set(newPaths ?? []);
-        await Promise.all(safeParseArray(oldRaw).filter((p) => !newSet.has(p)).map(deleteStoredFile));
+        orphanedFiles.push(...safeParseArray(oldRaw).filter((p) => !newSet.has(p)));
       }
     }
 
@@ -157,6 +159,11 @@ export async function PUT(
       });
     }
 
+    // Delete orphaned files after successful DB update (H-3)
+    if (orphanedFiles.length > 0) {
+      await Promise.allSettled(orphanedFiles.map(deleteStoredFile));
+    }
+
     return NextResponse.json(sample);
   } catch (error) {
     console.error('[PUT /api/products/[id]/sample]', error);
@@ -194,7 +201,8 @@ export async function POST(
     });
 
     if (existing) {
-      // Delete orphaned photo files before updating
+      // Compute orphaned files BEFORE updating (H-3: delete files AFTER DB success)
+      const orphaned: string[] = [];
       const photoFields = [
         [existing.samplePhotoPaths, body.samplePhotoPaths],
         [existing.detailPhotoPaths, body.detailPhotoPaths],
@@ -204,7 +212,7 @@ export async function POST(
       for (const [oldRaw, newPaths] of photoFields) {
         if (newPaths === undefined) continue;
         const newSet = new Set(newPaths ?? []);
-        await Promise.all(safeParseArray(oldRaw).filter((p) => !newSet.has(p)).map(deleteStoredFile));
+        orphaned.push(...safeParseArray(oldRaw).filter((p) => !newSet.has(p)));
       }
 
       // Update instead
@@ -239,6 +247,10 @@ export async function POST(
           }),
         },
       });
+      // Delete orphaned files after successful DB update (H-3)
+      if (orphaned.length > 0) {
+        await Promise.allSettled(orphaned.map(deleteStoredFile));
+      }
       return NextResponse.json(updated);
     }
 
