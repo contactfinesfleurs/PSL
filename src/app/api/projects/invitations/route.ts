@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
+import { getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +9,9 @@ export const dynamic = "force-dynamic";
 // Returns PENDING invitations addressed to the current user's email.
 export async function GET(req: NextRequest) {
   try {
+    const limited = await rateLimitResponse(`invitations:${getClientIp(req)}`, "moderate");
+    if (limited) return limited;
+
     const profileId = getProfileId(req);
     if (!profileId) return unauthorizedResponse();
 

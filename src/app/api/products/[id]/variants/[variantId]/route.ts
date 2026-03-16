@@ -43,9 +43,10 @@ export async function DELETE(
         data: { variantGroupId: null },
       });
     } else {
-      // Remove only the target variant from the group
+      // Remove only the target variant from the group.
+      // profileId is required to prevent cross-tenant IDOR.
       await prisma.product.update({
-        where: { id: variantId },
+        where: { id: variantId, profileId },
         data: { variantGroupId: null },
       });
     }

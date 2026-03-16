@@ -162,6 +162,12 @@ export async function DELETE(
       return NextResponse.json({ error: "Produit introuvable" }, { status: 404 });
     }
 
+    // Delete associated files before soft-deleting (RGPD — right to erasure)
+    const filesToDelete: string[] = [];
+    if (existing.sketchPaths) filesToDelete.push(...safeParseArray(existing.sketchPaths));
+    if (existing.techPackPath) filesToDelete.push(existing.techPackPath);
+    await Promise.all(filesToDelete.map(deleteStoredFile));
+
     await prisma.product.update({ where: { id }, data: { deletedAt: new Date() } });
     logAudit("PRODUCT_DELETE", profileId, "product", id);
     return NextResponse.json({ success: true });
