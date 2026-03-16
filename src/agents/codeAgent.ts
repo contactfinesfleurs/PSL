@@ -180,25 +180,35 @@ ${context}
 
 Produis ton rapport technique complet avec du code d'implémentation prêt à l'emploi.`;
 
-  const stream = client.messages.stream({
-    model: "claude-sonnet-4-6",
-    max_tokens: 12000,
-    thinking: { type: "adaptive" },
-    system: CODE_AGENT_CONFIG.systemPrompt,
-    messages: [{ role: "user", content: userMessage }],
-  });
+  const stream = client.messages.stream(
+    {
+      model: "claude-sonnet-4-6",
+      max_tokens: 12000,
+      thinking: { type: "adaptive" },
+      system: CODE_AGENT_CONFIG.systemPrompt,
+      messages: [{ role: "user", content: userMessage }],
+    },
+    { signal: AbortSignal.timeout(8 * 60 * 1000) } // 8 min max
+  );
 
   process.stdout.write(`\n[${CODE_AGENT_CONFIG.name}] Analyse en cours`);
 
   let report = "";
-  for await (const event of stream) {
-    if (
-      event.type === "content_block_delta" &&
-      event.delta.type === "text_delta"
-    ) {
-      report += event.delta.text;
-      process.stdout.write(".");
+  try {
+    for await (const event of stream) {
+      if (
+        event.type === "content_block_delta" &&
+        event.delta.type === "text_delta"
+      ) {
+        report += event.delta.text;
+        process.stdout.write(".");
+      }
     }
+  } catch (e) {
+    if (e instanceof Error && e.name === "TimeoutError") {
+      throw new Error(`[${CODE_AGENT_CONFIG.name}] Timeout après 8 minutes`);
+    }
+    throw e;
   }
 
   const finalMessage = await stream.finalMessage();

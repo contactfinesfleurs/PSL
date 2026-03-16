@@ -229,25 +229,35 @@ ${context}
 
 Produis ton rapport de sécurité complet.`;
 
-  const stream = client.messages.stream({
-    model: "claude-sonnet-4-6",
-    max_tokens: 8000,
-    thinking: { type: "adaptive" },
-    system: SECURITY_AGENT_CONFIG.systemPrompt,
-    messages: [{ role: "user", content: userMessage }],
-  });
+  const stream = client.messages.stream(
+    {
+      model: "claude-sonnet-4-6",
+      max_tokens: 8000,
+      thinking: { type: "adaptive" },
+      system: SECURITY_AGENT_CONFIG.systemPrompt,
+      messages: [{ role: "user", content: userMessage }],
+    },
+    { signal: AbortSignal.timeout(5 * 60 * 1000) } // 5 min max
+  );
 
   process.stdout.write(`\n[${SECURITY_AGENT_CONFIG.name}] Analyse en cours`);
 
   let report = "";
-  for await (const event of stream) {
-    if (
-      event.type === "content_block_delta" &&
-      event.delta.type === "text_delta"
-    ) {
-      report += event.delta.text;
-      process.stdout.write(".");
+  try {
+    for await (const event of stream) {
+      if (
+        event.type === "content_block_delta" &&
+        event.delta.type === "text_delta"
+      ) {
+        report += event.delta.text;
+        process.stdout.write(".");
+      }
     }
+  } catch (e) {
+    if (e instanceof Error && e.name === "TimeoutError") {
+      throw new Error(`[${SECURITY_AGENT_CONFIG.name}] Timeout après 5 minutes`);
+    }
+    throw e;
   }
 
   const finalMessage = await stream.finalMessage();

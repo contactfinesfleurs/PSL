@@ -98,40 +98,50 @@ export async function POST(req: NextRequest) {
     });
 
     // Retry loop to handle SKU collisions caused by concurrent inserts.
-    // Two simultaneous requests can produce the same count → same SKU → P2002.
-    // Each retry increments the offset so it always finds an unused index.
+    // The count + create are wrapped in a serializable transaction so PostgreSQL
+    // guarantees no other transaction can insert between the count read and the
+    // create. If two concurrent transactions conflict, one gets P2034
+    // (serialization failure) and retries — the next read will see the committed
+    // row and pick the correct next index without needing an offset.
     let product;
     for (let attempt = 0; attempt < 5; attempt++) {
-      const count = await prisma.product.count({
-        where: { profileId, family: data.family, season: data.season, year: data.year },
-      });
-      const sku = generateSKU({
-        family: data.family,
-        season: data.season,
-        year: data.year,
-        index: count + 1 + attempt,
-      });
       try {
-        product = await prisma.product.create({
-          data: {
-            profileId,
-            name: data.name,
-            sku,
-            reference,
+        product = await prisma.$transaction(async (tx) => {
+          const count = await tx.product.count({
+            where: { profileId, family: data.family, season: data.season, year: data.year },
+          });
+          const sku = generateSKU({
             family: data.family,
             season: data.season,
             year: data.year,
-            sizeRange: data.sizeRange,
-            sizes: JSON.stringify(data.sizes),
-            measurements: data.measurements ?? null,
-            materials: data.materials ? JSON.stringify(data.materials) : null,
-            colors: colorCodes.length > 0 ? JSON.stringify(colorCodes) : null,
-          },
-        });
+            index: count + 1,
+          });
+          return tx.product.create({
+            data: {
+              profileId,
+              name: data.name,
+              sku,
+              reference,
+              family: data.family,
+              season: data.season,
+              year: data.year,
+              sizeRange: data.sizeRange,
+              sizes: JSON.stringify(data.sizes),
+              measurements: data.measurements ?? null,
+              materials: data.materials ? JSON.stringify(data.materials) : null,
+              colors: colorCodes.length > 0 ? JSON.stringify(colorCodes) : null,
+            },
+          });
+        }, { isolationLevel: "Serializable" });
         break; // success
       } catch (e) {
-        // P2002 = unique constraint violation on sku — retry with next index
-        if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002" && attempt < 4) {
+        // P2002 = unique constraint violation on sku
+        // P2034 = serialization failure (concurrent transaction conflict) — retry
+        if (
+          e instanceof Prisma.PrismaClientKnownRequestError &&
+          (e.code === "P2002" || e.code === "P2034") &&
+          attempt < 4
+        ) {
           continue;
         }
         throw e;

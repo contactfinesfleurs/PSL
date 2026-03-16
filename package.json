@@ -17,7 +17,9 @@
     "agents:no-code": "tsx scripts/run-agents.ts --no-code",
     "blob:migrate": "tsx scripts/migrate-blobs-to-private.ts",
     "blob:migrate:dry": "tsx scripts/migrate-blobs-to-private.ts --dry-run",
-    "admin:promote": "tsx scripts/make-super-admin.ts"
+    "admin:promote": "tsx scripts/make-super-admin.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
@@ -53,6 +55,7 @@
     "prisma": "^5.22.0",
     "tailwindcss": "^3.4.1",
     "tsx": "^4.21.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.0"
   }
 }
