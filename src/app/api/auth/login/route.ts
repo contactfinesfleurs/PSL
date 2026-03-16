@@ -10,7 +10,7 @@ import { logAudit, logSecurityEvent } from "@/lib/audit";
 export const dynamic = "force-dynamic";
 
 const LoginSchema = z.object({
-  email: z.string().email(),
+  email: z.string().email().transform((e) => e.toLowerCase()),
   password: z.string().min(1),
 });
 

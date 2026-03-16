@@ -1,11 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { clearSessionCookie, getSession, revokeToken } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
+import { getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   try {
+    const ip = getClientIp(req);
+    const limited = await rateLimitResponse(`logout:${ip}`, "loose");
+    if (limited) return limited;
+
     const session = await getSession();
 
     if (session) {
