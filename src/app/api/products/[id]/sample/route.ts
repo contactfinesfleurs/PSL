@@ -2,23 +2,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { parseBodyJson, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
-import { deleteStoredFile } from "@/lib/storage";
+import { deleteStoredFile, isStoredPath } from "@/lib/storage";
 import { safeParseArray } from "@/lib/formatters";
 
 export const dynamic = 'force-dynamic';
 
+const storedPathArray = z.array(z.string().refine(isStoredPath, { message: "Invalid stored path" }));
+
 const SampleUpsertSchema = z.object({
   sampleId: z.string().optional(),
-  samplePhotoPaths: z.array(z.string()).nullable().optional(),
-  detailPhotoPaths: z.array(z.string()).nullable().optional(),
-  reviewPhotoPaths: z.array(z.string()).nullable().optional(),
+  samplePhotoPaths: storedPathArray.nullable().optional(),
+  detailPhotoPaths: storedPathArray.nullable().optional(),
+  reviewPhotoPaths: storedPathArray.nullable().optional(),
   reviewNotes: z.string().nullable().optional(),
   supplierName: z.string().nullable().optional(),
   supplierAddress: z.string().nullable().optional(),
   supplierCountry: z.string().nullable().optional(),
   shippingDate: z.string().datetime().nullable().optional(),
   trackingNumber: z.string().nullable().optional(),
-  packshotPaths: z.array(z.string()).nullable().optional(),
+  packshotPaths: storedPathArray.nullable().optional(),
   definitiveColors: z.array(z.string()).nullable().optional(),
   definitiveMaterials: z.array(z.string()).nullable().optional(),
 });
