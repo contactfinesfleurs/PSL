@@ -7,7 +7,11 @@ export async function GET(req: NextRequest) {
   const secret = req.headers.get("authorization");
   const expected = process.env.CRON_SECRET;
 
-  if (!expected || secret !== `Bearer ${expected}`) {
+  if (!expected) {
+    console.error("[GET /api/cron/cleanup-tokens] CRON_SECRET is not configured");
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (secret !== `Bearer ${expected}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

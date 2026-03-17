@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
+import { z } from "zod";
+import { getProfileId, unauthorizedResponse, parseBodyJson } from "@/lib/api-helpers";
 import { logAudit } from "@/lib/audit";
 import { getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 import { safeParseArray } from "@/lib/formatters";
 import { deleteStoredFile } from "@/lib/storage";
+
+const ProjectPatchSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  description: z.string().max(1000).nullable().optional(),
+});
 
 export const dynamic = "force-dynamic";
 
@@ -77,6 +83,42 @@ export async function GET(req: NextRequest, { params }: Params) {
     });
   } catch (error) {
     console.error("[GET /api/projects/[code]]", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+/**
+ * PATCH /api/projects/[code] — owner only, update name/description
+ */
+export async function PATCH(req: NextRequest, { params }: Params) {
+  try {
+    const profileId = getProfileId(req);
+    if (!profileId) return unauthorizedResponse();
+
+    const { code } = await params;
+
+    const project = await prisma.project.findUnique({ where: { code } });
+    if (!project || project.profileId !== profileId) {
+      return NextResponse.json({ error: "Projet introuvable." }, { status: 404 });
+    }
+
+    const result = await parseBodyJson(req, ProjectPatchSchema);
+    if (!result.success) return result.response;
+    const body = result.data;
+
+    const updated = await prisma.project.update({
+      where: { code },
+      data: {
+        ...(body.name !== undefined && { name: body.name }),
+        ...(body.description !== undefined && { description: body.description }),
+      },
+    });
+
+    logAudit("PROJECT_UPDATE", profileId, "project", project.id, { code });
+
+    return NextResponse.json(updated);
+  } catch (error) {
+    console.error("[PATCH /api/projects/[code]]", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

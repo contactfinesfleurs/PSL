@@ -4,6 +4,7 @@ import { z } from "zod";
 import { parseBodyJson, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 import { storeFile, MAX_FILE_SIZE, ALLOWED_MIME_TYPES } from "@/lib/storage";
 import { logAudit } from "@/lib/audit";
+import { checkProjectAccess } from "@/lib/project-helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -24,20 +25,9 @@ export async function GET(req: NextRequest, { params }: Params) {
 
     const { code, productId } = await params;
 
-    const project = await prisma.project.findUnique({
-      where: { code },
-      include: { collaborators: { select: { profileId: true } } },
-    });
-
-    if (!project) {
-      return NextResponse.json({ error: "Projet introuvable." }, { status: 404 });
-    }
-
-    const isOwner = project.profileId === profileId;
-    const isCollaborator = project.collaborators.some((c) => c.profileId === profileId);
-    if (!isOwner && !isCollaborator) {
-      return NextResponse.json({ error: "Accès refusé." }, { status: 403 });
-    }
+    const access = await checkProjectAccess(code, profileId);
+    if (!access.ok) return access.response;
+    const { project } = access;
 
     const contributions = await prisma.projectContribution.findMany({
       where: { projectId: project.id, productId },
@@ -64,20 +54,9 @@ export async function POST(req: NextRequest, { params }: Params) {
 
     const { code, productId } = await params;
 
-    const project = await prisma.project.findUnique({
-      where: { code },
-      include: { collaborators: { select: { profileId: true } } },
-    });
-
-    if (!project) {
-      return NextResponse.json({ error: "Projet introuvable." }, { status: 404 });
-    }
-
-    const isOwner = project.profileId === profileId;
-    const isCollaborator = project.collaborators.some((c) => c.profileId === profileId);
-    if (!isOwner && !isCollaborator) {
-      return NextResponse.json({ error: "Accès refusé." }, { status: 403 });
-    }
+    const access = await checkProjectAccess(code, profileId);
+    if (!access.ok) return access.response;
+    const { project } = access;
 
     // Verify the product is in this project
     const link = await prisma.projectProduct.findUnique({

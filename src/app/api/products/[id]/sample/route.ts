@@ -9,6 +9,32 @@ export const dynamic = 'force-dynamic';
 
 const storedPathArray = z.array(z.string().refine(isStoredPath, { message: "Invalid stored path" }));
 
+type PhotoFields = {
+  samplePhotoPaths?: string[] | null;
+  detailPhotoPaths?: string[] | null;
+  reviewPhotoPaths?: string[] | null;
+  packshotPaths?: string[] | null;
+};
+
+function computeOrphanedFiles(
+  existing: { samplePhotoPaths: string | null; detailPhotoPaths: string | null; reviewPhotoPaths: string | null; packshotPaths: string | null },
+  updated: PhotoFields
+): string[] {
+  const orphaned: string[] = [];
+  const fields = [
+    [existing.samplePhotoPaths, updated.samplePhotoPaths],
+    [existing.detailPhotoPaths, updated.detailPhotoPaths],
+    [existing.reviewPhotoPaths, updated.reviewPhotoPaths],
+    [existing.packshotPaths, updated.packshotPaths],
+  ] as const;
+  for (const [oldRaw, newPaths] of fields) {
+    if (newPaths === undefined) continue;
+    const newSet = new Set(newPaths ?? []);
+    orphaned.push(...safeParseArray(oldRaw).filter((p) => !newSet.has(p)));
+  }
+  return orphaned;
+}
+
 const SampleUpsertSchema = z.object({
   sampleId: z.string().optional(),
   samplePhotoPaths: storedPathArray.nullable().optional(),
@@ -91,20 +117,7 @@ export async function PUT(
 
     // Compute orphaned files BEFORE the DB update (H-3: update DB first, delete files after
     // so a DB failure doesn't leave files deleted but paths still in the DB).
-    const orphanedFiles: string[] = [];
-    if (existingSample) {
-      const photoFields = [
-        [existingSample.samplePhotoPaths, body.samplePhotoPaths],
-        [existingSample.detailPhotoPaths, body.detailPhotoPaths],
-        [existingSample.reviewPhotoPaths, body.reviewPhotoPaths],
-        [existingSample.packshotPaths, body.packshotPaths],
-      ] as const;
-      for (const [oldRaw, newPaths] of photoFields) {
-        if (newPaths === undefined) continue;
-        const newSet = new Set(newPaths ?? []);
-        orphanedFiles.push(...safeParseArray(oldRaw).filter((p) => !newSet.has(p)));
-      }
-    }
+    const orphanedFiles = existingSample ? computeOrphanedFiles(existingSample, body) : [];
 
     let sample;
     if (existingSample) {
@@ -202,18 +215,7 @@ export async function POST(
 
     if (existing) {
       // Compute orphaned files BEFORE updating (H-3: delete files AFTER DB success)
-      const orphaned: string[] = [];
-      const photoFields = [
-        [existing.samplePhotoPaths, body.samplePhotoPaths],
-        [existing.detailPhotoPaths, body.detailPhotoPaths],
-        [existing.reviewPhotoPaths, body.reviewPhotoPaths],
-        [existing.packshotPaths, body.packshotPaths],
-      ] as const;
-      for (const [oldRaw, newPaths] of photoFields) {
-        if (newPaths === undefined) continue;
-        const newSet = new Set(newPaths ?? []);
-        orphaned.push(...safeParseArray(oldRaw).filter((p) => !newSet.has(p)));
-      }
+      const orphaned = computeOrphanedFiles(existing, body);
 
       // Update instead
       const updated = await prisma.sample.update({
@@ -281,6 +283,49 @@ export async function POST(
     return NextResponse.json(sample, { status: 201 });
   } catch (error) {
     console.error('[POST /api/products/[id]/sample]', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const profileId = getProfileId(req);
+    if (!profileId) return unauthorizedResponse();
+
+    const { id } = await params;
+    if (!id || typeof id !== 'string' || id.trim() === '') {
+      return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+    }
+
+    // Verify product ownership
+    const product = await prisma.product.findFirst({
+      where: { id, profileId, deletedAt: null },
+    });
+    if (!product) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const sample = await prisma.sample.findFirst({ where: { productId: id } });
+    if (!sample) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    // Collect all file paths before deletion (H-3: delete files after DB deletion)
+    const allPaths = [
+      ...safeParseArray(sample.samplePhotoPaths),
+      ...safeParseArray(sample.detailPhotoPaths),
+      ...safeParseArray(sample.reviewPhotoPaths),
+      ...safeParseArray(sample.packshotPaths),
+    ];
+
+    await prisma.sample.delete({ where: { id: sample.id } });
+
+    if (allPaths.length > 0) {
+      await Promise.allSettled(allPaths.map(deleteStoredFile));
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('[DELETE /api/products/[id]/sample]', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

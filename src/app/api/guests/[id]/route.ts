@@ -39,7 +39,7 @@ export async function PATCH(
     // Verify ownership via event.profileId
     const guest = await prisma.eventGuest.findFirst({
       where: { id },
-      include: { event: { select: { profileId: true } } },
+      include: { event: { select: { id: true, profileId: true } } },
     });
     if (!guest || guest.event.profileId !== profileId) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -72,6 +72,8 @@ export async function PATCH(
         }),
       },
     });
+
+    logAudit("GUEST_PATCH", profileId, "event", guest.event.id, { guestId: id });
 
     return NextResponse.json(updated);
   } catch (error) {

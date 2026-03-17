@@ -433,6 +433,7 @@ model ShareContribution {
   note       String?  // optional text note
 
   @@index([shareId])
+  @@index([shareId, createdAt])
 }
 
 model EventProduct {
