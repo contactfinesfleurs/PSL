@@ -35,7 +35,7 @@ export function Sidebar({ userName, userEmail, userRole, plan = "FREE" }: Sideba
     {
       label: "GÉNÉRAL",
       items: [
-        { name: "Vue d'ensemble", href: "/dashboard", icon: LayoutDashboard },
+        { name: "Vue d'ensemble", href: "/", icon: LayoutDashboard },
       ],
     },
     {
@@ -101,8 +101,8 @@ export function Sidebar({ userName, userEmail, userRole, plan = "FREE" }: Sideba
             <div className="space-y-0.5">
               {section.items.map((item) => {
                 const isActive =
-                  item.href === "/dashboard"
-                    ? pathname === "/dashboard"
+                  item.href === "/"
+                    ? pathname === "/"
                     : pathname.startsWith(item.href);
                 return (
                   <Link

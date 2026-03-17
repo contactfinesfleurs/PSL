@@ -564,7 +564,7 @@ export default function LandingPage() {
               </Link>
               <ul className="space-y-3.5 mt-auto">
                 {[
-                  "1 produit",
+                  "2 produits",
                   "1 événement",
                   "1 campagne",
                   "Gestion des croquis",
@@ -608,8 +608,11 @@ export default function LandingPage() {
                   Pour les équipes créatives
                 </p>
                 <div className="mb-8">
-                  <span className="text-5xl font-bold text-white">9,99 €</span>
+                  <span className="text-5xl font-bold text-white">11,99 €</span>
                   <span className="text-gray-400 text-sm ml-2">/ mois</span>
+                </div>
+                <div className="mb-8">
+                  <span className="text-gray-400 text-sm">ou 99,99 €/an (2 mois offerts)</span>
                 </div>
               </div>
               <Link

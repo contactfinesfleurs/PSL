@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
     customer: customerId,
     mode: "subscription",
     line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${appUrl}/dashboard?upgraded=true`,
+    success_url: `${appUrl}/?upgraded=true`,
     cancel_url: `${appUrl}/settings`,
     metadata: { profileId },
   });
