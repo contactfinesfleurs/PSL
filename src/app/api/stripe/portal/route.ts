@@ -6,6 +6,13 @@ import { getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
+  if (process.env.BETA_MODE === "true") {
+    return NextResponse.json(
+      { error: "Le portail de facturation n'est pas disponible pendant la période bêta." },
+      { status: 503 }
+    );
+  }
+
   const profileId = getProfileId(req);
   if (!profileId) return unauthorizedResponse();
 

@@ -104,6 +104,14 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // En mode bêta, la landing page est masquée — on redirige vers /login.
+  if (process.env.BETA_MODE === "true" && pathname === "/landing") {
+    const loginUrl = req.nextUrl.clone();
+    loginUrl.pathname = "/login";
+    loginUrl.search = "";
+    return NextResponse.redirect(loginUrl);
+  }
+
   const session = await getSessionFromRequest(req);
 
   // Si connecté, transmettre le profileId dans les headers pour les Route Handlers
