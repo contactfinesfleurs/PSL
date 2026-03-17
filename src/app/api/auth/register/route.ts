@@ -59,6 +59,7 @@ export async function POST(req: NextRequest) {
       email: profile.email,
       name: profile.name,
       role: profile.role,
+      plan: "FREE",
     });
 
     await setSessionCookie(token, profile.role ?? undefined);

@@ -6,6 +6,7 @@ import { z } from "zod";
 import { parseBodyJson, validateEnum, getProfileId, unauthorizedResponse, parsePagination } from "@/lib/api-helpers";
 import { SAMPLE_STATUS_VALUES } from "@/lib/constants";
 import { getClientIp, rateLimitResponse } from "@/lib/rate-limit";
+import { checkPlanLimit } from "@/lib/plan-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -82,6 +83,9 @@ export async function POST(req: NextRequest) {
   try {
     const profileId = getProfileId(req);
     if (!profileId) return unauthorizedResponse();
+
+    const limitReached = await checkPlanLimit(profileId, "products");
+    if (limitReached) return limitReached;
 
     const result = await parseBodyJson(req, ProductCreateSchema);
     if (!result.success) return result.response;

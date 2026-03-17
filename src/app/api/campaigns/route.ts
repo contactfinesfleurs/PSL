@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { parseBodyJson, validateEnum, getProfileId, unauthorizedResponse, parsePagination } from "@/lib/api-helpers";
 import { CAMPAIGN_STATUS_VALUES, CAMPAIGN_TYPE_VALUES } from "@/lib/constants";
+import { checkPlanLimit } from "@/lib/plan-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +66,9 @@ export async function POST(req: NextRequest) {
   try {
     const profileId = getProfileId(req);
     if (!profileId) return unauthorizedResponse();
+
+    const limitReached = await checkPlanLimit(profileId, "campaigns");
+    if (limitReached) return limitReached;
 
     const result = await parseBodyJson(req, CampaignCreateSchema);
     if (!result.success) return result.response;

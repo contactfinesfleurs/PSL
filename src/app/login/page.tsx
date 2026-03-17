@@ -12,8 +12,8 @@ function LoginForm() {
   // as the middleware. This rejects absolute URLs, protocol-relative URLs
   // (//evil.com), and paths with query/fragment injection attempts.
   const SAFE_PATH_RE = /^\/[a-zA-Z0-9\-._~!$&'()*+,;=:@/]*$/;
-  const rawFrom = searchParams.get("from") ?? "/";
-  const from = SAFE_PATH_RE.test(rawFrom) ? rawFrom : "/";
+  const rawFrom = searchParams.get("from") ?? "/dashboard";
+  const from = SAFE_PATH_RE.test(rawFrom) ? rawFrom : "/dashboard";
 
   const [mode, setMode] = useState<Mode>("login");
   const [name, setName] = useState("");

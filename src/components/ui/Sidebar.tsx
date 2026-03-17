@@ -12,6 +12,8 @@ import {
   User,
   ShieldCheck,
   FolderKanban,
+  Settings,
+  Crown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/ui/Logo";
@@ -20,9 +22,10 @@ type SidebarProps = {
   userName: string;
   userEmail: string;
   userRole: string | null;
+  plan?: string;
 };
 
-export function Sidebar({ userName, userEmail, userRole }: SidebarProps) {
+export function Sidebar({ userName, userEmail, userRole, plan = "FREE" }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -32,7 +35,7 @@ export function Sidebar({ userName, userEmail, userRole }: SidebarProps) {
     {
       label: "GÉNÉRAL",
       items: [
-        { name: "Vue d'ensemble", href: "/", icon: LayoutDashboard },
+        { name: "Vue d'ensemble", href: "/dashboard", icon: LayoutDashboard },
       ],
     },
     {
@@ -48,6 +51,12 @@ export function Sidebar({ userName, userEmail, userRole }: SidebarProps) {
       label: "COLLABORATION",
       items: [
         { name: "Projets", href: "/projects", icon: FolderKanban },
+      ],
+    },
+    {
+      label: "COMPTE",
+      items: [
+        { name: "Paramètres", href: "/settings", icon: Settings },
       ],
     },
     ...(isAdmin
@@ -92,8 +101,8 @@ export function Sidebar({ userName, userEmail, userRole }: SidebarProps) {
             <div className="space-y-0.5">
               {section.items.map((item) => {
                 const isActive =
-                  item.href === "/"
-                    ? pathname === "/"
+                  item.href === "/dashboard"
+                    ? pathname === "/dashboard"
                     : pathname.startsWith(item.href);
                 return (
                   <Link
@@ -128,9 +137,21 @@ export function Sidebar({ userName, userEmail, userRole }: SidebarProps) {
             {initials || <User className="h-3.5 w-3.5" />}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[12px] font-medium text-gray-900 truncate">
-              {userName}
-            </p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-[12px] font-medium text-gray-900 truncate">
+                {userName}
+              </p>
+              {plan === "PRO" ? (
+                <span className="flex items-center gap-0.5 bg-indigo-100 text-indigo-700 text-[9px] font-semibold px-1.5 py-0.5 rounded-full">
+                  <Crown className="h-2.5 w-2.5" />
+                  PRO
+                </span>
+              ) : (
+                <span className="text-[9px] font-medium text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">
+                  Gratuit
+                </span>
+              )}
+            </div>
             <p className="text-[10px] text-gray-400 truncate">{userEmail}</p>
           </div>
           <button

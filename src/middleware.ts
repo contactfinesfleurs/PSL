@@ -96,6 +96,7 @@ export async function middleware(req: NextRequest) {
 
   // Laisser passer les assets statiques et le tunnel Sentry
   if (
+    pathname === "/" ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
     pathname === "/monitoring"
@@ -114,6 +115,7 @@ export async function middleware(req: NextRequest) {
     requestHeaders.set("x-profile-email", session.email);
     requestHeaders.set("x-profile-name", session.name);
     requestHeaders.set("x-profile-role", session.role ?? "MEMBER");
+    requestHeaders.set("x-profile-plan", session.plan ?? "FREE");
     requestHeaders.set("x-nonce", nonce);
     const res = NextResponse.next({ request: { headers: requestHeaders } });
     res.headers.set("Content-Security-Policy", csp);
@@ -127,6 +129,7 @@ export async function middleware(req: NextRequest) {
     pathname === "/landing" ||
     pathname.startsWith("/api/auth/") ||
     pathname.startsWith("/api/share/") ||
+    pathname === "/api/stripe/webhook" ||
     pathname.startsWith("/share/")
   ) {
     const requestHeaders = new Headers(req.headers);

@@ -48,6 +48,10 @@ model Profile {
   // Any JWT issued before this moment is considered invalid.
   tokensInvalidatedAt DateTime?
 
+  // Plan & Billing
+  plan             String  @default("FREE") // FREE | PRO
+  stripeCustomerId String? @unique
+
   products  Product[]
   events    Event[]
   campaigns Campaign[]
@@ -59,9 +63,49 @@ model Profile {
   receivedInvitations  ProjectInvitation[] @relation("InvitationsReceived")
   passwordResetTokens  PasswordResetToken[]
   productShares        ProductShare[]
+  subscription         Subscription?
+  teamMembers          TeamMember[]
+  memberOf             TeamMember[]  @relation("MemberProfile")
 
   @@index([role])
   @@index([teamId])
+}
+
+// ─── SUBSCRIPTION (STRIPE) ──────────────────────────────────────────────────
+
+model Subscription {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  profileId String  @unique
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  stripeSubscriptionId String   @unique
+  stripePriceId        String
+  status               String   // active | past_due | canceled | incomplete | trialing
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  cancelAtPeriodEnd    Boolean  @default(false)
+}
+
+// ─── TEAM MEMBER (COLLABORATION) ────────────────────────────────────────────
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  ownerId String
+  owner   Profile @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  memberId String
+  member   Profile @relation("MemberProfile", fields: [memberId], references: [id], onDelete: Cascade)
+
+  role String @default("VIEWER") // VIEWER | EDITOR
+
+  @@unique([ownerId, memberId])
+  @@index([ownerId])
+  @@index([memberId])
 }
 
 // ─── PRODUCT ─────────────────────────────────────────────────────────────────

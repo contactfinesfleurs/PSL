@@ -28,7 +28,7 @@ export default async function RootLayout({
         )}
         <div className="md:flex md:h-screen">
           {session && (
-            <Sidebar userName={session.name} userEmail={session.email} userRole={userRole} />
+            <Sidebar userName={session.name} userEmail={session.email} userRole={userRole} plan={session.plan} />
           )}
           <main className={`flex-1 overflow-auto${session ? " pt-14 md:pt-0" : ""}`}>
             {children}
