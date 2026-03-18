@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { MAX_FILE_SIZE, ALLOWED_MIME_TYPES, storeFile } from "@/lib/storage";
 import { getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
+import { getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
+// Upload-specific limit: 20 files per 10 minutes per IP.
+// More permissive than the auth limiter (5/15 min) but still caps resource abuse.
+const UPLOAD_RATE_LIMIT = { max: 20, windowMs: 10 * 60 * 1000, prefix: "upload:" };
+
 export async function POST(req: NextRequest) {
+  // Rate limit before any expensive work (auth check, file parsing, blob upload).
+  const limitErr = rateLimitResponse(getClientIp(req), UPLOAD_RATE_LIMIT);
+  if (limitErr) return limitErr;
+
   // Defense-in-depth: middleware already enforces auth, but we check here too
   // so a future middleware misconfiguration doesn't silently expose this endpoint.
   const profileId = getProfileId(req);

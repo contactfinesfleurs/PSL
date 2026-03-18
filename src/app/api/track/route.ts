@@ -72,15 +72,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "17track API key not configured" }, { status: 500 });
     }
 
-    // Call 17track API
-    const res = await fetch("https://api.17track.net/track/v2.2/gettracklist", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "17token": apiKey,
-      },
-      body: JSON.stringify({ data: [{ number: trackingNumber }] }),
-    });
+    // Call 17track API — 10 s timeout so a hung upstream never blocks a server thread
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10_000);
+    let res: Response;
+    try {
+      res = await fetch("https://api.17track.net/track/v2.2/gettracklist", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "17token": apiKey,
+        },
+        body: JSON.stringify({ data: [{ number: trackingNumber }] }),
+        signal: controller.signal,
+      });
+    } catch (err) {
+      const isTimeout = err instanceof Error && err.name === "AbortError";
+      return NextResponse.json(
+        { error: isTimeout ? "17track API timeout" : "17track API unreachable" },
+        { status: 502 }
+      );
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!res.ok) {
       return NextResponse.json({ error: "17track API error" }, { status: 502 });

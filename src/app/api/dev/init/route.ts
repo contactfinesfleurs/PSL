@@ -11,7 +11,9 @@ const DEV_PROFILE_EMAIL = "dev@psl.local";
 const DEV_PROFILE_NAME = "Développeur";
 
 export async function GET() {
-  if (process.env.BYPASS_AUTH !== "1") {
+  // Double guard: env flag AND non-production environment.
+  // This prevents accidental exposure if BYPASS_AUTH=1 leaks into a prod deploy.
+  if (process.env.NODE_ENV === "production" || process.env.BYPASS_AUTH !== "1") {
     return NextResponse.json({ error: "Non disponible" }, { status: 404 });
   }
 
