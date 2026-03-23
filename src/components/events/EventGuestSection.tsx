@@ -534,7 +534,7 @@ export function EventGuestSection({ eventId, initialGuests }: Props) {
                   )}
                   {guest.instagram && (
                     <a
-                      href={`https://instagram.com/${guest.instagram}`}
+                      href={`https://instagram.com/${encodeURIComponent(guest.instagram)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-xs text-pink-400 hover:text-pink-600 transition-colors"

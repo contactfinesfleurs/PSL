@@ -65,13 +65,10 @@ export function Sidebar({ userName, userEmail, userRole }: SidebarProps) {
     .join("");
 
   return (
-    <aside className="w-[220px] shrink-0 flex flex-col" style={{ background: "#0f1f3d" }}>
+    <aside className="w-[220px] shrink-0 flex flex-col bg-[#0f1f3d]">
       {/* Logo */}
       <div className="flex items-center gap-3 px-5 h-16 border-b border-white/10">
-        <div
-          className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0"
-          style={{ background: "rgba(255,255,255,0.12)" }}
-        >
+        <div className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0 bg-white/[0.12]">
           <svg width="20" height="14" viewBox="0 0 20 14" fill="none" xmlns="http://www.w3.org/2000/svg">
             <text x="10" y="11" textAnchor="middle" fontFamily="Arial Black, Arial" fontWeight="900" fontSize="10" fill="white">PSL</text>
           </svg>
@@ -85,7 +82,7 @@ export function Sidebar({ userName, userEmail, userRole }: SidebarProps) {
       <nav className="flex-1 px-3 py-4 space-y-6 overflow-y-auto">
         {sections.map((section) => (
           <div key={section.label}>
-            <p className="px-3 mb-2 text-[10px] font-semibold tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.35)" }}>
+            <p className="px-3 mb-2 text-[10px] font-semibold tracking-widest uppercase text-white/35">
               {section.label}
             </p>
             <div className="space-y-0.5">
@@ -101,22 +98,15 @@ export function Sidebar({ userName, userEmail, userRole }: SidebarProps) {
                     className={cn(
                       "flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-150",
                       isActive
-                        ? "text-white"
-                        : "hover:text-white transition-colors"
+                        ? "bg-white/[0.12] text-white"
+                        : "text-white/55 hover:text-white"
                     )}
-                    style={
-                      isActive
-                        ? { background: "rgba(255,255,255,0.12)", color: "white" }
-                        : { color: "rgba(255,255,255,0.55)" }
-                    }
                   >
                     <item.icon
-                      className="h-4 w-4 shrink-0"
-                      style={
-                        isActive
-                          ? { color: "rgba(255,255,255,0.9)" }
-                          : { color: "rgba(255,255,255,0.4)" }
-                      }
+                      className={cn(
+                        "h-4 w-4 shrink-0",
+                        isActive ? "text-white/90" : "text-white/40"
+                      )}
                     />
                     {item.name}
                     {isActive && (
@@ -131,27 +121,22 @@ export function Sidebar({ userName, userEmail, userRole }: SidebarProps) {
       </nav>
 
       {/* User info + logout */}
-      <div className="px-3 py-4 border-t" style={{ borderColor: "rgba(255,255,255,0.1)" }}>
-        <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg" style={{ background: "rgba(255,255,255,0.07)" }}>
-          <div
-            className="h-7 w-7 rounded-full text-[11px] font-semibold flex items-center justify-center shrink-0"
-            style={{ background: "rgba(255,255,255,0.15)", color: "white" }}
-          >
+      <div className="px-3 py-4 border-t border-white/10">
+        <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-white/[0.07]">
+          <div className="h-7 w-7 rounded-full text-[11px] font-semibold flex items-center justify-center shrink-0 bg-white/15 text-white">
             {initials || <User className="h-3.5 w-3.5" />}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[12px] font-medium truncate" style={{ color: "rgba(255,255,255,0.9)" }}>
+            <p className="text-[12px] font-medium truncate text-white/90">
               {userName}
             </p>
-            <p className="text-[10px] truncate" style={{ color: "rgba(255,255,255,0.4)" }}>{userEmail}</p>
+            <p className="text-[10px] truncate text-white/40">{userEmail}</p>
           </div>
           <button
             onClick={handleLogout}
             title="Se déconnecter"
-            className="transition-colors shrink-0"
-            style={{ color: "rgba(255,255,255,0.4)" }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.9)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.4)")}
+            aria-label="Se déconnecter"
+            className="text-white/40 hover:text-white/90 transition-colors shrink-0"
           >
             <LogOut className="h-3.5 w-3.5" />
           </button>
