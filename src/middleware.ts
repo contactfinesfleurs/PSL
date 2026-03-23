@@ -46,20 +46,25 @@ function isAllowedOrigin(req: NextRequest): boolean {
   const origin = req.headers.get("origin");
   if (!origin) return true; // no Origin → not a cross-origin browser request
 
-  // Derive the expected origin from the public app URL if configured,
-  // falling back to the request's own origin (reliable in edge runtime).
+  // 1. Check against NEXT_PUBLIC_APP_URL if configured
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-  const expected = appUrl
-    ? (() => {
-        try {
-          return new URL(appUrl).origin;
-        } catch {
-          return req.nextUrl.origin;
-        }
-      })()
-    : req.nextUrl.origin;
+  if (appUrl) {
+    try {
+      if (origin === new URL(appUrl).origin) return true;
+    } catch { /* ignore invalid URL */ }
+  }
 
-  return origin === expected;
+  // 2. Check against the Host header (most reliable on Vercel where
+  //    req.nextUrl.origin can differ from the public-facing domain).
+  const host = req.headers.get("host");
+  if (host) {
+    const proto = req.headers.get("x-forwarded-proto") || "https";
+    const hostOrigin = `${proto}://${host}`;
+    if (origin === hostOrigin) return true;
+  }
+
+  // 3. Fallback to req.nextUrl.origin
+  return origin === req.nextUrl.origin;
 }
 
 export async function middleware(req: NextRequest) {
