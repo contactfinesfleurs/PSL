@@ -79,7 +79,7 @@ export default function EventDetailPage({
       .then(setEvent);
     fetch("/api/products")
       .then((r) => r.json())
-      .then(setAllProducts);
+      .then((d) => setAllProducts(d.data ?? []));
     fetch(`/api/events/${id}/guests`)
       .then((r) => r.json())
       .then((data: EventGuest[]) => setGuests(Array.isArray(data) ? data : []));

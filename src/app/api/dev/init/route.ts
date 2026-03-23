@@ -11,6 +11,10 @@ const DEV_PROFILE_EMAIL = "dev@psl.local";
 const DEV_PROFILE_NAME = "Développeur";
 
 export async function GET() {
+  // Block unconditionally in production — never trust NODE_ENV alone
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Non disponible" }, { status: 404 });
+  }
   if (process.env.BYPASS_AUTH !== "1") {
     return NextResponse.json({ error: "Non disponible" }, { status: 404 });
   }
@@ -20,7 +24,7 @@ export async function GET() {
     return NextResponse.json({ ok: true, message: "Profil dev déjà présent", id: existing.id });
   }
 
-  const passwordHash = await hash("Dev-bypass-not-used", 10);
+  const passwordHash = await hash("Dev-bypass-not-used", 12);
   const profile = await prisma.profile.create({
     data: {
       id: DEV_PROFILE_ID,

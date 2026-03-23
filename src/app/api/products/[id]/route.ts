@@ -3,8 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { parseBodyJson, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 import { logAudit } from "@/lib/audit";
-import { deleteStoredFile } from "@/lib/storage";
+import { deleteStoredFile, isStoredPath } from "@/lib/storage";
 import { safeParseArray } from "@/lib/formatters";
+import { getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -20,8 +21,8 @@ const ProductPatchSchema = z.object({
   colors: z.array(z.string().max(100)).nullable().optional(),
   colorPrimary: z.string().max(10).nullable().optional(),
   colorSecondary: z.string().max(10).nullable().optional(),
-  sketchPaths: z.array(z.string()).nullable().optional(),
-  techPackPath: z.string().max(500).nullable().optional(),
+  sketchPaths: z.array(z.string().refine(isStoredPath, { message: "Invalid stored path" })).nullable().optional(),
+  techPackPath: z.string().max(500).refine(isStoredPath, { message: "Invalid stored path" }).nullable().optional(),
   sampleStatus: z.enum(["PENDING", "VALIDATED", "NOT_VALIDATED"]).optional(),
   description: z.string().max(5000).nullable().optional(),
   metaTags: z.array(z.string().max(100)).nullable().optional(),
@@ -34,6 +35,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const limited = await rateLimitResponse(`products:${getClientIp(req)}`, "loose");
+    if (limited) return limited;
     const profileId = getProfileId(req);
     if (!profileId) return unauthorizedResponse();
 
@@ -66,6 +69,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const limited = await rateLimitResponse(`products:${getClientIp(req)}`, "moderate");
+    if (limited) return limited;
     const profileId = getProfileId(req);
     if (!profileId) return unauthorizedResponse();
 
@@ -141,6 +146,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const limited = await rateLimitResponse(`products:${getClientIp(req)}`, "moderate");
+    if (limited) return limited;
     const profileId = getProfileId(req);
     if (!profileId) return unauthorizedResponse();
 
@@ -154,6 +161,12 @@ export async function DELETE(
     if (!existing) {
       return NextResponse.json({ error: "Produit introuvable" }, { status: 404 });
     }
+
+    // Delete associated files before soft-deleting (RGPD — right to erasure)
+    const filesToDelete: string[] = [];
+    if (existing.sketchPaths) filesToDelete.push(...safeParseArray(existing.sketchPaths));
+    if (existing.techPackPath) filesToDelete.push(existing.techPackPath);
+    await Promise.all(filesToDelete.map(deleteStoredFile));
 
     await prisma.product.update({ where: { id }, data: { deletedAt: new Date() } });
     logAudit("PRODUCT_DELETE", profileId, "product", id);

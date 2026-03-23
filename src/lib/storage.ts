@@ -37,6 +37,7 @@
 import { put, del as blobDel, get as blobGet } from "@vercel/blob";
 import { writeFile, mkdir, unlink } from "fs/promises";
 import path from "path";
+import "@/lib/env"; // validate required env vars at startup
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -108,20 +109,6 @@ export function isVercelBlobHostname(raw: string): boolean {
   }
 }
 
-/**
- * Returns true for raw Vercel Blob URLs that pre-date the private migration
- * (i.e. stored directly as https://…vercel-storage.com/…).
- *
- * Used ONLY in isTrustedImageUrl() for legacy compatibility.
- * Remove this function (and its call site) once migrate-blobs-to-private
- * has been successfully run against production.
- *
- * @deprecated Remove after running npm run blob:migrate in production.
- */
-export function isLegacyPublicBlobUrl(s: string): boolean {
-  return isVercelBlobHostname(s);
-}
-
 // ─── Store a file ─────────────────────────────────────────────────────────────
 
 export interface StoredFile {
@@ -149,10 +136,16 @@ export interface StoredFile {
  *   → Saves to private-uploads/<folder>/<timestamp>_<filename>
  *   → Returns /api/files/<folder>/<timestamp>_<filename>
  *
- * NOTE: This function does NOT validate MIME type or file size.
- *       Callers must check against ALLOWED_MIME_TYPES and MAX_FILE_SIZE first.
+ * Validates MIME type and file size as defense-in-depth (callers should also
+ * validate before calling, but this ensures the invariant is always enforced).
  */
 export async function storeFile(file: File, folder: string): Promise<StoredFile> {
+  if (!ALLOWED_MIME_TYPES.has(file.type)) {
+    throw new Error(`Type de fichier non autorisé : ${file.type}`);
+  }
+  if (file.size > MAX_FILE_SIZE) {
+    throw new Error(`Fichier trop volumineux (max ${MAX_FILE_SIZE / 1024 / 1024} Mo)`);
+  }
   const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
   const safeFolder = folder.replace(/[^a-zA-Z0-9_-]/g, "_");
   const timestamp = Date.now();

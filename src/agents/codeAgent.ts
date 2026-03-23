@@ -6,7 +6,15 @@
 import Anthropic from "@anthropic-ai/sdk";
 import * as fs from "fs";
 import * as path from "path";
-import type { AgentConfig, AgentResult, Finding } from "./types";
+import type { AgentConfig, AgentResult } from "./types";
+import {
+  sanitizeFileContent,
+  wrapUntrustedFile,
+  extractAndValidateFindings,
+  logInjectionAttempts,
+  logContextStats,
+  ANTI_INJECTION_SYSTEM_SUFFIX,
+} from "./promptSecurity";
 
 export const CODE_AGENT_CONFIG: AgentConfig = {
   role: "code",
@@ -63,7 +71,7 @@ Retourne un rapport Markdown structuré avec :
 }
 \`\`\`
 
-Fournis du code TypeScript complet, compilable et prêt à l'emploi. Utilise les patterns du projet existant.`,
+Fournis du code TypeScript complet, compilable et prêt à l'emploi. Utilise les patterns du projet existant.${ANTI_INJECTION_SYSTEM_SUFFIX}`,
   scope: ["src/app", "src/lib", "prisma"],
 };
 
@@ -89,49 +97,50 @@ function collectFiles(
 
 function buildCodeContext(projectRoot: string): string {
   const sections: string[] = [];
+  let totalBytes = 0;
+  let truncatedCount = 0;
+  let suspiciousCount = 0;
+
+  function processFile(relPath: string): void {
+    const absPath = path.join(projectRoot, relPath);
+    const raw = fs.readFileSync(absPath, "utf-8");
+    const { content, suspiciousPatterns, wasTruncated } = sanitizeFileContent(raw);
+
+    totalBytes += raw.length;
+    if (wasTruncated) truncatedCount++;
+    if (suspiciousPatterns.length > 0) {
+      suspiciousCount++;
+      logInjectionAttempts(CODE_AGENT_CONFIG.name, relPath, suspiciousPatterns);
+    }
+
+    sections.push(wrapUntrustedFile(relPath, content));
+  }
 
   // Prisma schema
-  const prismaSchema = path.join(projectRoot, "prisma/schema.prisma");
-  if (fs.existsSync(prismaSchema)) {
-    const content = fs.readFileSync(prismaSchema, "utf-8");
-    sections.push(`### prisma/schema.prisma\n\`\`\`prisma\n${content}\n\`\`\``);
-  }
+  const prismaSchema = "prisma/schema.prisma";
+  if (fs.existsSync(path.join(projectRoot, prismaSchema))) processFile(prismaSchema);
 
   // API routes
   const apiDir = path.join(projectRoot, "src/app/api");
-  const apiFiles = collectFiles(apiDir, projectRoot, [".ts"]);
-  for (const file of apiFiles) {
-    const content = fs.readFileSync(path.join(projectRoot, file), "utf-8");
-    sections.push(`### ${file}\n\`\`\`typescript\n${content}\n\`\`\``);
-  }
+  for (const file of collectFiles(apiDir, projectRoot, [".ts"])) processFile(file);
 
   // Lib utilities
   const libDir = path.join(projectRoot, "src/lib");
-  const libFiles = collectFiles(libDir, projectRoot, [".ts"]);
-  for (const file of libFiles) {
-    const content = fs.readFileSync(path.join(projectRoot, file), "utf-8");
-    sections.push(`### ${file}\n\`\`\`typescript\n${content}\n\`\`\``);
-  }
+  for (const file of collectFiles(libDir, projectRoot, [".ts"])) processFile(file);
 
   // Package.json for dependencies context
-  const pkgPath = path.join(projectRoot, "package.json");
-  if (fs.existsSync(pkgPath)) {
-    const content = fs.readFileSync(pkgPath, "utf-8");
-    sections.push(`### package.json\n\`\`\`json\n${content}\n\`\`\``);
-  }
+  const pkgPath = "package.json";
+  if (fs.existsSync(path.join(projectRoot, pkgPath))) processFile(pkgPath);
+
+  logContextStats(
+    CODE_AGENT_CONFIG.name,
+    sections.length,
+    totalBytes,
+    truncatedCount,
+    suspiciousCount
+  );
 
   return sections.join("\n\n");
-}
-
-function extractFindings(report: string): Finding[] {
-  const jsonMatch = report.match(/```json\s*([\s\S]*?)\s*```/);
-  if (!jsonMatch) return [];
-  try {
-    const parsed = JSON.parse(jsonMatch[1]);
-    return parsed.findings ?? [];
-  } catch {
-    return [];
-  }
 }
 
 export async function runCodeAgent(
@@ -140,6 +149,11 @@ export async function runCodeAgent(
   securityFindings?: string,
   designFindings?: string
 ): Promise<AgentResult> {
+  // Validate projectRoot to prevent reading arbitrary filesystem paths
+  if (!projectRoot || !fs.existsSync(projectRoot) || !fs.statSync(projectRoot).isDirectory()) {
+    throw new Error(`Invalid projectRoot: "${projectRoot}"`);
+  }
+
   const start = Date.now();
   const context = buildCodeContext(projectRoot);
 
@@ -166,25 +180,35 @@ ${context}
 
 Produis ton rapport technique complet avec du code d'implémentation prêt à l'emploi.`;
 
-  const stream = client.messages.stream({
-    model: "claude-sonnet-4-6",
-    max_tokens: 12000,
-    thinking: { type: "adaptive" },
-    system: CODE_AGENT_CONFIG.systemPrompt,
-    messages: [{ role: "user", content: userMessage }],
-  });
+  const stream = client.messages.stream(
+    {
+      model: "claude-sonnet-4-6",
+      max_tokens: 12000,
+      thinking: { type: "adaptive" },
+      system: CODE_AGENT_CONFIG.systemPrompt,
+      messages: [{ role: "user", content: userMessage }],
+    },
+    { signal: AbortSignal.timeout(8 * 60 * 1000) } // 8 min max
+  );
 
   process.stdout.write(`\n[${CODE_AGENT_CONFIG.name}] Analyse en cours`);
 
   let report = "";
-  for await (const event of stream) {
-    if (
-      event.type === "content_block_delta" &&
-      event.delta.type === "text_delta"
-    ) {
-      report += event.delta.text;
-      process.stdout.write(".");
+  try {
+    for await (const event of stream) {
+      if (
+        event.type === "content_block_delta" &&
+        event.delta.type === "text_delta"
+      ) {
+        report += event.delta.text;
+        process.stdout.write(".");
+      }
     }
+  } catch (e) {
+    if (e instanceof Error && e.name === "TimeoutError") {
+      throw new Error(`[${CODE_AGENT_CONFIG.name}] Timeout après 8 minutes`);
+    }
+    throw e;
   }
 
   const finalMessage = await stream.finalMessage();
@@ -194,7 +218,7 @@ Produis ton rapport technique complet avec du code d'implémentation prêt à l'
     role: "code",
     name: CODE_AGENT_CONFIG.name,
     report,
-    findings: extractFindings(report),
+    findings: extractAndValidateFindings(report),
     durationMs: Date.now() - start,
     inputTokens: finalMessage.usage.input_tokens,
     outputTokens: finalMessage.usage.output_tokens,

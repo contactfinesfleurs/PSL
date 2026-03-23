@@ -1,14 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { MAX_FILE_SIZE, ALLOWED_MIME_TYPES, storeFile } from "@/lib/storage";
 import { getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
+import { getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
+  // "moderate" tier: 20 uploads per 15 min per IP (photos/PDFs uploaded in batches)
+  const limited = await rateLimitResponse(`upload:${getClientIp(req)}`, "moderate");
+  if (limited) return limited;
+
   // Defense-in-depth: middleware already enforces auth, but we check here too
   // so a future middleware misconfiguration doesn't silently expose this endpoint.
   const profileId = getProfileId(req);
   if (!profileId) return unauthorizedResponse();
+
+  // Per-user rate limit (guards against shared IPs / multi-account abuse).
+  const userLimited = await rateLimitResponse(`upload:${profileId}`, "moderate");
+  if (userLimited) return userLimited;
 
   const formData = await req.formData();
   const file = formData.get("file") as File | null;

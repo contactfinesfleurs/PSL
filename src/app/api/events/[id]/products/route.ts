@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { parseBodyJson, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
+import { getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +21,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const limited = await rateLimitResponse(`event-products:${getClientIp(req)}`, "loose");
+    if (limited) return limited;
     const profileId = getProfileId(req);
     if (!profileId) return unauthorizedResponse();
 
@@ -79,6 +82,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const limited = await rateLimitResponse(`event-products:${getClientIp(req)}`, "loose");
+    if (limited) return limited;
     const profileId = getProfileId(req);
     if (!profileId) return unauthorizedResponse();
 

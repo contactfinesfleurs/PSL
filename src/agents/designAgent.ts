@@ -6,7 +6,15 @@
 import Anthropic from "@anthropic-ai/sdk";
 import * as fs from "fs";
 import * as path from "path";
-import type { AgentConfig, AgentResult, Finding } from "./types";
+import type { AgentConfig, AgentResult } from "./types";
+import {
+  sanitizeFileContent,
+  wrapUntrustedFile,
+  extractAndValidateFindings,
+  logInjectionAttempts,
+  logContextStats,
+  ANTI_INJECTION_SYSTEM_SUFFIX,
+} from "./promptSecurity";
 
 export const DESIGN_AGENT_CONFIG: AgentConfig = {
   role: "design",
@@ -49,7 +57,7 @@ Retourne un rapport Markdown structuré avec :
 }
 \`\`\`
 
-Sois inspirant et précis. Pense aux besoins d'un directeur artistique ou d'un chef de produit dans une maison de couture.`,
+Sois inspirant et précis. Pense aux besoins d'un directeur artistique ou d'un chef de produit dans une maison de couture.${ANTI_INJECTION_SYSTEM_SUFFIX}`,
   scope: ["src/components", "src/app"],
 };
 
@@ -71,14 +79,28 @@ function collectFiles(dir: string, root: string, extensions = [".tsx", ".ts"]): 
 
 function buildDesignContext(projectRoot: string): string {
   const sections: string[] = [];
+  let totalBytes = 0;
+  let truncatedCount = 0;
+  let suspiciousCount = 0;
+
+  function processFile(relPath: string): void {
+    const absPath = path.join(projectRoot, relPath);
+    const raw = fs.readFileSync(absPath, "utf-8");
+    const { content, suspiciousPatterns, wasTruncated } = sanitizeFileContent(raw);
+
+    totalBytes += raw.length;
+    if (wasTruncated) truncatedCount++;
+    if (suspiciousPatterns.length > 0) {
+      suspiciousCount++;
+      logInjectionAttempts(DESIGN_AGENT_CONFIG.name, relPath, suspiciousPatterns);
+    }
+
+    sections.push(wrapUntrustedFile(relPath, content));
+  }
 
   // All component files
   const componentsDir = path.join(projectRoot, "src/components");
-  const componentFiles = collectFiles(componentsDir, projectRoot);
-  for (const file of componentFiles) {
-    const content = fs.readFileSync(path.join(projectRoot, file), "utf-8");
-    sections.push(`### ${file}\n\`\`\`tsx\n${content}\n\`\`\``);
-  }
+  for (const file of collectFiles(componentsDir, projectRoot)) processFile(file);
 
   // App pages (layout + page files — not API routes)
   const appDir = path.join(projectRoot, "src/app");
@@ -87,39 +109,32 @@ function buildDesignContext(projectRoot: string): string {
       !f.includes("/api/") &&
       (f.endsWith("page.tsx") || f.endsWith("layout.tsx") || f.endsWith("page.ts"))
   );
-  for (const file of pageFiles) {
-    const content = fs.readFileSync(path.join(projectRoot, file), "utf-8");
-    sections.push(`### ${file}\n\`\`\`tsx\n${content}\n\`\`\``);
-  }
+  for (const file of pageFiles) processFile(file);
 
   // Global CSS / Tailwind config
   for (const cssFile of ["src/app/globals.css", "tailwind.config.ts", "tailwind.config.js"]) {
-    const filePath = path.join(projectRoot, cssFile);
-    if (fs.existsSync(filePath)) {
-      const content = fs.readFileSync(filePath, "utf-8");
-      const ext = path.extname(cssFile).slice(1);
-      sections.push(`### ${cssFile}\n\`\`\`${ext}\n${content}\n\`\`\``);
-    }
+    if (fs.existsSync(path.join(projectRoot, cssFile))) processFile(cssFile);
   }
+
+  logContextStats(
+    DESIGN_AGENT_CONFIG.name,
+    sections.length,
+    totalBytes,
+    truncatedCount,
+    suspiciousCount
+  );
 
   return sections.join("\n\n");
-}
-
-function extractFindings(report: string): Finding[] {
-  const jsonMatch = report.match(/```json\s*([\s\S]*?)\s*```/);
-  if (!jsonMatch) return [];
-  try {
-    const parsed = JSON.parse(jsonMatch[1]);
-    return parsed.findings ?? [];
-  } catch {
-    return [];
-  }
 }
 
 export async function runDesignAgent(
   client: Anthropic,
   projectRoot: string
 ): Promise<AgentResult> {
+  if (!projectRoot || !fs.existsSync(projectRoot) || !fs.statSync(projectRoot).isDirectory()) {
+    throw new Error(`Invalid projectRoot: "${projectRoot}"`);
+  }
+
   const start = Date.now();
   const context = buildDesignContext(projectRoot);
 
@@ -133,25 +148,35 @@ ${context}
 
 Produis ton rapport design/UX complet.`;
 
-  const stream = client.messages.stream({
-    model: "claude-sonnet-4-6",
-    max_tokens: 8000,
-    thinking: { type: "adaptive" },
-    system: DESIGN_AGENT_CONFIG.systemPrompt,
-    messages: [{ role: "user", content: userMessage }],
-  });
+  const stream = client.messages.stream(
+    {
+      model: "claude-sonnet-4-6",
+      max_tokens: 8000,
+      thinking: { type: "adaptive" },
+      system: DESIGN_AGENT_CONFIG.systemPrompt,
+      messages: [{ role: "user", content: userMessage }],
+    },
+    { signal: AbortSignal.timeout(5 * 60 * 1000) } // 5 min max
+  );
 
   process.stdout.write(`\n[${DESIGN_AGENT_CONFIG.name}] Analyse en cours`);
 
   let report = "";
-  for await (const event of stream) {
-    if (
-      event.type === "content_block_delta" &&
-      event.delta.type === "text_delta"
-    ) {
-      report += event.delta.text;
-      process.stdout.write(".");
+  try {
+    for await (const event of stream) {
+      if (
+        event.type === "content_block_delta" &&
+        event.delta.type === "text_delta"
+      ) {
+        report += event.delta.text;
+        process.stdout.write(".");
+      }
     }
+  } catch (e) {
+    if (e instanceof Error && e.name === "TimeoutError") {
+      throw new Error(`[${DESIGN_AGENT_CONFIG.name}] Timeout après 5 minutes`);
+    }
+    throw e;
   }
 
   const finalMessage = await stream.finalMessage();
@@ -161,7 +186,7 @@ Produis ton rapport design/UX complet.`;
     role: "design",
     name: DESIGN_AGENT_CONFIG.name,
     report,
-    findings: extractFindings(report),
+    findings: extractAndValidateFindings(report),
     durationMs: Date.now() - start,
     inputTokens: finalMessage.usage.input_tokens,
     outputTokens: finalMessage.usage.output_tokens,

@@ -12,7 +12,7 @@ export default function NewCampaignPage() {
   const [events, setEvents] = useState<Event[]>([]);
 
   useEffect(() => {
-    fetch("/api/events").then((r) => r.json()).then(setEvents);
+    fetch("/api/events").then((r) => r.json()).then((d) => setEvents(d.data ?? []));
   }, []);
 
   const [form, setForm] = useState({
@@ -94,7 +94,7 @@ export default function NewCampaignPage() {
           </select>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Date de début
@@ -119,7 +119,7 @@ export default function NewCampaignPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Budget

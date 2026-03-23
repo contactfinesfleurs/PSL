@@ -1,17 +1,9 @@
-/** @type {import('next').NextConfig} */
+import { withSentryConfig } from "@sentry/nextjs";
 
+/** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "*.vercel-storage.com",
-      },
-      {
-        protocol: "https",
-        hostname: "*.public.blob.vercel-storage.com",
-      },
-    ],
+    remotePatterns: [],
   },
   serverExternalPackages: ["@prisma/client", "prisma"],
 
@@ -39,37 +31,35 @@ const nextConfig = {
             value: "max-age=63072000; includeSubDomains; preload",
           },
           // Prevent cross-origin window interactions (e.g. Spectre-style attacks)
-          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
-          // Require all sub-resources to opt in to cross-origin isolation
-          { key: "Cross-Origin-Embedder-Policy", value: "require-corp" },
-          // Content Security Policy
-          // NOTE: 'unsafe-inline' is required for script-src because Next.js 15
-          // injects inline scripts for hydration and Server Components. Removing it
-          // would break the app. Using 'strict-dynamic' as a forward-compatible
-          // addition: browsers that support it will honour the hash/nonce list and
-          // ignore 'unsafe-inline'; older browsers fall back to 'unsafe-inline'.
-          // TODO: generate per-request nonces via middleware and remove
-          //       'unsafe-inline' entirely once nonce support is wired up.
-          {
-            key: "Content-Security-Policy",
-            value: [
-              "default-src 'self'",
-              // 'strict-dynamic' supersedes 'unsafe-inline' in supporting browsers
-              "script-src 'self' 'unsafe-inline' 'strict-dynamic'",
-              "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob: https://*.vercel-storage.com https://*.public.blob.vercel-storage.com",
-              "font-src 'self'",
-              "connect-src 'self' https://*.vercel-storage.com",
-              "object-src 'none'",
-              "base-uri 'self'",
-              "form-action 'self'",
-              "frame-ancestors 'self'",
-            ].join("; "),
-          },
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
+          // Prevent cross-origin reads of our resources (e.g. images) by
+          // other origins — complements frame-ancestors and CORS.
+          { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
+          // Content-Security-Policy is set dynamically per-request in
+          // src/middleware.ts with a per-request nonce so that
+          // 'strict-dynamic' can replace 'unsafe-inline' in modern browsers.
         ],
       },
     ];
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  org: "contactfinesfleurs",
+  project: "javascript-nextjs",
+
+  // Tunnel Sentry requests through /monitoring to bypass ad-blockers
+  tunnelRoute: "/monitoring",
+
+  // Upload source maps for readable production stack traces
+  // Requires SENTRY_AUTH_TOKEN env variable
+  sourcemaps: {
+    deleteSourcemapsAfterUpload: true,
+  },
+
+  // Disable Sentry telemetry
+  telemetry: false,
+
+  // Suppress build logs
+  silent: !process.env.CI,
+});
