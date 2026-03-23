@@ -271,7 +271,7 @@ export function MediaPlacementsSection({ productId, initialPlacements }: Props) 
                   >
                     {TYPE_LABELS[placement.type] ?? placement.type}
                   </span>
-                  {placement.url && (
+                  {placement.url && /^https?:\/\//i.test(placement.url) && (
                     <a
                       href={placement.url}
                       target="_blank"

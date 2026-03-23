@@ -72,18 +72,30 @@ export default function EventDetailPage({
   const [selectedProduct, setSelectedProduct] = useState("");
   const [lookNumber, setLookNumber] = useState("");
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     fetch(`/api/events/${id}`)
-      .then((r) => r.json())
-      .then(setEvent);
+      .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
+      .then(setEvent)
+      .catch(() => setLoadError(true));
     fetch("/api/products")
       .then((r) => r.json())
-      .then(setAllProducts);
+      .then(setAllProducts)
+      .catch(() => {});
     fetch(`/api/events/${id}/guests`)
       .then((r) => r.json())
-      .then((data: EventGuest[]) => setGuests(Array.isArray(data) ? data : []));
+      .then((data: EventGuest[]) => setGuests(Array.isArray(data) ? data : []))
+      .catch(() => {});
   }, [id]);
+
+  if (loadError) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-red-500">Impossible de charger cet événement.</div>
+      </div>
+    );
+  }
 
   if (!event) {
     return (

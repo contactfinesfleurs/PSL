@@ -50,15 +50,26 @@ export default function CampaignDetailPage({
   const [productNotes, setProductNotes] = useState("");
   const [addingProduct, setAddingProduct] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     fetch(`/api/campaigns/${id}`)
-      .then((r) => r.json())
-      .then(setCampaign);
+      .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
+      .then(setCampaign)
+      .catch(() => setLoadError(true));
     fetch("/api/products")
       .then((r) => r.json())
-      .then(setAllProducts);
+      .then(setAllProducts)
+      .catch(() => {});
   }, [id]);
+
+  if (loadError) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-red-500">Impossible de charger cette campagne.</div>
+      </div>
+    );
+  }
 
   if (!campaign) {
     return (
