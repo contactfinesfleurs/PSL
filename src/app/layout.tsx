@@ -30,7 +30,7 @@ export default async function RootLayout({
 
   return (
     <html lang="fr" className={inter.variable}>
-      <body className="font-sans bg-[#f4f4f6]">
+      <body className="font-sans bg-slate-50">
         <div className="flex h-screen">
           {session && (
             <Sidebar userName={session.name} userEmail={session.email} userRole={userRole} />
