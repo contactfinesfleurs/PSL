@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { FileUpload } from "@/components/ui/FileUpload";
 import { TagInput } from "@/components/ui/TagInput";
+import { safeParseArray } from "@/lib/utils";
 
 type Sample = {
   id: string;
@@ -45,15 +46,6 @@ type Product = {
   plannedLaunchAt: Date | null;
 };
 
-const parse = (s: string | null): string[] => {
-  if (!s) return [];
-  try {
-    return JSON.parse(s) as string[];
-  } catch {
-    return [];
-  }
-};
-
 const toDateInput = (d: Date | null): string =>
   d ? new Date(d).toISOString().split("T")[0] : "";
 
@@ -79,13 +71,13 @@ export function SampleTab({
   const [validating, setValidating] = useState(false);
   const [tracking, setTracking] = useState(false);
 
-  const samplePhotoPaths = useMemo(() => parse(sample?.samplePhotoPaths ?? null), [sample?.samplePhotoPaths]);
-  const detailPhotoPaths = useMemo(() => parse(sample?.detailPhotoPaths ?? null), [sample?.detailPhotoPaths]);
-  const reviewPhotoPaths = useMemo(() => parse(sample?.reviewPhotoPaths ?? null), [sample?.reviewPhotoPaths]);
-  const packshotPaths = useMemo(() => parse(sample?.packshotPaths ?? null), [sample?.packshotPaths]);
-  const definitiveColors = useMemo(() => parse(sample?.definitiveColors ?? null), [sample?.definitiveColors]);
-  const definitiveMaterials = useMemo(() => parse(sample?.definitiveMaterials ?? null), [sample?.definitiveMaterials]);
-  const metaTags = useMemo(() => parse(product.metaTags), [product.metaTags]);
+  const samplePhotoPaths = useMemo(() => safeParseArray(sample?.samplePhotoPaths ?? null), [sample?.samplePhotoPaths]);
+  const detailPhotoPaths = useMemo(() => safeParseArray(sample?.detailPhotoPaths ?? null), [sample?.detailPhotoPaths]);
+  const reviewPhotoPaths = useMemo(() => safeParseArray(sample?.reviewPhotoPaths ?? null), [sample?.reviewPhotoPaths]);
+  const packshotPaths = useMemo(() => safeParseArray(sample?.packshotPaths ?? null), [sample?.packshotPaths]);
+  const definitiveColors = useMemo(() => safeParseArray(sample?.definitiveColors ?? null), [sample?.definitiveColors]);
+  const definitiveMaterials = useMemo(() => safeParseArray(sample?.definitiveMaterials ?? null), [sample?.definitiveMaterials]);
+  const metaTags = useMemo(() => safeParseArray(product.metaTags), [product.metaTags]);
 
   const [form, setForm] = useState({
     // Supplier

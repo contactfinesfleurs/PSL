@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Save, RefreshCw } from "lucide-react";
-import { PRODUCT_FAMILIES, SEASONS, SIZE_RANGES, COLOR_CODES, generateReference } from "@/lib/utils";
+import { PRODUCT_FAMILIES, SEASONS, SIZE_RANGES, COLOR_CODES, generateReference, safeParseArray } from "@/lib/utils";
 import { TagInput } from "@/components/ui/TagInput";
 import { FileUpload } from "@/components/ui/FileUpload";
 
@@ -29,28 +29,19 @@ export function TechPackTab({ product }: { product: Product }) {
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const parse = (s: string | null) => {
-    if (!s) return [];
-    try {
-      return JSON.parse(s) as string[];
-    } catch {
-      return [];
-    }
-  };
-
   const [form, setForm] = useState({
     name: product.name,
     family: product.family,
     season: product.season,
     year: product.year,
     sizeRange: product.sizeRange,
-    sizes: parse(product.sizes),
-    materials: parse(product.materials),
-    colorPrimary: parse(product.colors)[0] ?? "",
-    colorSecondary: parse(product.colors)[1] ?? "",
+    sizes: safeParseArray(product.sizes),
+    materials: safeParseArray(product.materials),
+    colorPrimary: safeParseArray(product.colors)[0] ?? "",
+    colorSecondary: safeParseArray(product.colors)[1] ?? "",
     measurements: product.measurements ?? "",
     reference: product.reference ?? "",
-    sketchPaths: parse(product.sketchPaths),
+    sketchPaths: safeParseArray(product.sketchPaths),
     techPackPath: product.techPackPath,
   });
 
