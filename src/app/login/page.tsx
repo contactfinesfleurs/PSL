@@ -121,7 +121,7 @@ function LoginForm() {
             />
             {mode === "register" && (
               <p className="text-xs text-gray-400 mt-1">
-                Majuscule, chiffre et caractère spécial requis (ex&nbsp;: Abc1@xyz)
+                Minimum 8 caractères
               </p>
             )}
           </div>

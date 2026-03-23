@@ -11,13 +11,7 @@ export const dynamic = "force-dynamic";
 const RegisterSchema = z.object({
   name: z.string().min(1).max(100),
   email: z.string().email(),
-  password: z
-    .string()
-    .min(8)
-    .max(100)
-    .regex(/[A-Z]/, "Le mot de passe doit contenir au moins une majuscule")
-    .regex(/[0-9]/, "Le mot de passe doit contenir au moins un chiffre")
-    .regex(/[^A-Za-z0-9]/, "Le mot de passe doit contenir au moins un caractère spécial"),
+  password: z.string().min(8).max(100),
 });
 
 export async function POST(req: NextRequest) {
