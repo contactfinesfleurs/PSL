@@ -12,7 +12,7 @@ export default async function CampaignsPage() {
   const profileId = session?.profileId ?? "";
 
   const campaigns = await prisma.campaign.findMany({
-    where: { profileId },
+    where: { profileId, deletedAt: null },
     include: { products: true, event: true },
     orderBy: { createdAt: "desc" },
   });
@@ -22,9 +22,9 @@ export default async function CampaignsPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-end justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="text-5xl font-light text-gray-900 tracking-tight">
+          <h1 className="text-3xl sm:text-5xl font-light text-gray-900 tracking-tight">
             Campagnes
           </h1>
           <p className="text-sm text-gray-500 mt-2">

@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { parseBodyJson, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 import { PLACEMENT_TYPE_VALUES } from "@/lib/constants";
+import { isStoredPath } from "@/lib/storage";
+import { getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +13,7 @@ const PlacementCreateSchema = z.object({
   type: z.enum(PLACEMENT_TYPE_VALUES),
   publishedAt: z.string().datetime(),
   url: z.string().url().optional().nullable(),
-  screenshotPath: z.string().optional().nullable(),
+  screenshotPath: z.string().refine(isStoredPath, { message: "Invalid stored path" }).optional().nullable(),
   notes: z.string().max(1000).optional().nullable(),
   reach: z.number().int().positive().optional().nullable(),
   sampleLoanId: z.string().optional().nullable(),
@@ -22,6 +24,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const limited = await rateLimitResponse(`placements:${getClientIp(req)}`, "loose");
+    if (limited) return limited;
     const profileId = getProfileId(req);
     if (!profileId) return unauthorizedResponse();
 

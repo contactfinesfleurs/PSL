@@ -33,10 +33,21 @@ export function forbiddenResponse(message = "Accès interdit") {
  * if (!result.success) return result.response;
  * const data = result.data;
  */
+const MAX_JSON_BODY_BYTES = 512 * 1024; // 512 KB
+
 export async function parseBodyJson<T>(
   req: Request,
   schema: z.ZodSchema<T>
 ): Promise<{ success: true; data: T } | { success: false; response: NextResponse }> {
+  const contentLength = (req.headers as Headers).get("content-length");
+  const contentLengthNum = contentLength ? Number(contentLength) : NaN;
+  if (Number.isFinite(contentLengthNum) && contentLengthNum > MAX_JSON_BODY_BYTES) {
+    return {
+      success: false,
+      response: NextResponse.json({ error: "Corps de requête trop volumineux." }, { status: 413 }),
+    };
+  }
+
   let body: unknown;
   try {
     body = await req.json();
@@ -73,7 +84,7 @@ export async function parseBodyJson<T>(
 export function parsePagination(searchParams: URLSearchParams): { skip: number; take: number; page: number; limit: number } {
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1") || 1);
   const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "20") || 20));
-  return { skip: (page - 1) * limit, take: limit, page, limit }
+  return { skip: (page - 1) * limit, take: limit, page, limit };
 }
 
 /**

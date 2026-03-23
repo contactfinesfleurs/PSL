@@ -72,15 +72,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "17track API key not configured" }, { status: 500 });
     }
 
-    // Call 17track API
-    const res = await fetch("https://api.17track.net/track/v2.2/gettracklist", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "17token": apiKey,
-      },
-      body: JSON.stringify({ data: [{ number: trackingNumber }] }),
-    });
+    // Call 17track API — apiKey intentionally not referenced in any error/log path
+    let res: Response;
+    try {
+      res = await fetch("https://api.17track.net/track/v2.2/gettracklist", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "17token": apiKey,
+        },
+        body: JSON.stringify({ data: [{ number: trackingNumber }] }),
+      });
+    } catch {
+      console.error("[POST /api/track] External API unreachable");
+      return NextResponse.json({ error: "17track API error" }, { status: 502 });
+    }
 
     if (!res.ok) {
       return NextResponse.json({ error: "17track API error" }, { status: 502 });

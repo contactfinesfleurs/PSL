@@ -69,6 +69,19 @@ export const LOAN_STATUS_VALUES = ["SENT", "RETURNED", "LOST"] as const;
 export const PLACEMENT_TYPE_VALUES = ["PRINT", "DIGITAL", "SOCIAL", "TV", "PODCAST"] as const;
 export const PROFILE_ROLE_VALUES = ["SUPER_ADMIN", "ADMIN", "MEMBER"] as const;
 
+// ─── Common passwords blocklist (HIBP / NCSC top-100) ────────────────────────
+// Keep in sync with registration and password-reset validation schemas.
+
+export const COMMON_PASSWORDS = new Set([
+  "password","password1","password123","123456","12345678","123456789","1234567890",
+  "qwerty","qwerty123","azerty","azerty123","111111","000000","iloveyou","admin",
+  "welcome","monkey","dragon","master","letmein","login","pass","test","abc123",
+  "sunshine","princess","shadow","superman","michael","football","baseball","solo",
+  "charlie","donald","batman","trustno1","hello","jesus","ninja","mustang","access",
+  "696969","passw0rd","starwars","pokemon","2000","1111","12345","1q2w3e","1q2w3e4r",
+  "password!","p@ssword","p@ssw0rd","pass123","pass1234","qwerty!","qwerty1",
+]);
+
 // ─── Color codes ──────────────────────────────────────────────────────────────
 
 export const COLOR_CODES = [

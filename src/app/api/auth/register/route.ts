@@ -5,42 +5,50 @@ import { prisma } from "@/lib/prisma";
 import { signToken, setSessionCookie } from "@/lib/auth";
 import { parseBodyJson } from "@/lib/api-helpers";
 import { getClientIp, rateLimitResponse } from "@/lib/rate-limit";
+import { logAudit, logSecurityEvent } from "@/lib/audit";
+import { COMMON_PASSWORDS } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
 const RegisterSchema = z.object({
   name: z.string().min(1).max(100),
-  email: z.string().email(),
+  email: z.string().email().transform((e) => e.toLowerCase()),
   password: z
     .string()
     .min(8)
     .max(100)
     .regex(/[A-Z]/, "Le mot de passe doit contenir au moins une majuscule")
     .regex(/[0-9]/, "Le mot de passe doit contenir au moins un chiffre")
-    .regex(/[^A-Za-z0-9]/, "Le mot de passe doit contenir au moins un caractère spécial"),
+    .regex(/[^A-Za-z0-9]/, "Le mot de passe doit contenir au moins un caractère spécial")
+    .refine((p) => !COMMON_PASSWORDS.has(p.toLowerCase()), {
+      message: "Ce mot de passe est trop courant, veuillez en choisir un plus original",
+    }),
 });
 
 export async function POST(req: NextRequest) {
   try {
     // Rate limiting: max 5 attempts per IP per 15-minute window.
     const ip = getClientIp(req);
-    const limited = rateLimitResponse(ip);
+    const limited = await rateLimitResponse(`register:${ip}`);
     if (limited) return limited;
 
     const result = await parseBodyJson(req, RegisterSchema);
     if (!result.success) return result.response;
     const { name, email, password } = result.data;
 
+    // Hash first — ensures constant-time response regardless of whether the
+    // email is already registered, preventing timing-based email enumeration.
+    const passwordHash = await hash(password, 12);
+
     const existing = await prisma.profile.findUnique({ where: { email } });
     if (existing) {
       // Message volontairement vague pour éviter l'énumération d'emails
+      logSecurityEvent("REGISTER_DUPLICATE_EMAIL", null, { email, ip: getClientIp(req) });
       return NextResponse.json(
         { error: "Impossible de créer le compte avec ces informations" },
         { status: 409 }
       );
     }
-
-    const passwordHash = await hash(password, 12);
 
     const profile = await prisma.profile.create({
       data: { name, email, passwordHash },
@@ -50,9 +58,13 @@ export async function POST(req: NextRequest) {
       profileId: profile.id,
       email: profile.email,
       name: profile.name,
+      role: profile.role,
+      plan: "FREE",
     });
 
-    await setSessionCookie(token);
+    await setSessionCookie(token, profile.role ?? undefined);
+
+    logAudit("REGISTER_SUCCESS", profile.id, "profile", profile.id, { ip: getClientIp(req) });
 
     return NextResponse.json(
       { name: profile.name, email: profile.email },

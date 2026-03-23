@@ -30,6 +30,7 @@ type Product = {
   metaTags: string | null;
   plannedLaunchAt: Date | null;
   reference: string | null;
+  variantGroupId: string | null;
   samples: {
     id: string;
     samplePhotoPaths: string | null;

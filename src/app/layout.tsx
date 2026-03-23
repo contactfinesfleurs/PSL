@@ -1,11 +1,8 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/ui/Sidebar";
+import { MobileHeader } from "@/components/ui/MobileHeader";
 import { getSession } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
   title: "PSL — Product & Event Management",
@@ -18,24 +15,19 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const session = await getSession();
-
-  let userRole: string | null = null;
-  if (session) {
-    const profile = await prisma.profile.findUnique({
-      where: { id: session.profileId },
-      select: { role: true },
-    });
-    userRole = profile?.role ?? null;
-  }
+  const userRole = session?.role ?? null;
 
   return (
-    <html lang="fr" className={inter.variable}>
-      <body className="font-sans bg-slate-50">
-        <div className="flex h-screen">
+    <html lang="fr">
+      <body className="font-sans bg-[#f4f4f6]">
+        {session && (
+          <MobileHeader userName={session.name} userEmail={session.email} userRole={userRole} />
+        )}
+        <div className="md:flex md:h-screen">
           {session && (
-            <Sidebar userName={session.name} userEmail={session.email} userRole={userRole} />
+            <Sidebar userName={session.name} userEmail={session.email} userRole={userRole} plan={session.plan} />
           )}
-          <main className="flex-1 overflow-auto">
+          <main className={`flex-1 overflow-auto${session ? " pt-14 md:pt-0" : ""}`}>
             {children}
           </main>
         </div>

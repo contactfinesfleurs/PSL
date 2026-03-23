@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { escapeHtml, safeParseArray, isTrustedImageUrl } from "@/lib/utils";
+import { escapeHtml, safeParseArray, isTrustedImageUrl } from "@/lib/formatters";
 import { getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
+import { getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,9 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const rl = await rateLimitResponse(`pdf:${getClientIp(req)}`, "moderate");
+  if (rl) return rl;
+
   const profileId = getProfileId(req);
   if (!profileId) return unauthorizedResponse();
 

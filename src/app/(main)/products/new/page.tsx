@@ -125,7 +125,7 @@ export default function NewProductPage() {
         )}
 
         {/* Family + Season + Year */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">
               Famille <span className="text-red-400">*</span>
@@ -224,7 +224,7 @@ export default function NewProductPage() {
         </div>
 
         {/* Colors */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">
               Couleur principale

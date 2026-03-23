@@ -5,22 +5,22 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
+    --foreground: 240 10% 3.9%;
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 221 83% 53%;
-    --radius: 0.75rem;
+    --card-foreground: 240 10% 3.9%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5% 64.9%;
+    --radius: 1rem;
   }
 }
 
 @layer base {
   * {
-    border-color: rgb(226 232 240);
+    border-color: rgb(229 231 235);
   }
   body {
-    @apply bg-slate-50 text-gray-900 antialiased;
+    @apply bg-[#f4f4f6] text-gray-900 antialiased;
   }
 }
 

@@ -36,9 +36,9 @@ export default async function ProductsPage({
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-end justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="text-5xl font-light text-gray-900 tracking-tight">
+          <h1 className="text-3xl sm:text-5xl font-light text-gray-900 tracking-tight">
             Produits
           </h1>
           <p className="text-sm text-gray-500 mt-2">

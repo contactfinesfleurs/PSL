@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { generateSKU, generateReference } from "@/lib/generators";
 import { z } from "zod";
 import { parseBodyJson, validateEnum, getProfileId, unauthorizedResponse, parsePagination } from "@/lib/api-helpers";
 import { SAMPLE_STATUS_VALUES } from "@/lib/constants";
+import { getClientIp, rateLimitResponse } from "@/lib/rate-limit";
+import { checkPlanLimit } from "@/lib/plan-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +29,8 @@ const ProductCreateSchema = z.object({
 
 export async function GET(req: NextRequest) {
   try {
+    const limited = await rateLimitResponse(`products-list:${getClientIp(req)}`, "loose");
+    if (limited) return limited;
     const profileId = getProfileId(req);
     if (!profileId) return unauthorizedResponse();
 
@@ -39,6 +44,8 @@ export async function GET(req: NextRequest) {
     const family = rawFamily ? rawFamily.trim().slice(0, 100) || undefined : undefined;
     const season = rawSeason ? rawSeason.trim().slice(0, 100) || undefined : undefined;
     const { skip, take, page, limit } = parsePagination(searchParams);
+    // slim=1: skip sample relation — used by lightweight autocompletes (e.g. variant search)
+    const slim = searchParams.get("slim") === "1";
 
     const where = {
       profileId,
@@ -53,7 +60,8 @@ export async function GET(req: NextRequest) {
         where,
         // Only include the lightweight sample count needed for list display.
         // Deep relations (campaigns, events) are loaded on the detail route to avoid N+1.
-        include: { samples: true },
+        // slim=1 callers (e.g. variant autocomplete) skip this entirely.
+        ...(!slim ? { include: { samples: true } } : {}),
         orderBy: { createdAt: "desc" },
         skip,
         take,
@@ -76,21 +84,12 @@ export async function POST(req: NextRequest) {
     const profileId = getProfileId(req);
     if (!profileId) return unauthorizedResponse();
 
+    const limitReached = await checkPlanLimit(profileId, "products");
+    if (limitReached) return limitReached;
+
     const result = await parseBodyJson(req, ProductCreateSchema);
     if (!result.success) return result.response;
     const data = result.data;
-
-    // Count existing products in this family+season+year to generate index
-    const count = await prisma.product.count({
-      where: { profileId, family: data.family, season: data.season, year: data.year },
-    });
-
-    const sku = generateSKU({
-      family: data.family,
-      season: data.season,
-      year: data.year,
-      index: count + 1,
-    });
 
     const colorCodes = [data.colorPrimary, data.colorSecondary].filter(Boolean) as string[];
 
@@ -102,24 +101,58 @@ export async function POST(req: NextRequest) {
       colorPrimary: data.colorPrimary ?? null,
     });
 
-    const product = await prisma.product.create({
-      data: {
-        profileId,
-        name: data.name,
-        sku,
-        reference,
-        family: data.family,
-        season: data.season,
-        year: data.year,
-        sizeRange: data.sizeRange,
-        sizes: JSON.stringify(data.sizes),
-        measurements: data.measurements ?? null,
-        materials: data.materials ? JSON.stringify(data.materials) : null,
-        colors: colorCodes.length > 0 ? JSON.stringify(colorCodes) : null,
-      },
-    });
+    // Retry loop to handle SKU collisions caused by concurrent inserts.
+    // The count + create are wrapped in a serializable transaction so PostgreSQL
+    // guarantees no other transaction can insert between the count read and the
+    // create. If two concurrent transactions conflict, one gets P2034
+    // (serialization failure) and retries — the next read will see the committed
+    // row and pick the correct next index without needing an offset.
+    let product;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        product = await prisma.$transaction(async (tx) => {
+          const count = await tx.product.count({
+            where: { profileId, family: data.family, season: data.season, year: data.year },
+          });
+          const sku = generateSKU({
+            family: data.family,
+            season: data.season,
+            year: data.year,
+            index: count + 1,
+          });
+          return tx.product.create({
+            data: {
+              profileId,
+              name: data.name,
+              sku,
+              reference,
+              family: data.family,
+              season: data.season,
+              year: data.year,
+              sizeRange: data.sizeRange,
+              sizes: JSON.stringify(data.sizes),
+              measurements: data.measurements ?? null,
+              materials: data.materials ? JSON.stringify(data.materials) : null,
+              colors: colorCodes.length > 0 ? JSON.stringify(colorCodes) : null,
+            },
+          });
+        }, { isolationLevel: "Serializable" });
+        break; // success
+      } catch (e) {
+        // P2002 = unique constraint violation on sku
+        // P2034 = serialization failure (concurrent transaction conflict) — retry
+        if (
+          e instanceof Prisma.PrismaClientKnownRequestError &&
+          (e.code === "P2002" || e.code === "P2034") &&
+          attempt < 4
+        ) {
+          continue;
+        }
+        throw e;
+      }
+    }
 
-    return NextResponse.json(product, { status: 201 });
+    return NextResponse.json(product!, { status: 201 });
   } catch (error) {
     console.error('[POST /api/products]', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

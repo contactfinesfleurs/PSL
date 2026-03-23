@@ -1,15 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { compare } from "bcryptjs";
+import { hash, compare } from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { signToken, setSessionCookie } from "@/lib/auth";
 import { parseBodyJson } from "@/lib/api-helpers";
 import { getClientIp, rateLimitResponse } from "@/lib/rate-limit";
+import { logAudit, logSecurityEvent } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
+// Pre-compute a valid bcrypt hash at module load time so that login attempts
+// for non-existent emails take the same time as those for existing ones,
+// preventing email enumeration via response-time differences.
+const DUMMY_HASH_PROMISE = hash("psl_dummy_placeholder_not_a_real_password", 12);
+
 const LoginSchema = z.object({
-  email: z.string().email(),
+  email: z.string().email().transform((e) => e.toLowerCase()),
   password: z.string().min(1),
 });
 
@@ -17,7 +23,7 @@ export async function POST(req: NextRequest) {
   try {
     // Rate limiting: max 5 attempts per IP per 15-minute window.
     const ip = getClientIp(req);
-    const limited = rateLimitResponse(ip);
+    const limited = await rateLimitResponse(`login:${ip}`);
     if (limited) return limited;
 
     const result = await parseBodyJson(req, LoginSchema);
@@ -26,15 +32,13 @@ export async function POST(req: NextRequest) {
 
     const profile = await prisma.profile.findUnique({ where: { email } });
 
-    if (!profile) {
-      return NextResponse.json(
-        { error: "Email ou mot de passe incorrect" },
-        { status: 401 }
-      );
-    }
+    // Always run bcrypt compare — even when the profile doesn't exist — so that
+    // an attacker cannot enumerate valid emails via response-time differences.
+    const dummyHash = await DUMMY_HASH_PROMISE;
+    const valid = await compare(password, profile?.passwordHash ?? dummyHash);
 
-    const valid = await compare(password, profile.passwordHash);
-    if (!valid) {
+    if (!profile || !valid) {
+      logSecurityEvent("LOGIN_FAILURE", null, { email, ip: getClientIp(req) });
       return NextResponse.json(
         { error: "Email ou mot de passe incorrect" },
         { status: 401 }
@@ -45,9 +49,13 @@ export async function POST(req: NextRequest) {
       profileId: profile.id,
       email: profile.email,
       name: profile.name,
+      role: profile.role,
+      plan: profile.plan,
     });
 
-    await setSessionCookie(token);
+    await setSessionCookie(token, profile.role ?? undefined);
+
+    logAudit("LOGIN_SUCCESS", profile.id, "profile", profile.id, { ip: getClientIp(req) });
 
     return NextResponse.json({ name: profile.name, email: profile.email });
   } catch (error) {

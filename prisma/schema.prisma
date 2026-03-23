@@ -1,6 +1,5 @@
 generator client {
-  provider      = "prisma-client-js"
-  binaryTargets = ["native", "rhel-openssl-1.0.x"]
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -45,12 +44,68 @@ model Profile {
   teamId String?
   team   Team?       @relation(fields: [teamId], references: [id], onDelete: SetNull)
 
+  // Set to the current timestamp when the user changes their password (H-16).
+  // Any JWT issued before this moment is considered invalid.
+  tokensInvalidatedAt DateTime?
+
+  // Plan & Billing
+  plan             String  @default("FREE") // FREE | PRO
+  stripeCustomerId String? @unique
+
   products  Product[]
   events    Event[]
   campaigns Campaign[]
 
+  ownedProjects        Project[]
+  projectMemberships   ProjectCollaborator[]
+  projectContributions ProjectContribution[]
+  sentInvitations      ProjectInvitation[] @relation("InvitationsSent")
+  receivedInvitations  ProjectInvitation[] @relation("InvitationsReceived")
+  passwordResetTokens  PasswordResetToken[]
+  productShares        ProductShare[]
+  subscription         Subscription?
+  teamMembers          TeamMember[]
+  memberOf             TeamMember[]  @relation("MemberProfile")
+
   @@index([role])
   @@index([teamId])
+}
+
+// ─── SUBSCRIPTION (STRIPE) ──────────────────────────────────────────────────
+
+model Subscription {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  profileId String  @unique
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  stripeSubscriptionId String   @unique
+  stripePriceId        String
+  status               String   // active | past_due | canceled | incomplete | trialing
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  cancelAtPeriodEnd    Boolean  @default(false)
+}
+
+// ─── TEAM MEMBER (COLLABORATION) ────────────────────────────────────────────
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  ownerId String
+  owner   Profile @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  memberId String
+  member   Profile @relation("MemberProfile", fields: [memberId], references: [id], onDelete: Cascade)
+
+  role String @default("VIEWER") // VIEWER | EDITOR
+
+  @@unique([ownerId, memberId])
+  @@index([ownerId])
+  @@index([memberId])
 }
 
 // ─── PRODUCT ─────────────────────────────────────────────────────────────────
@@ -94,17 +149,26 @@ model Product {
   sampleStatus    String    @default("PENDING")
   plannedLaunchAt DateTime?
 
+  // Variants — products sharing the same variantGroupId are color variants of each other
+  variantGroupId String?
+
   // Relations
   samples    Sample[]
   campaigns  CampaignProduct[]
   events     EventProduct[]
   loans      SampleLoan[]
   placements MediaPlacement[]
+  shares     ProductShare[]
+  projectLinks    ProjectProduct[]
+  projectContributions ProjectContribution[]
 
   @@index([profileId])
+  @@index([profileId, deletedAt])
   @@index([profileId, season, year])
   @@index([profileId, family])
   @@index([sampleStatus])
+  @@index([variantGroupId])
+  @@index([profileId, variantGroupId])
 }
 
 // ─── SAMPLE ──────────────────────────────────────────────────────────────────
@@ -332,6 +396,46 @@ model CampaignProduct {
   @@unique([campaignId, productId])
 }
 
+// ─── PRODUCT SHARE ────────────────────────────────────────────────────────────
+// Allows an external user to view a product and add photos/notes via a short code.
+
+model ProductShare {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  code      String   @unique // short alphanumeric code, e.g. "a3f9c12b"
+  label     String?  // optional description, e.g. "Lien pour Valentino"
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  profileId String   // owner who created the share
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  expiresAt DateTime? // optional expiry
+
+  contributions ShareContribution[]
+
+  @@index([productId])
+  @@index([profileId])
+}
+
+model ShareContribution {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  shareId String
+  share   ProductShare @relation(fields: [shareId], references: [id], onDelete: Cascade)
+
+  authorName String?  // optional display name provided by contributor
+  photoPaths String?  // JSON array of stored paths
+  note       String?  // optional text note
+
+  @@index([shareId])
+  @@index([shareId, createdAt])
+}
+
 model EventProduct {
   id        String   @id @default(cuid())
   eventId   String
@@ -344,4 +448,130 @@ model EventProduct {
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, productId])
+}
+
+// ─── PROJECT (COLLABORATIVE COLLECTIONS) ─────────────────────────────────────
+// An authenticated profile creates a Project (e.g. SS26), adds products to it,
+// then shares a join code with collaborators. Collaborators can view all products
+// in the project and add photos/notes (contributions) but cannot edit or delete.
+
+model Project {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name        String
+  description String?
+  code        String  @unique // join code, e.g. "a3f9c12b" (8 hex chars)
+
+  profileId String  // owner
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  products      ProjectProduct[]
+  collaborators ProjectCollaborator[]
+  contributions ProjectContribution[]
+  invitations   ProjectInvitation[]
+
+  @@index([profileId])
+}
+
+model ProjectProduct {
+  id        String   @id @default(cuid())
+  addedAt   DateTime @default(now())
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, productId])
+  @@index([projectId])
+  @@index([productId])
+}
+
+model ProjectCollaborator {
+  id       String   @id @default(cuid())
+  joinedAt DateTime @default(now())
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  profileId String
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, profileId])
+  @@index([projectId])
+  @@index([profileId])
+}
+
+model ProjectContribution {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  profileId String   // collaborator who contributed
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  photoPaths String? // JSON array of stored paths
+  note       String?
+
+  @@index([projectId])
+  @@index([productId])
+  @@index([profileId])
+}
+
+model ProjectInvitation {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  invitedByProfileId String
+  invitedByProfile   Profile @relation("InvitationsSent", fields: [invitedByProfileId], references: [id], onDelete: Cascade)
+
+  invitedEmail     String   // email address of the invitee
+  invitedProfileId String?  // set if the email matches a registered profile
+  invitedProfile   Profile? @relation("InvitationsReceived", fields: [invitedProfileId], references: [id], onDelete: SetNull)
+
+  status    String    @default("PENDING") // PENDING | ACCEPTED | DECLINED
+  expiresAt DateTime? // invitation expires after this date (null = never)
+
+  @@unique([projectId, invitedEmail])
+  @@index([projectId])
+  @@index([invitedEmail])
+  @@index([invitedProfileId])
+  @@index([expiresAt])
+}
+
+// ─── REVOKED TOKEN ────────────────────────────────────────────────────────────
+// Tracks JWT IDs (jti) that have been revoked on logout before their expiry.
+
+model RevokedToken {
+  id        String   @id @default(cuid())
+  jti       String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+// ─── PASSWORD RESET TOKEN ─────────────────────────────────────────────────────
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  profileId String
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  profile   Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
 }

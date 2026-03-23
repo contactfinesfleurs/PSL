@@ -22,9 +22,9 @@ export default async function EventsPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-end justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="text-5xl font-light text-gray-900 tracking-tight">
+          <h1 className="text-3xl sm:text-5xl font-light text-gray-900 tracking-tight">
             Événements
           </h1>
           <p className="text-sm text-gray-500 mt-2">
@@ -84,7 +84,7 @@ export default async function EventsPage() {
                   </span>
                 </div>
               </div>
-              <div className="flex items-center gap-4 ml-4 shrink-0 text-xs text-gray-400">
+              <div className="hidden sm:flex items-center gap-4 ml-4 shrink-0 text-xs text-gray-400">
                 <span>{event.products.length} produit(s)</span>
                 <span>{event.campaigns.length} campagne(s)</span>
               </div>

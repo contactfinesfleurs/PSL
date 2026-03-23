@@ -57,7 +57,7 @@ export default function CampaignDetailPage({
       .then(setCampaign);
     fetch("/api/products")
       .then((r) => r.json())
-      .then(setAllProducts);
+      .then((d) => setAllProducts(d.data ?? []));
   }, [id]);
 
   if (!campaign) {

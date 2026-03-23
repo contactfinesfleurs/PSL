@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { Upload, X, File as FileIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { isTrustedImageUrl } from "@/lib/formatters";
 
 interface FileUploadProps {
   folder?: string;
@@ -116,7 +117,7 @@ export function FileUpload({
       {/* Preview */}
       {paths.length > 0 && (
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-          {paths.map((p) => (
+          {paths.filter(isTrustedImageUrl).map((p) => (
             <div key={p} className="relative group">
               {isImage(p) ? (
                 // eslint-disable-next-line @next/next/no-img-element

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { parseBodyJson } from "@/lib/api-helpers";
 import { requireAdmin } from "@/lib/admin-auth";
 import { logAudit } from "@/lib/audit";
+import { getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 import { PROFILE_ROLE_VALUES } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +30,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const limited = await rateLimitResponse(`admin-profiles-id:${getClientIp(req)}`, "strict");
+    if (limited) return limited;
     const auth = await requireAdmin(req);
     if (!auth.ok) return auth.response;
 
@@ -87,7 +90,18 @@ export async function PATCH(
       select: SAFE_PROFILE_SELECT,
     });
 
-    logAudit("ADMIN_PROFILE_PATCH", auth.profileId, "profile", id, { fields: Object.keys(body) });
+    // Build a detailed audit delta for sensitive fields (role, teamId)
+    const auditDelta: Record<string, { old: unknown; new: unknown }> = {};
+    if (body.role !== undefined && body.role !== target.role) {
+      auditDelta.role = { old: target.role, new: body.role };
+    }
+    if (body.teamId !== undefined && body.teamId !== target.teamId) {
+      auditDelta.teamId = { old: target.teamId, new: body.teamId };
+    }
+    logAudit("ADMIN_PROFILE_PATCH", auth.profileId, "profile", id, {
+      fields: Object.keys(body),
+      ...(Object.keys(auditDelta).length > 0 && { changes: auditDelta }),
+    });
 
     return NextResponse.json(updated);
   } catch (error) {

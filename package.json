@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "prisma db push --accept-data-loss && prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
@@ -17,13 +17,19 @@
     "agents:no-code": "tsx scripts/run-agents.ts --no-code",
     "blob:migrate": "tsx scripts/migrate-blobs-to-private.ts",
     "blob:migrate:dry": "tsx scripts/migrate-blobs-to-private.ts --dry-run",
-    "admin:promote": "tsx scripts/make-super-admin.ts"
+    "admin:promote": "tsx scripts/make-super-admin.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
+    "@logtail/node": "^0.5.8",
     "@prisma/client": "^5.22.0",
     "@react-pdf/renderer": "^4.0.0",
+    "@sentry/nextjs": "^10.43.0",
     "@types/bcryptjs": "^2.4.6",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.37.0",
     "@vercel/blob": "^2.3.0",
     "autoprefixer": "^10.4.27",
     "bcryptjs": "^3.0.3",
@@ -31,10 +37,12 @@
     "date-fns": "^3.6.0",
     "jose": "^6.2.1",
     "lucide-react": "^0.475.0",
-    "next": "^15.2.0",
+    "next": "^16.1.7",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-dropzone": "^14.4.0",
+    "resend": "^6.9.3",
+    "stripe": "^20.4.1",
     "tailwind-merge": "^2.6.0",
     "zod": "^4.3.6"
   },
@@ -48,6 +56,7 @@
     "prisma": "^5.22.0",
     "tailwindcss": "^3.4.1",
     "tsx": "^4.21.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.0"
   }
 }

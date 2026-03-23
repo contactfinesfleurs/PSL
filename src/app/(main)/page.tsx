@@ -44,68 +44,64 @@ export default async function DashboardPage() {
       <div className="space-y-10">
         {/* Header */}
         <div>
-          <h1 className="text-4xl font-semibold text-gray-900 tracking-tight">
+          <h1 className="text-3xl sm:text-5xl font-light text-gray-900 tracking-tight">
             Vue d&apos;ensemble
           </h1>
-          <p className="mt-1.5 text-sm text-gray-500">
+          <p className="mt-2 text-sm text-gray-500">
             Bienvenue sur PSL Studio
           </p>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           <StatCard
             label="Produits"
             value={productCount}
-            icon={<Package className="h-5 w-5" />}
+            icon={<Package className="h-5 w-5 text-gray-400" />}
             href="/products"
-            color="blue"
           />
           <StatCard
             label="Événements"
             value={eventCount}
-            icon={<Calendar className="h-5 w-5" />}
+            icon={<Calendar className="h-5 w-5 text-gray-400" />}
             href="/events"
-            color="violet"
           />
           <StatCard
             label="Campagnes"
             value={campaignCount}
-            icon={<Tag className="h-5 w-5" />}
+            icon={<Tag className="h-5 w-5 text-gray-400" />}
             href="/campaigns"
-            color="amber"
           />
           <StatCard
             label="Validés"
             value={validatedCount}
-            icon={<CheckCircle className="h-5 w-5" />}
+            icon={<CheckCircle className="h-5 w-5 text-gray-400" />}
             href="/products?status=VALIDATED"
-            color="emerald"
           />
         </div>
 
         {/* Recent Products & Upcoming Events */}
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Recent Products */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-              <h2 className="text-sm font-semibold text-gray-900">
+          <div className="bg-white rounded-2xl border border-gray-200">
+            <div className="flex items-center justify-between px-6 py-4">
+              <h2 className="text-sm font-medium text-gray-900">
                 Produits récents
               </h2>
               <Link
                 href="/products"
-                className="text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors"
+                className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
               >
-                Voir tout →
+                Voir tout
               </Link>
             </div>
-            <div className="divide-y divide-slate-100">
+            <div className="border-t border-gray-100 divide-y divide-gray-100">
               {recentProducts.length === 0 ? (
                 <p className="px-6 py-8 text-sm text-gray-400 text-center">
                   Aucun produit encore.{" "}
                   <Link
                     href="/products/new"
-                    className="text-blue-600 hover:underline"
+                    className="text-indigo-600 hover:underline"
                   >
                     Créer le premier
                   </Link>
@@ -115,7 +111,7 @@ export default async function DashboardPage() {
                   <Link
                     key={product.id}
                     href={`/products/${product.id}`}
-                    className="flex items-center justify-between px-6 py-3.5 hover:bg-slate-50 transition-colors"
+                    className="flex items-center justify-between px-6 py-3.5 hover:bg-gray-50 transition-colors"
                   >
                     <div>
                       <p className="text-sm font-medium text-gray-900">
@@ -133,25 +129,25 @@ export default async function DashboardPage() {
           </div>
 
           {/* Upcoming Events */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-              <h2 className="text-sm font-semibold text-gray-900">
+          <div className="bg-white rounded-2xl border border-gray-200">
+            <div className="flex items-center justify-between px-6 py-4">
+              <h2 className="text-sm font-medium text-gray-900">
                 Événements à venir
               </h2>
               <Link
                 href="/events"
-                className="text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors"
+                className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
               >
-                Voir tout →
+                Voir tout
               </Link>
             </div>
-            <div className="divide-y divide-slate-100">
+            <div className="border-t border-gray-100 divide-y divide-gray-100">
               {upcomingEvents.length === 0 ? (
                 <p className="px-6 py-8 text-sm text-gray-400 text-center">
                   Aucun événement à venir.{" "}
                   <Link
                     href="/events/new"
-                    className="text-blue-600 hover:underline"
+                    className="text-indigo-600 hover:underline"
                   >
                     Créer un événement
                   </Link>
@@ -161,7 +157,7 @@ export default async function DashboardPage() {
                   <Link
                     key={event.id}
                     href={`/events/${event.id}`}
-                    className="flex items-center justify-between px-6 py-3.5 hover:bg-slate-50 transition-colors"
+                    className="flex items-center justify-between px-6 py-3.5 hover:bg-gray-50 transition-colors"
                   >
                     <div>
                       <p className="text-sm font-medium text-gray-900">
@@ -189,7 +185,7 @@ export default async function DashboardPage() {
     return (
       <div className="space-y-8">
         <div>
-          <h1 className="text-4xl font-semibold text-gray-900 tracking-tight">
+          <h1 className="text-3xl sm:text-5xl font-light text-gray-900 tracking-tight">
             Vue d&apos;ensemble
           </h1>
         </div>
@@ -221,14 +217,23 @@ export default async function DashboardPage() {
             )}
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 opacity-40 pointer-events-none select-none">
+        <div className="grid grid-cols-2 gap-5 sm:grid-cols-4 opacity-40 pointer-events-none select-none">
           {[
-            { label: "Produits", icon: Package, color: "blue" as const },
-            { label: "Événements", icon: Calendar, color: "violet" as const },
-            { label: "Campagnes", icon: Tag, color: "amber" as const },
-            { label: "Validés", icon: CheckCircle, color: "emerald" as const },
-          ].map(({ label, icon: Icon, color }) => (
-            <StatCard key={label} label={label} value={0} icon={<Icon className="h-5 w-5" />} href="#" color={color} />
+            { label: "Produits", icon: Package },
+            { label: "Événements", icon: Calendar },
+            { label: "Campagnes", icon: Tag },
+            { label: "Validés", icon: CheckCircle },
+          ].map(({ label, icon: Icon }) => (
+            <div
+              key={label}
+              className="bg-white rounded-2xl border border-gray-200 p-6"
+            >
+              <Icon className="h-5 w-5 text-gray-400" />
+              <div className="mt-4">
+                <p className="text-4xl font-light text-gray-900">—</p>
+                <p className="text-sm text-gray-500 mt-1">{label}</p>
+              </div>
+            </div>
           ))}
         </div>
       </div>
@@ -236,36 +241,24 @@ export default async function DashboardPage() {
   }
 }
 
-const colorMap = {
-  blue:    { bg: "bg-blue-50",    icon: "text-blue-600",    border: "border-blue-100" },
-  violet:  { bg: "bg-violet-50",  icon: "text-violet-600",  border: "border-violet-100" },
-  amber:   { bg: "bg-amber-50",   icon: "text-amber-600",   border: "border-amber-100" },
-  emerald: { bg: "bg-emerald-50", icon: "text-emerald-600", border: "border-emerald-100" },
-};
-
 function StatCard({
   label,
   value,
   icon,
   href,
-  color,
 }: {
   label: string;
   value: number;
   icon: React.ReactNode;
   href: string;
-  color: keyof typeof colorMap;
 }) {
-  const c = colorMap[color];
   return (
     <Link href={href}>
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 hover:border-slate-300 hover:shadow-md transition-all duration-200">
-        <div className={`inline-flex items-center justify-center h-10 w-10 rounded-xl ${c.bg} ${c.icon} ${c.border} border`}>
-          {icon}
-        </div>
+      <div className="bg-white rounded-2xl border border-gray-200 p-6 hover:border-gray-300 transition-colors">
+        {icon}
         <div className="mt-4">
-          <p className="text-3xl font-semibold text-gray-900">{value}</p>
-          <p className="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wide">{label}</p>
+          <p className="text-4xl font-light text-gray-900">{value}</p>
+          <p className="text-sm text-gray-500 mt-1">{label}</p>
         </div>
       </div>
     </Link>

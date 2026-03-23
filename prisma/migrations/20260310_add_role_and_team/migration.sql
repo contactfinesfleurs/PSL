@@ -1,26 +1,7 @@
--- CreateEnum
-CREATE TYPE "ProfileRole" AS ENUM ('SUPER_ADMIN', 'ADMIN', 'MEMBER');
-
--- CreateTable
-CREATE TABLE "Team" (
-    "id" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-    "name" TEXT NOT NULL,
-    "description" TEXT,
-
-    CONSTRAINT "Team_pkey" PRIMARY KEY ("id")
-);
-
--- AlterTable
-ALTER TABLE "Profile" ADD COLUMN "role" "ProfileRole" NOT NULL DEFAULT 'MEMBER';
-ALTER TABLE "Profile" ADD COLUMN "teamId" TEXT;
-
--- CreateIndex
-CREATE INDEX "Profile_role_idx" ON "Profile"("role");
-
--- CreateIndex
-CREATE INDEX "Profile_teamId_idx" ON "Profile"("teamId");
-
--- AddForeignKey
-ALTER TABLE "Profile" ADD CONSTRAINT "Profile_teamId_fkey" FOREIGN KEY ("teamId") REFERENCES "Team"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+-- Migration: add_role_and_team
+-- Ces changements (Team, ProfileRole, role, teamId) ont été intégrés
+-- directement dans la migration initiale (00000000000000_init).
+-- Ce fichier existe uniquement pour résoudre l'entrée échouée dans
+-- _prisma_migrations. Il est marqué comme appliqué via :
+--   prisma migrate resolve --applied 20260310_add_role_and_team
+-- Aucune instruction SQL n'est nécessaire ici.

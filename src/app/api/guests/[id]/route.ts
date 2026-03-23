@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { parseBodyJson, getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 import { GUEST_CATEGORY_VALUES, RSVP_STATUS_VALUES } from "@/lib/constants";
+import { logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +39,7 @@ export async function PATCH(
     // Verify ownership via event.profileId
     const guest = await prisma.eventGuest.findFirst({
       where: { id },
-      include: { event: { select: { profileId: true } } },
+      include: { event: { select: { id: true, profileId: true } } },
     });
     if (!guest || guest.event.profileId !== profileId) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -72,6 +73,8 @@ export async function PATCH(
       },
     });
 
+    logAudit("GUEST_PATCH", profileId, "event", guest.event.id, { guestId: id });
+
     return NextResponse.json(updated);
   } catch (error) {
     console.error('[PATCH /api/guests/[id]]', error);
@@ -95,13 +98,14 @@ export async function DELETE(
     // Verify ownership via event.profileId
     const guest = await prisma.eventGuest.findFirst({
       where: { id },
-      include: { event: { select: { profileId: true } } },
+      include: { event: { select: { id: true, profileId: true } } },
     });
     if (!guest || guest.event.profileId !== profileId) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
     await prisma.eventGuest.delete({ where: { id } });
+    logAudit("GUEST_DELETE", profileId, "event", guest.event.id, { guestId: id });
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('[DELETE /api/guests/[id]]', error);

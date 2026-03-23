@@ -1,20 +1,18 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 import spec from "../openapi.json";
 
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
 
 /**
  * GET /api/docs
  *
  * Serves the OpenAPI 3.0 specification as JSON.
- * The spec is imported at build time from openapi.json — no filesystem reads at runtime.
+ * Requires authentication — the spec is not public.
  */
-export async function GET() {
-  return NextResponse.json(spec, {
-    headers: {
-      // Allow Swagger UI, Redoc, and other tooling to consume the spec cross-origin
-      "Access-Control-Allow-Origin": "*",
-      "Cache-Control": "public, max-age=3600, s-maxage=3600",
-    },
-  });
+export async function GET(req: NextRequest) {
+  const profileId = getProfileId(req);
+  if (!profileId) return unauthorizedResponse();
+
+  return NextResponse.json(spec);
 }
