@@ -101,7 +101,6 @@ export async function middleware(req: NextRequest) {
 
   // Laisser passer les assets statiques et le tunnel Sentry
   if (
-    pathname === "/" ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
     pathname === "/monitoring"
