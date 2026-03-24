@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, Clipboard, Lock } from "lucide-react";
+import { ArrowLeft, Check, Clipboard, Lock, Trash2 } from "lucide-react";
 import { cn, PRODUCT_FAMILIES, SEASONS } from "@/lib/utils";
 import { TechPackTab } from "./TechPackTab";
 import { SampleTab } from "./SampleTab";
@@ -158,6 +158,24 @@ export function ProductTabs({
   // Redirect legacy "loans"/"placements" tab params to "presse"
   const resolvedTab = (activeTab === "loans" || activeTab === "placements") ? "presse" : activeTab;
   const [tab, setTab] = useState<StepId>((resolvedTab as StepId) || "techpack");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/products/${product.id}`, { method: "DELETE" });
+      if (res.ok) {
+        router.push("/products");
+      } else {
+        setDeleting(false);
+        setShowDeleteConfirm(false);
+      }
+    } catch {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  }
 
   const familyLabel =
     PRODUCT_FAMILIES.find((f) => f.value === product.family)?.label ?? product.family;
@@ -206,9 +224,53 @@ export function ProductTabs({
               </span>
             </div>
           </div>
-          <StatusBadge status={product.sampleStatus} />
+          <div className="flex items-center gap-3">
+            <StatusBadge status={product.sampleStatus} />
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-red-600 transition-colors px-2 py-1 rounded-lg hover:bg-red-50"
+              title="Supprimer le produit"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Supprimer
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Delete confirmation modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full mx-4 p-6 space-y-4">
+            <div>
+              <h3 className="text-base font-semibold text-gray-900">
+                Supprimer ce produit ?
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Le produit <strong>{product.name}</strong> ({product.sku}) sera
+                supprimé. Cette action est irréversible.
+              </p>
+            </div>
+            <div className="flex items-center justify-end gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleting}
+                className="text-sm text-gray-600 hover:text-gray-800 px-4 py-2 rounded-lg transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                {deleting ? "Suppression…" : "Supprimer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stepper */}
       <div className="relative">
