@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { PRODUCT_FAMILIES, SEASONS, formatDate } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
-import { Plus, Package } from "lucide-react";
+import { Plus, Package, Lock } from "lucide-react";
+import { getResourceUsage } from "@/lib/plan-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -16,16 +17,20 @@ export default async function ProductsPage({
   const profileId = session?.profileId ?? "";
 
   const sp = await searchParams;
-  const products = await prisma.product.findMany({
-    where: {
-      profileId,
-      ...(sp.status ? { sampleStatus: sp.status as never } : {}),
-      ...(sp.family ? { family: sp.family } : {}),
-      ...(sp.season ? { season: sp.season } : {}),
-    },
-    include: { samples: true },
-    orderBy: { createdAt: "desc" },
-  });
+  const [products, usage] = await Promise.all([
+    prisma.product.findMany({
+      where: {
+        profileId,
+        deletedAt: null,
+        ...(sp.status ? { sampleStatus: sp.status as never } : {}),
+        ...(sp.family ? { family: sp.family } : {}),
+        ...(sp.season ? { season: sp.season } : {}),
+      },
+      include: { samples: true },
+      orderBy: { createdAt: "desc" },
+    }),
+    getResourceUsage(profileId, "products"),
+  ]);
 
   const familyLabel = (f: string) =>
     PRODUCT_FAMILIES.find((x) => x.value === f)?.label ?? f;
@@ -45,13 +50,23 @@ export default async function ProductsPage({
             {products.length} produit{products.length !== 1 ? "s" : ""}
           </p>
         </div>
-        <Link
-          href="/products/new"
-          className="inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Nouveau produit
-        </Link>
+        {usage.atLimit ? (
+          <Link
+            href="/settings"
+            className="inline-flex items-center gap-2 bg-gray-300 text-gray-500 text-sm font-medium px-4 py-2 rounded-xl cursor-not-allowed"
+          >
+            <Lock className="h-4 w-4" />
+            Limite atteinte ({usage.current}/{usage.max})
+          </Link>
+        ) : (
+          <Link
+            href="/products/new"
+            className="inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Nouveau produit
+          </Link>
+        )}
       </div>
 
       {/* Filters */}

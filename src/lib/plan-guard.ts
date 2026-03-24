@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getPlanLimits } from "@/lib/plan-limits";
 import { NextResponse } from "next/server";
 
-type Resource = "products" | "events" | "campaigns" | "collaborators";
+export type Resource = "products" | "events" | "campaigns" | "collaborators";
 
 const RESOURCE_LABELS: Record<Resource, string> = {
   products: "produits",
@@ -10,6 +10,41 @@ const RESOURCE_LABELS: Record<Resource, string> = {
   campaigns: "campagnes",
   collaborators: "collaborateurs",
 };
+
+/**
+ * Returns current count and max for a resource, useful for UI gating.
+ */
+export async function getResourceUsage(
+  profileId: string,
+  resource: Resource
+): Promise<{ current: number; max: number; atLimit: boolean }> {
+  const profile = await prisma.profile.findUniqueOrThrow({
+    where: { id: profileId },
+    select: { plan: true },
+  });
+
+  const limits = getPlanLimits(profile.plan);
+  const maxKey = `max${resource.charAt(0).toUpperCase() + resource.slice(1)}` as keyof typeof limits;
+  const max = limits[maxKey];
+
+  let current: number;
+  switch (resource) {
+    case "products":
+      current = await prisma.product.count({ where: { profileId, deletedAt: null } });
+      break;
+    case "events":
+      current = await prisma.event.count({ where: { profileId, deletedAt: null } });
+      break;
+    case "campaigns":
+      current = await prisma.campaign.count({ where: { profileId, deletedAt: null } });
+      break;
+    case "collaborators":
+      current = await prisma.teamMember.count({ where: { ownerId: profileId } });
+      break;
+  }
+
+  return { current, max, atLimit: max !== Infinity && current >= max };
+}
 
 /**
  * Returns a 403 response if the profile has reached its plan limit for the resource.

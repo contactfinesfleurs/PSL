@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { CAMPAIGN_TYPES, formatDate } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
-import { Plus, Megaphone } from "lucide-react";
+import { Plus, Megaphone, Lock } from "lucide-react";
+import { getResourceUsage } from "@/lib/plan-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -11,11 +12,14 @@ export default async function CampaignsPage() {
   const session = await getSession();
   const profileId = session?.profileId ?? "";
 
-  const campaigns = await prisma.campaign.findMany({
-    where: { profileId, deletedAt: null },
-    include: { products: true, event: true },
-    orderBy: { createdAt: "desc" },
-  });
+  const [campaigns, usage] = await Promise.all([
+    prisma.campaign.findMany({
+      where: { profileId, deletedAt: null },
+      include: { products: true, event: true },
+      orderBy: { createdAt: "desc" },
+    }),
+    getResourceUsage(profileId, "campaigns"),
+  ]);
 
   const typeLabel = (t: string) =>
     CAMPAIGN_TYPES.find((c) => c.value === t)?.label ?? t;
@@ -31,13 +35,23 @@ export default async function CampaignsPage() {
             {campaigns.length} campagne{campaigns.length !== 1 ? "s" : ""}
           </p>
         </div>
-        <Link
-          href="/campaigns/new"
-          className="inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Nouvelle campagne
-        </Link>
+        {usage.atLimit ? (
+          <Link
+            href="/settings"
+            className="inline-flex items-center gap-2 bg-gray-300 text-gray-500 text-sm font-medium px-4 py-2 rounded-xl cursor-not-allowed"
+          >
+            <Lock className="h-4 w-4" />
+            Limite atteinte ({usage.current}/{usage.max})
+          </Link>
+        ) : (
+          <Link
+            href="/campaigns/new"
+            className="inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Nouvelle campagne
+          </Link>
+        )}
       </div>
 
       {campaigns.length === 0 ? (

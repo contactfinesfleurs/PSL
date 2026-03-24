@@ -51,6 +51,10 @@ export default function NewEventPage() {
       router.push(`/events/${event.id}`);
     } else {
       const body = await res.json().catch(() => ({}));
+      if (body.code === "PLAN_LIMIT_REACHED") {
+        router.push("/settings");
+        return;
+      }
       const details = body.details
         ? Object.entries(body.details as Record<string, string[]>)
             .map(([field, msgs]) => `${field} : ${msgs.join(", ")}`)

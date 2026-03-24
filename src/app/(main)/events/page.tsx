@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { EVENT_TYPES, formatDateTime } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
-import { Plus, Calendar, MapPin } from "lucide-react";
+import { Plus, Calendar, MapPin, Lock } from "lucide-react";
+import { getResourceUsage } from "@/lib/plan-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -11,11 +12,14 @@ export default async function EventsPage() {
   const session = await getSession();
   const profileId = session?.profileId ?? "";
 
-  const events = await prisma.event.findMany({
-    where: { profileId },
-    include: { products: true, campaigns: true },
-    orderBy: { startAt: "asc" },
-  });
+  const [events, usage] = await Promise.all([
+    prisma.event.findMany({
+      where: { profileId, deletedAt: null },
+      include: { products: true, campaigns: true },
+      orderBy: { startAt: "asc" },
+    }),
+    getResourceUsage(profileId, "events"),
+  ]);
 
   const typeLabel = (t: string) =>
     EVENT_TYPES.find((e) => e.value === t)?.label ?? t;
@@ -31,13 +35,23 @@ export default async function EventsPage() {
             {events.length} événement{events.length !== 1 ? "s" : ""}
           </p>
         </div>
-        <Link
-          href="/events/new"
-          className="inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Nouvel événement
-        </Link>
+        {usage.atLimit ? (
+          <Link
+            href="/settings"
+            className="inline-flex items-center gap-2 bg-gray-300 text-gray-500 text-sm font-medium px-4 py-2 rounded-xl cursor-not-allowed"
+          >
+            <Lock className="h-4 w-4" />
+            Limite atteinte ({usage.current}/{usage.max})
+          </Link>
+        ) : (
+          <Link
+            href="/events/new"
+            className="inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Nouvel événement
+          </Link>
+        )}
       </div>
 
       {events.length === 0 ? (

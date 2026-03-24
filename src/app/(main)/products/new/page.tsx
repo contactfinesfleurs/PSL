@@ -15,6 +15,7 @@ import { FileUpload } from "@/components/ui/FileUpload";
 export default function NewProductPage() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const currentYear = new Date().getFullYear();
 
@@ -77,8 +78,13 @@ export default function NewProductPage() {
       const product = await res.json();
       router.push(`/products/${product.id}`);
     } else {
+      const body = await res.json().catch(() => ({}));
+      if (body.code === "PLAN_LIMIT_REACHED") {
+        router.push("/settings");
+        return;
+      }
+      setError(body.error ?? "Erreur lors de la création du produit.");
       setSaving(false);
-      alert("Erreur lors de la création du produit.");
     }
   }
 
@@ -306,6 +312,12 @@ export default function NewProductPage() {
             hint="PDF, Word ou Excel acceptés"
           />
         </div>
+
+        {error && (
+          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            {error}
+          </p>
+        )}
 
         {/* Actions */}
         <div className="flex items-center gap-3 pt-2 border-t border-gray-100">

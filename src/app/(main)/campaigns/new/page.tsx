@@ -9,6 +9,7 @@ type Event = { id: string; name: string };
 export default function NewCampaignPage() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
 
   useEffect(() => {
@@ -53,8 +54,13 @@ export default function NewCampaignPage() {
       const campaign = await res.json();
       router.push(`/campaigns/${campaign.id}`);
     } else {
+      const body = await res.json().catch(() => ({}));
+      if (body.code === "PLAN_LIMIT_REACHED") {
+        router.push("/settings");
+        return;
+      }
+      setError(body.error ?? "Erreur lors de la création.");
       setSaving(false);
-      alert("Erreur lors de la création.");
     }
   }
 
@@ -178,6 +184,12 @@ export default function NewCampaignPage() {
             className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 resize-none"
           />
         </div>
+
+        {error && (
+          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            {error}
+          </p>
+        )}
 
         <div className="flex items-center gap-3 pt-2">
           <button
