@@ -1,14 +1,10 @@
 import { NextResponse } from "next/server";
-import { clearSessionCookie } from "@/lib/auth";
+import { COOKIE_NAME } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export async function POST() {
-  try {
-    await clearSessionCookie();
-    return NextResponse.json({ ok: true });
-  } catch (error) {
-    console.error('[POST /api/auth/logout]', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  }
+  const response = NextResponse.json({ ok: true });
+  response.cookies.delete(COOKIE_NAME);
+  return response;
 }

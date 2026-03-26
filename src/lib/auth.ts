@@ -75,4 +75,14 @@ export async function getSessionFromRequest(
   return verifyToken(token);
 }
 
+// Options du cookie session — à utiliser directement sur NextResponse dans les Route Handlers
+// (cookies().set() de next/headers n'applique pas toujours le Set-Cookie sur NextResponse.json())
+export const SESSION_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax" as const,
+  maxAge: COOKIE_MAX_AGE,
+  path: "/",
+};
+
 export { COOKIE_NAME, COOKIE_MAX_AGE };
