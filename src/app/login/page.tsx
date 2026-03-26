@@ -31,12 +31,17 @@ function LoginForm() {
         ? { email, password }
         : { name, email, password };
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
     try {
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -51,8 +56,13 @@ function LoginForm() {
 
       router.push(from);
       router.refresh();
-    } catch {
-      setError("Erreur réseau, réessayez.");
+    } catch (err) {
+      clearTimeout(timeoutId);
+      if (err instanceof Error && err.name === "AbortError") {
+        setError("La connexion prend trop de temps. Veuillez réessayer dans quelques instants.");
+      } else {
+        setError("Erreur réseau, réessayez.");
+      }
     } finally {
       setLoading(false);
     }
