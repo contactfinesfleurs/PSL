@@ -28,6 +28,7 @@ export default async function LookBookPage({
     select: { season: true, year: true },
     distinct: ["season", "year"],
     orderBy: [{ year: "desc" }, { season: "asc" }],
+    where: { deletedAt: null },
   });
 
   const collections = Array.from(
@@ -44,6 +45,7 @@ export default async function LookBookPage({
   // Fetch products for current collection with their samples (for packshots)
   const products = await prisma.product.findMany({
     where: {
+      deletedAt: null,
       season: activeSeason || undefined,
       year: activeYear || undefined,
       ...(activeFamily ? { family: activeFamily } : {}),

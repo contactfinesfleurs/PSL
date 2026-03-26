@@ -19,6 +19,7 @@ export default async function ProductsPage({
   const products = await prisma.product.findMany({
     where: {
       profileId,
+      deletedAt: null,
       ...(sp.status ? { sampleStatus: sp.status as never } : {}),
       ...(sp.family ? { family: sp.family } : {}),
       ...(sp.season ? { season: sp.season } : {}),
