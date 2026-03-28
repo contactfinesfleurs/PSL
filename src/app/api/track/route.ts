@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "17track API key not configured" }, { status: 500 });
     }
 
-    // Call 17track API
+    // Call 17track API (10s timeout to avoid hanging serverless functions)
     const res = await fetch("https://api.17track.net/track/v2.2/gettracklist", {
       method: "POST",
       headers: {
@@ -80,6 +80,7 @@ export async function POST(req: NextRequest) {
         "17token": apiKey,
       },
       body: JSON.stringify({ data: [{ number: trackingNumber }] }),
+      signal: AbortSignal.timeout(10_000),
     });
 
     if (!res.ok) {

@@ -39,9 +39,9 @@ const nextConfig = {
             value: "max-age=63072000; includeSubDomains; preload",
           },
           // Prevent cross-origin window interactions (e.g. Spectre-style attacks)
-          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
-          // Require all sub-resources to opt in to cross-origin isolation
-          { key: "Cross-Origin-Embedder-Policy", value: "require-corp" },
+          // NOTE: Using same-origin-allow-popups instead of same-origin to avoid
+          // breaking OAuth flows or payment popups if added later.
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
           // Content Security Policy
           // NOTE: 'unsafe-inline' is required for script-src because Next.js 15
           // injects inline scripts for hydration and Server Components. Removing it

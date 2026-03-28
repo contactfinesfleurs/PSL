@@ -18,8 +18,6 @@ export async function middleware(req: NextRequest) {
   if (session) {
     const res = NextResponse.next();
     res.headers.set("x-profile-id", session.profileId);
-    res.headers.set("x-profile-email", session.email);
-    res.headers.set("x-profile-name", session.name);
     return res;
   }
 
