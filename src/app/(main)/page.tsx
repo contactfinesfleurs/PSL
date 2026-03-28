@@ -21,23 +21,23 @@ export default async function DashboardPage() {
   try {
     const [productCount, eventCount, campaignCount, validatedCount] =
       await Promise.all([
-        prisma.product.count({ where: { profileId } }),
-        prisma.event.count({ where: { profileId } }),
-        prisma.campaign.count({ where: { profileId } }),
-        prisma.product.count({ where: { profileId, sampleStatus: "VALIDATED" } }),
+        prisma.product.count({ where: { profileId, deletedAt: null } }),
+        prisma.event.count({ where: { profileId, deletedAt: null } }),
+        prisma.campaign.count({ where: { profileId, deletedAt: null } }),
+        prisma.product.count({ where: { profileId, deletedAt: null, sampleStatus: "VALIDATED" } }),
       ]);
 
     const recentProducts = await prisma.product.findMany({
       take: 5,
       orderBy: { createdAt: "desc" },
-      where: { profileId },
+      where: { profileId, deletedAt: null },
       include: { samples: true },
     });
 
     const upcomingEvents = await prisma.event.findMany({
       take: 5,
       orderBy: { startAt: "asc" },
-      where: { profileId, startAt: { gte: new Date() }, status: { not: "CANCELLED" } },
+      where: { profileId, deletedAt: null, startAt: { gte: new Date() }, status: { not: "CANCELLED" } },
     });
 
     return (

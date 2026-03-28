@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/auth";
 import { PRODUCT_FAMILIES, SEASONS, safeParseArray } from "@/lib/utils";
 import Image from "next/image";
 import { ArrowLeft, Package } from "lucide-react";
@@ -22,11 +23,14 @@ export default async function LookBookPage({
   searchParams: Promise<{ season?: string; year?: string; family?: string }>;
 }) {
   const sp = await searchParams;
+  const session = await getSession();
+  const profileId = session?.profileId ?? "";
 
   // Available seasons+years in the DB
   const allProducts = await prisma.product.findMany({
     select: { season: true, year: true },
     distinct: ["season", "year"],
+    where: { profileId, deletedAt: null },
     orderBy: [{ year: "desc" }, { season: "asc" }],
   });
 
@@ -44,6 +48,8 @@ export default async function LookBookPage({
   // Fetch products for current collection with their samples (for packshots)
   const products = await prisma.product.findMany({
     where: {
+      profileId,
+      deletedAt: null,
       season: activeSeason || undefined,
       year: activeYear || undefined,
       ...(activeFamily ? { family: activeFamily } : {}),

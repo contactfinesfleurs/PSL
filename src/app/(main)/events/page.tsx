@@ -12,7 +12,7 @@ export default async function EventsPage() {
   const profileId = session?.profileId ?? "";
 
   const events = await prisma.event.findMany({
-    where: { profileId },
+    where: { profileId, deletedAt: null },
     include: { products: true, campaigns: true },
     orderBy: { startAt: "asc" },
   });

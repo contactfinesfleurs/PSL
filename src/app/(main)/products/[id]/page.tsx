@@ -21,14 +21,14 @@ export default async function ProductPage({
   // Core query — always works (samples, campaigns, events tables always exist)
   const [baseProduct, allCampaigns] = await Promise.all([
     prisma.product.findUnique({
-      where: { id, profileId },
+      where: { id, profileId, deletedAt: null },
       include: {
         samples: true,
         campaigns: { include: { campaign: true } },
         events: { include: { event: true } },
       },
     }),
-    prisma.campaign.findMany({ where: { profileId }, orderBy: { createdAt: "desc" } }),
+    prisma.campaign.findMany({ where: { profileId, deletedAt: null }, orderBy: { createdAt: "desc" } }),
   ]);
 
   if (!baseProduct) {

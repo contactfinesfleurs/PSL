@@ -150,10 +150,24 @@ export async function DELETE(
     }
 
     // Verify ownership before deleting
-    const existing = await prisma.product.findUnique({ where: { id, profileId, deletedAt: null } });
+    const existing = await prisma.product.findUnique({
+      where: { id, profileId, deletedAt: null },
+      include: { samples: { select: { samplePhotoPaths: true, detailPhotoPaths: true, reviewPhotoPaths: true, packshotPaths: true } } },
+    });
     if (!existing) {
       return NextResponse.json({ error: "Produit introuvable" }, { status: 404 });
     }
+
+    // Clean up all associated files before soft-deleting
+    const filesToDelete: string[] = [];
+    if (existing.techPackPath) filesToDelete.push(existing.techPackPath);
+    for (const p of safeParseArray(existing.sketchPaths)) filesToDelete.push(p);
+    for (const sample of existing.samples) {
+      for (const field of [sample.samplePhotoPaths, sample.detailPhotoPaths, sample.reviewPhotoPaths, sample.packshotPaths]) {
+        for (const p of safeParseArray(field)) filesToDelete.push(p);
+      }
+    }
+    await Promise.all(filesToDelete.map((p) => deleteStoredFile(p).catch(() => {})));
 
     await prisma.product.update({ where: { id }, data: { deletedAt: new Date() } });
     logAudit("PRODUCT_DELETE", profileId, "product", id);

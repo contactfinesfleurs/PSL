@@ -210,6 +210,7 @@ model Campaign {
   @@index([profileId])
   @@index([status])
   @@index([deletedAt])
+  @@index([eventId])
 }
 
 // ─── SAMPLE LOAN ─────────────────────────────────────────────────────────────
@@ -329,6 +330,7 @@ model CampaignProduct {
   product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([campaignId, productId])
+  @@index([productId])
 }
 
 model EventProduct {
@@ -343,4 +345,5 @@ model EventProduct {
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, productId])
+  @@index([productId])
 }
