@@ -75,14 +75,17 @@ export default function EventDetailPage({
 
   useEffect(() => {
     fetch(`/api/events/${id}`)
-      .then((r) => r.json())
-      .then(setEvent);
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then(setEvent)
+      .catch(() => {});
     fetch("/api/products")
-      .then((r) => r.json())
-      .then(setAllProducts);
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((d) => setAllProducts(d.data ?? d))
+      .catch(() => {});
     fetch(`/api/events/${id}/guests`)
-      .then((r) => r.json())
-      .then((data: EventGuest[]) => setGuests(Array.isArray(data) ? data : []));
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data: EventGuest[]) => setGuests(Array.isArray(data) ? data : []))
+      .catch(() => {});
   }, [id]);
 
   if (!event) {
@@ -116,47 +119,52 @@ export default function EventDetailPage({
 
   async function saveEdit() {
     setSaving(true);
-    const res = await fetch(`/api/events/${event!.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(editForm),
-    });
-    const updated = await res.json();
-    setEvent({ ...event!, ...updated });
-    setEditing(false);
-    setSaving(false);
+    try {
+      const res = await fetch(`/api/events/${event!.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm),
+      });
+      if (!res.ok) return;
+      const updated = await res.json();
+      setEvent({ ...event!, ...updated });
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function addProduct() {
     if (!selectedProduct) return;
     setAddingProduct(true);
-    await fetch(`/api/events/${event!.id}/products`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        productId: selectedProduct,
-        look: lookNumber ? parseInt(lookNumber) : null,
-      }),
-    });
-    const updated = await fetch(`/api/events/${event!.id}`).then((r) =>
-      r.json()
-    );
-    setEvent(updated);
-    setSelectedProduct("");
-    setLookNumber("");
-    setAddingProduct(false);
+    try {
+      const addRes = await fetch(`/api/events/${event!.id}/products`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId: selectedProduct,
+          look: lookNumber ? parseInt(lookNumber) : null,
+        }),
+      });
+      if (!addRes.ok) return;
+      const refreshRes = await fetch(`/api/events/${event!.id}`);
+      if (refreshRes.ok) setEvent(await refreshRes.json());
+      setSelectedProduct("");
+      setLookNumber("");
+    } finally {
+      setAddingProduct(false);
+    }
   }
 
   async function removeProduct(productId: string) {
-    await fetch(`/api/events/${event!.id}/products`, {
+    const delRes = await fetch(`/api/events/${event!.id}/products`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ productId }),
     });
-    const updated = await fetch(`/api/events/${event!.id}`).then((r) =>
-      r.json()
-    );
-    setEvent(updated);
+    if (!delRes.ok) return;
+    const refreshRes = await fetch(`/api/events/${event!.id}`);
+    if (refreshRes.ok) setEvent(await refreshRes.json());
   }
 
   async function changeStatus(status: string) {
@@ -165,6 +173,7 @@ export default function EventDetailPage({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
+    if (!res.ok) return;
     const updated = await res.json();
     setEvent({ ...event!, ...updated });
   }

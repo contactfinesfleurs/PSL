@@ -53,11 +53,13 @@ export default function CampaignDetailPage({
 
   useEffect(() => {
     fetch(`/api/campaigns/${id}`)
-      .then((r) => r.json())
-      .then(setCampaign);
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then(setCampaign)
+      .catch(() => {});
     fetch("/api/products")
-      .then((r) => r.json())
-      .then(setAllProducts);
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((d) => setAllProducts(d.data ?? d))
+      .catch(() => {});
   }, [id]);
 
   if (!campaign) {
@@ -94,15 +96,19 @@ export default function CampaignDetailPage({
 
   async function saveEdit() {
     setSaving(true);
-    const res = await fetch(`/api/campaigns/${campaign!.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(editForm),
-    });
-    const updated = await res.json();
-    setCampaign({ ...campaign!, ...updated });
-    setEditing(false);
-    setSaving(false);
+    try {
+      const res = await fetch(`/api/campaigns/${campaign!.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm),
+      });
+      if (!res.ok) return;
+      const updated = await res.json();
+      setCampaign({ ...campaign!, ...updated });
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function changeStatus(status: string) {
@@ -111,6 +117,7 @@ export default function CampaignDetailPage({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
+    if (!res.ok) return;
     const updated = await res.json();
     setCampaign({ ...campaign!, ...updated });
   }
@@ -118,30 +125,31 @@ export default function CampaignDetailPage({
   async function addProduct() {
     if (!selectedProduct) return;
     setAddingProduct(true);
-    await fetch(`/api/campaigns/${campaign!.id}/products`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productId: selectedProduct, notes: productNotes }),
-    });
-    const updated = await fetch(`/api/campaigns/${campaign!.id}`).then((r) =>
-      r.json()
-    );
-    setCampaign(updated);
-    setSelectedProduct("");
-    setProductNotes("");
-    setAddingProduct(false);
+    try {
+      const addRes = await fetch(`/api/campaigns/${campaign!.id}/products`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: selectedProduct, notes: productNotes }),
+      });
+      if (!addRes.ok) return;
+      const refreshRes = await fetch(`/api/campaigns/${campaign!.id}`);
+      if (refreshRes.ok) setCampaign(await refreshRes.json());
+      setSelectedProduct("");
+      setProductNotes("");
+    } finally {
+      setAddingProduct(false);
+    }
   }
 
   async function removeProduct(productId: string) {
-    await fetch(`/api/campaigns/${campaign!.id}/products`, {
+    const delRes = await fetch(`/api/campaigns/${campaign!.id}/products`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ productId }),
     });
-    const updated = await fetch(`/api/campaigns/${campaign!.id}`).then((r) =>
-      r.json()
-    );
-    setCampaign(updated);
+    if (!delRes.ok) return;
+    const refreshRes = await fetch(`/api/campaigns/${campaign!.id}`);
+    if (refreshRes.ok) setCampaign(await refreshRes.json());
   }
 
   return (

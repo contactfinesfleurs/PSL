@@ -12,7 +12,10 @@ export default function NewCampaignPage() {
   const [events, setEvents] = useState<Event[]>([]);
 
   useEffect(() => {
-    fetch("/api/events").then((r) => r.json()).then(setEvents);
+    fetch("/api/events")
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then(setEvents)
+      .catch(() => {});
   }, []);
 
   const [form, setForm] = useState({

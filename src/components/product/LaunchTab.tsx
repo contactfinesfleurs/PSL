@@ -56,26 +56,28 @@ export function LaunchTab({
   async function addCampaign() {
     if (!selectedCampaign) return;
     setAdding(true);
-
-    await fetch(`/api/campaigns/${selectedCampaign}/products`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productId: product.id, notes }),
-    });
-
-    setSelectedCampaign("");
-    setNotes("");
-    setAdding(false);
-    router.refresh();
+    try {
+      const res = await fetch(`/api/campaigns/${selectedCampaign}/products`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: product.id, notes }),
+      });
+      if (!res.ok) return;
+      setSelectedCampaign("");
+      setNotes("");
+      router.refresh();
+    } finally {
+      setAdding(false);
+    }
   }
 
   async function removeCampaign(campaignId: string) {
-    await fetch(`/api/campaigns/${campaignId}/products`, {
+    const res = await fetch(`/api/campaigns/${campaignId}/products`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ productId: product.id }),
     });
-    router.refresh();
+    if (res.ok) router.refresh();
   }
 
   const typeLabel = (t: string) =>

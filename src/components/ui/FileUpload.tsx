@@ -37,13 +37,18 @@ export function FileUpload({
         formData.append("file", file);
         formData.append("folder", folder);
 
-        const res = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-        });
-        const data = await res.json();
-        if (data.path) {
-          newPaths.push(data.path);
+        try {
+          const res = await fetch("/api/upload", {
+            method: "POST",
+            body: formData,
+          });
+          if (!res.ok) continue;
+          const data = await res.json();
+          if (data.path) {
+            newPaths.push(data.path);
+          }
+        } catch {
+          // Skip failed uploads silently — the user sees which files appear in preview
         }
       }
 

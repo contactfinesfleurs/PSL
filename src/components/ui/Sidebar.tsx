@@ -53,7 +53,11 @@ export function Sidebar({ userName, userEmail, userRole }: SidebarProps) {
   ];
 
   async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      // Redirect to login regardless — cookie may already be cleared
+    }
     router.push("/login");
     router.refresh();
   }

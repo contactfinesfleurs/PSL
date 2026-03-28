@@ -118,97 +118,108 @@ export function SampleTab({
 
   async function saveSample() {
     setSaving(true);
-    await fetch(`/api/products/${product.id}/sample`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        sampleId: sample?.id,
-        supplierName: form.supplierName || null,
-        supplierAddress: form.supplierAddress || null,
-        supplierCountry: form.supplierCountry || null,
-        shippingDate: form.shippingDate || null,
-        trackingNumber: form.trackingNumber || null,
-        samplePhotoPaths: form.samplePhotoPaths,
-        detailPhotoPaths: form.detailPhotoPaths,
-        reviewPhotoPaths: form.reviewPhotoPaths,
-        reviewNotes: form.reviewNotes,
-        ...(product.sampleStatus === "VALIDATED" && {
-          packshotPaths: form.packshotPaths,
-          definitiveColors: form.definitiveColors,
-          definitiveMaterials: form.definitiveMaterials,
-        }),
-      }),
-    });
-
-    if (product.sampleStatus === "VALIDATED") {
-      await fetch(`/api/products/${product.id}`, {
-        method: "PATCH",
+    try {
+      const sampleRes = await fetch(`/api/products/${product.id}/sample`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          description: form.description,
-          metaTags: form.metaTags,
-          plannedLaunchAt: form.plannedLaunchAt || null,
+          sampleId: sample?.id,
+          supplierName: form.supplierName || null,
+          supplierAddress: form.supplierAddress || null,
+          supplierCountry: form.supplierCountry || null,
+          shippingDate: form.shippingDate || null,
+          trackingNumber: form.trackingNumber || null,
+          samplePhotoPaths: form.samplePhotoPaths,
+          detailPhotoPaths: form.detailPhotoPaths,
+          reviewPhotoPaths: form.reviewPhotoPaths,
+          reviewNotes: form.reviewNotes,
+          ...(product.sampleStatus === "VALIDATED" && {
+            packshotPaths: form.packshotPaths,
+            definitiveColors: form.definitiveColors,
+            definitiveMaterials: form.definitiveMaterials,
+          }),
         }),
       });
-    }
+      if (!sampleRes.ok) return;
 
-    setSaving(false);
-    router.refresh();
+      if (product.sampleStatus === "VALIDATED") {
+        await fetch(`/api/products/${product.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            description: form.description,
+            metaTags: form.metaTags,
+            plannedLaunchAt: form.plannedLaunchAt || null,
+          }),
+        });
+      }
+
+      router.refresh();
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function checkTracking() {
     if (!form.trackingNumber || !sample?.id) return;
     setTracking(true);
+    try {
+      // Save tracking number first so the API has the sampleId
+      const saveRes = await fetch(`/api/products/${product.id}/sample`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sampleId: sample.id,
+          trackingNumber: form.trackingNumber,
+        }),
+      });
+      if (!saveRes.ok) return;
 
-    // Save tracking number first so the API has the sampleId
-    await fetch(`/api/products/${product.id}/sample`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        sampleId: sample.id,
-        trackingNumber: form.trackingNumber,
-      }),
-    });
+      const res = await fetch("/api/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trackingNumber: form.trackingNumber, sampleId: sample.id }),
+      });
 
-    const res = await fetch("/api/track", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ trackingNumber: form.trackingNumber, sampleId: sample.id }),
-    });
-
-    if (res.ok) {
-      const data = await res.json() as { trackingStatus: string; receivedAt: string | null };
-      set("trackingStatus", data.trackingStatus ?? "");
-      if (data.receivedAt) {
-        set("receivedAt", new Date(data.receivedAt).toISOString().split("T")[0]);
+      if (res.ok) {
+        const data = await res.json() as { trackingStatus: string; receivedAt: string | null };
+        set("trackingStatus", data.trackingStatus ?? "");
+        if (data.receivedAt) {
+          set("receivedAt", new Date(data.receivedAt).toISOString().split("T")[0]);
+        }
       }
+    } finally {
+      setTracking(false);
     }
-
-    setTracking(false);
   }
 
   async function validate(status: "VALIDATED" | "NOT_VALIDATED" | "PENDING") {
     setValidating(true);
-    await fetch(`/api/products/${product.id}/sample`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        sampleId: sample?.id,
-        samplePhotoPaths: form.samplePhotoPaths,
-        detailPhotoPaths: form.detailPhotoPaths,
-        reviewPhotoPaths: form.reviewPhotoPaths,
-        reviewNotes: form.reviewNotes,
-      }),
-    });
+    try {
+      const sampleRes = await fetch(`/api/products/${product.id}/sample`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sampleId: sample?.id,
+          samplePhotoPaths: form.samplePhotoPaths,
+          detailPhotoPaths: form.detailPhotoPaths,
+          reviewPhotoPaths: form.reviewPhotoPaths,
+          reviewNotes: form.reviewNotes,
+        }),
+      });
+      if (!sampleRes.ok) return;
 
-    await fetch(`/api/products/${product.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sampleStatus: status }),
-    });
+      const statusRes = await fetch(`/api/products/${product.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sampleStatus: status }),
+      });
+      if (!statusRes.ok) return;
 
-    setValidating(false);
-    router.refresh();
+      router.refresh();
+    } finally {
+      setValidating(false);
+    }
   }
 
   function openPdfReport() {
