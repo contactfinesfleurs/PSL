@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromRequest } from "@/lib/auth";
 
-// Routes that don't require authentication
-const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/auth/register", "/api/auth/2fa/validate", "/api/docs"];
+// Routes that don't require authentication (exact match only)
+const PUBLIC_EXACT = ["/login", "/api/auth/login", "/api/auth/register", "/api/auth/2fa/validate", "/api/docs"];
+// Prefix paths must end with / to prevent "/api/docsanything" bypass
+const PUBLIC_PREFIXES = ["/login/"];
 
 function isPublicPath(pathname: string): boolean {
-  return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p));
+  return PUBLIC_EXACT.includes(pathname)
+    || PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
 }
 
 // ─── Global rate limiter for mutating requests (Edge-compatible) ────────────
