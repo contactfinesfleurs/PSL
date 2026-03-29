@@ -5,11 +5,14 @@ import { getProfileId, unauthorizedResponse } from "@/lib/api-helpers";
 export const dynamic = "force-dynamic";
 
 // Magic bytes for file type verification (prevents MIME spoofing)
-const MAGIC_BYTES: { mime: string; bytes: number[]; offset?: number }[] = [
+// Magic bytes for file type verification (prevents MIME spoofing).
+// Each entry checks primary bytes + optional secondary bytes at a different offset.
+const MAGIC_BYTES: { mime: string; bytes: number[]; offset?: number; extra?: { bytes: number[]; offset: number } }[] = [
   { mime: "image/jpeg", bytes: [0xff, 0xd8, 0xff] },
   { mime: "image/png", bytes: [0x89, 0x50, 0x4e, 0x47] },
-  { mime: "image/webp", bytes: [0x52, 0x49, 0x46, 0x46] }, // RIFF header
-  { mime: "image/gif", bytes: [0x47, 0x49, 0x46, 0x38] }, // GIF8
+  // WebP: RIFF header at 0 + "WEBP" at offset 8 (distinguishes from WAV/AVI which also use RIFF)
+  { mime: "image/webp", bytes: [0x52, 0x49, 0x46, 0x46], extra: { bytes: [0x57, 0x45, 0x42, 0x50], offset: 8 } },
+  { mime: "image/gif", bytes: [0x47, 0x49, 0x46, 0x38] }, // GIF8 (matches GIF87a and GIF89a)
   { mime: "application/pdf", bytes: [0x25, 0x50, 0x44, 0x46] }, // %PDF
 ];
 
@@ -19,7 +22,15 @@ function verifyMagicBytes(buffer: ArrayBuffer, claimedMime: string): boolean {
   if (!expected) return false;
   const offset = expected.offset ?? 0;
   if (view.length < offset + expected.bytes.length) return false;
-  return expected.bytes.every((b, i) => view[offset + i] === b);
+  const primaryMatch = expected.bytes.every((b, i) => view[offset + i] === b);
+  if (!primaryMatch) return false;
+  // Check secondary bytes (e.g. WEBP signature at offset 8)
+  if (expected.extra) {
+    const { bytes: extraBytes, offset: extraOffset } = expected.extra;
+    if (view.length < extraOffset + extraBytes.length) return false;
+    return extraBytes.every((b, i) => view[extraOffset + i] === b);
+  }
+  return true;
 }
 
 export async function POST(req: NextRequest) {

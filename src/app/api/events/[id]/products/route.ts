@@ -98,9 +98,9 @@ export async function DELETE(
       });
       if (!event) return null;
 
-      // Verify product belongs to the same profile (prevents cross-tenant unlinking)
+      // Verify product belongs to the same profile and isn't deleted
       const product = await tx.product.findFirst({
-        where: { id: productId, profileId },
+        where: { id: productId, profileId, deletedAt: null },
       });
       if (!product) return null;
 

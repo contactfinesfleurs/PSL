@@ -33,7 +33,10 @@ export async function GET(
     const event = await prisma.event.findUnique({
       where: { id, profileId, deletedAt: null },
       include: {
-        campaigns: { include: { products: { include: { product: true } } } },
+        campaigns: {
+          where: { deletedAt: null },
+          include: { products: { include: { product: true } } },
+        },
         products: { include: { product: true } },
       },
     });

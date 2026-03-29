@@ -13,6 +13,23 @@ import { getClientIp } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
+// Per-challenge TOTP brute-force protection: max 5 attempts per challenge token
+const totpAttempts = new Map<string, number>();
+
+const TOTP_MAX_ATTEMPTS = 5;
+
+function checkTotpAttempts(tokenFingerprint: string): boolean {
+  const attempts = totpAttempts.get(tokenFingerprint) ?? 0;
+  if (attempts >= TOTP_MAX_ATTEMPTS) return false;
+  totpAttempts.set(tokenFingerprint, attempts + 1);
+  // Cleanup: remove old entries periodically
+  if (totpAttempts.size > 10_000) {
+    const keys = Array.from(totpAttempts.keys());
+    for (const k of keys.slice(0, 5_000)) totpAttempts.delete(k);
+  }
+  return true;
+}
+
 const ValidateSchema = z.object({
   challengeToken: z.string().min(1),
   code: z.string().length(6).regex(/^\d{6}$/),
@@ -33,6 +50,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "Session expirée. Veuillez vous reconnecter." },
         { status: 401 }
+      );
+    }
+
+    // Per-challenge brute-force protection: 5 attempts max per token
+    const tokenFp = challengeToken.slice(-16); // fingerprint (last 16 chars)
+    if (!checkTotpAttempts(tokenFp)) {
+      await logSecurityEvent({
+        type: "TOTP_FAIL",
+        profileId: challenge.challengeProfileId,
+        email: challenge.email,
+        ip,
+        metadata: { context: "totp_brute_force_blocked" },
+      });
+      return NextResponse.json(
+        { error: "Trop de tentatives. Veuillez vous reconnecter." },
+        { status: 429 }
       );
     }
 

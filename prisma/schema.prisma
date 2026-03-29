@@ -64,7 +64,7 @@ model SecurityEvent {
   createdAt DateTime @default(now())
 
   profileId String?
-  profile   Profile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profile   Profile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
 
   type      String   // LOGIN_SUCCESS | LOGIN_FAIL | TOTP_ENABLED | TOTP_DISABLED | TOTP_FAIL | RATE_LIMITED | ACCOUNT_LOCKED
   ip        String?

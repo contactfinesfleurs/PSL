@@ -43,7 +43,12 @@ export async function GET(
       return NextResponse.json({ error: "Campagne introuvable" }, { status: 404 });
     }
 
-    return NextResponse.json(campaign);
+    // Hide deleted event reference from response
+    const result = {
+      ...campaign,
+      event: campaign.event?.deletedAt ? null : campaign.event,
+    };
+    return NextResponse.json(result);
   } catch (error) {
     console.error('[GET /api/campaigns/[id]]', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

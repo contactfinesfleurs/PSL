@@ -34,14 +34,22 @@ export function encryptSecret(plaintext: string): string {
   ].join(":");
 }
 
-/** Decrypt a string produced by encryptSecret(). */
+/** Decrypt a string produced by encryptSecret(). Throws on malformed input. */
 export function decryptSecret(encoded: string): string {
-  const key = getEncryptionKey();
-  const [ivB64, ciphertextB64, tagB64] = encoded.split(":");
+  const parts = encoded.split(":");
+  if (parts.length !== 3) {
+    throw new Error("Malformed encrypted secret: expected iv:ciphertext:tag format");
+  }
+  const [ivB64, ciphertextB64, tagB64] = parts;
 
+  const key = getEncryptionKey();
   const iv = Buffer.from(ivB64, "base64");
   const ciphertext = Buffer.from(ciphertextB64, "base64");
   const tag = Buffer.from(tagB64, "base64");
+
+  if (iv.length !== IV_LENGTH || tag.length !== TAG_LENGTH) {
+    throw new Error("Malformed encrypted secret: invalid IV or tag length");
+  }
 
   const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
   decipher.setAuthTag(tag);
@@ -76,7 +84,13 @@ export function verifyTotpCode(
   encryptedSecret: string,
   code: string
 ): boolean {
-  const base32 = decryptSecret(encryptedSecret);
+  let base32: string;
+  try {
+    base32 = decryptSecret(encryptedSecret);
+  } catch (err) {
+    console.error("[TOTP] Failed to decrypt secret:", err instanceof Error ? err.message : err);
+    return false;
+  }
 
   const totp = new OTPAuth.TOTP({
     secret: OTPAuth.Secret.fromBase32(base32),
