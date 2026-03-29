@@ -54,8 +54,11 @@ const nextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              // 'strict-dynamic' supersedes 'unsafe-inline' in supporting browsers
-              "script-src 'self' 'unsafe-inline' 'strict-dynamic'",
+              // 'unsafe-inline' required for Next.js hydration inline scripts.
+              // NOTE: Do NOT add 'strict-dynamic' here without also generating
+              // per-request nonces in middleware — strict-dynamic silences
+              // unsafe-inline in supporting browsers, breaking all JS execution.
+              "script-src 'self' 'unsafe-inline'",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https://*.vercel-storage.com https://*.public.blob.vercel-storage.com",
               "font-src 'self'",
