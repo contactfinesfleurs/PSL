@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { signToken, setSessionCookieOnResponse } from "@/lib/auth";
 import { parseBodyJson } from "@/lib/api-helpers";
 import { getClientIp, rateLimitResponse } from "@/lib/rate-limit";
+import { logSecurityEvent } from "@/lib/security-events";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +51,15 @@ export async function POST(req: NextRequest) {
       profileId: profile.id,
       email: profile.email,
       name: profile.name,
+    });
+
+    await logSecurityEvent({
+      type: "LOGIN_SUCCESS",
+      profileId: profile.id,
+      email: profile.email,
+      ip,
+      userAgent: req.headers.get("user-agent") ?? undefined,
+      metadata: { via: "register" },
     });
 
     const res = NextResponse.json(

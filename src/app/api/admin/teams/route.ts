@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
       const teams = await prisma.team.findMany({
         include: { _count: { select: { members: true } } },
         orderBy: { createdAt: "desc" },
+        take: 100,
       });
       return NextResponse.json(teams);
     }

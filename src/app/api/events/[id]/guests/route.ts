@@ -44,6 +44,7 @@ export async function GET(
     const guests = await prisma.eventGuest.findMany({
       where: { eventId: id },
       orderBy: [{ category: "asc" }, { lastName: "asc" }],
+      take: 500,
     });
     return NextResponse.json(guests);
   } catch (error) {

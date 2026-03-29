@@ -36,6 +36,7 @@ export async function GET(req: NextRequest) {
       const profiles = await prisma.profile.findMany({
         select: SAFE_PROFILE_SELECT,
         orderBy: { createdAt: "desc" },
+        take: 500,
       });
       return NextResponse.json(profiles);
     }
@@ -48,6 +49,7 @@ export async function GET(req: NextRequest) {
       where: { teamId: auth.teamId },
       select: SAFE_PROFILE_SELECT,
       orderBy: { createdAt: "desc" },
+      take: 200,
     });
     return NextResponse.json(profiles);
   } catch (error) {

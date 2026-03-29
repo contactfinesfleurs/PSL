@@ -70,6 +70,30 @@ export async function middleware(req: NextRequest) {
         { status: 429 }
       );
     }
+
+    // CSRF defense-in-depth: validate Origin header on mutating API requests.
+    // SameSite=lax cookies already block most cross-origin attacks, but this
+    // catches edge cases (old browsers, subdomain attacks, misconfigured proxies).
+    const origin = req.headers.get("origin");
+    const host = req.headers.get("host");
+    if (origin && host) {
+      try {
+        const originHost = new URL(origin).host;
+        if (originHost !== host) {
+          console.warn(`[CSRF] Blocked cross-origin ${req.method} ${pathname} from ${origin} (host: ${host})`);
+          return NextResponse.json(
+            { error: "Cross-origin request rejected" },
+            { status: 403 }
+          );
+        }
+      } catch {
+        // Malformed origin header — block it
+        return NextResponse.json(
+          { error: "Invalid origin" },
+          { status: 403 }
+        );
+      }
+    }
   }
 
   const session = await getSessionFromRequest(req);

@@ -39,6 +39,7 @@ export async function GET(
     const placements = await prisma.mediaPlacement.findMany({
       where: { productId: id },
       orderBy: { publishedAt: "desc" },
+      take: 200,
     });
     return NextResponse.json(placements);
   } catch (error) {

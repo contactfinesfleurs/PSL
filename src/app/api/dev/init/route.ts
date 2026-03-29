@@ -10,8 +10,15 @@ const DEV_PROFILE_ID = "dev-bypass-profile-001";
 const DEV_PROFILE_EMAIL = "dev@psl.local";
 const DEV_PROFILE_NAME = "Développeur";
 
-export async function GET() {
+export async function GET(req: Request) {
+  // Triple protection: environment check + bypass flag + localhost-only
   if (process.env.NODE_ENV !== "development" || process.env.BYPASS_AUTH !== "1") {
+    return NextResponse.json({ error: "Non disponible" }, { status: 404 });
+  }
+  const ip = (req.headers as Headers).get("x-forwarded-for")?.split(",")[0].trim()
+    ?? (req.headers as Headers).get("x-real-ip")
+    ?? "";
+  if (!["127.0.0.1", "::1", "localhost", "unknown"].includes(ip)) {
     return NextResponse.json({ error: "Non disponible" }, { status: 404 });
   }
 

@@ -39,6 +39,7 @@ export async function GET(
     const loans = await prisma.sampleLoan.findMany({
       where: { productId: id },
       orderBy: { sentAt: "desc" },
+      take: 200,
     });
     return NextResponse.json(loans);
   } catch (error) {
