@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromRequest } from "@/lib/auth";
 
 // Routes that don't require authentication
-const PUBLIC_PATHS = ["/login", "/api/auth/", "/api/docs"];
+const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/auth/register", "/api/auth/2fa/validate", "/api/docs"];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p));

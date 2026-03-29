@@ -87,6 +87,32 @@ export function clearSessionCookieOnResponse(res: NextResponse) {
   res.cookies.delete(COOKIE_NAME);
 }
 
+// ─── 2FA Challenge token (short-lived, not a session) ────────────────────────
+
+export type ChallengePayload = {
+  challengeProfileId: string;
+  email: string;
+  purpose: "2fa";
+};
+
+export async function signChallengeToken(payload: ChallengePayload): Promise<string> {
+  return new SignJWT(payload as unknown as Record<string, unknown>)
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("5m")
+    .sign(getJwtSecret());
+}
+
+export async function verifyChallengeToken(token: string): Promise<ChallengePayload | null> {
+  try {
+    const { payload } = await jwtVerify(token, getJwtSecret());
+    if (payload.purpose !== "2fa") return null;
+    return payload as unknown as ChallengePayload;
+  } catch {
+    return null;
+  }
+}
+
 // ─── Middleware helper (Edge runtime — reads from request) ────────────────────
 
 export async function getSessionFromRequest(

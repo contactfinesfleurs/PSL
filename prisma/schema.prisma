@@ -40,16 +40,41 @@ model Profile {
   email        String @unique
   passwordHash String
 
+  // 2FA (TOTP)
+  totpSecret  String?  // AES-256-GCM encrypted, base64 encoded
+  totpEnabled Boolean  @default(false)
+
   role   ProfileRole @default(MEMBER)
   teamId String?
   team   Team?       @relation(fields: [teamId], references: [id], onDelete: SetNull)
 
-  products  Product[]
-  events    Event[]
-  campaigns Campaign[]
+  products       Product[]
+  events         Event[]
+  campaigns      Campaign[]
+  securityEvents SecurityEvent[]
 
   @@index([role])
   @@index([teamId])
+}
+
+// ─── SECURITY EVENT ──────────────────────────────────────────────────────────
+
+model SecurityEvent {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  profileId String?
+  profile   Profile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  type      String   // LOGIN_SUCCESS | LOGIN_FAIL | TOTP_ENABLED | TOTP_DISABLED | TOTP_FAIL | RATE_LIMITED | ACCOUNT_LOCKED
+  ip        String?
+  userAgent String?
+  email     String?  // For failed login attempts where profileId is unknown
+  metadata  String?  // JSON string for extra context
+
+  @@index([profileId])
+  @@index([type, createdAt])
+  @@index([email, type, createdAt])
 }
 
 // ─── PRODUCT ─────────────────────────────────────────────────────────────────
