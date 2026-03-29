@@ -27,6 +27,7 @@ export async function POST(req: NextRequest) {
     const profile = await prisma.profile.findUnique({ where: { email } });
 
     if (!profile) {
+      console.warn(`[AUTH] Failed login attempt for unknown email from IP ${ip}`);
       return NextResponse.json(
         { error: "Email ou mot de passe incorrect" },
         { status: 401 }
@@ -35,6 +36,7 @@ export async function POST(req: NextRequest) {
 
     const valid = await compare(password, profile.passwordHash);
     if (!valid) {
+      console.warn(`[AUTH] Failed login attempt for ${email} from IP ${ip}`);
       return NextResponse.json(
         { error: "Email ou mot de passe incorrect" },
         { status: 401 }

@@ -8,6 +8,47 @@ function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p));
 }
 
+// ─── Global rate limiter for mutating requests (Edge-compatible) ────────────
+const GLOBAL_WINDOW_MS = 60_000; // 1 minute
+const GLOBAL_MAX_REQUESTS = 60; // 60 writes per minute per IP
+
+const globalStore = new Map<string, { timestamps: number[] }>();
+
+function getIp(req: NextRequest): string {
+  return req.headers.get("x-forwarded-for")?.split(",")[0].trim()
+    ?? req.headers.get("x-real-ip")
+    ?? "unknown";
+}
+
+function isGlobalRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const windowStart = now - GLOBAL_WINDOW_MS;
+  const record = globalStore.get(ip) ?? { timestamps: [] };
+
+  record.timestamps = record.timestamps.filter((t) => t > windowStart);
+
+  if (record.timestamps.length >= GLOBAL_MAX_REQUESTS) {
+    globalStore.set(ip, record);
+    return true;
+  }
+
+  record.timestamps.push(now);
+  globalStore.set(ip, record);
+
+  // Cleanup stale entries periodically
+  if (globalStore.size > 10_000) {
+    for (const [key, rec] of globalStore.entries()) {
+      if (rec.timestamps.every((t) => t <= windowStart)) {
+        globalStore.delete(key);
+      }
+    }
+  }
+
+  return false;
+}
+
+const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
@@ -17,6 +58,18 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith("/favicon")
   ) {
     return NextResponse.next();
+  }
+
+  // Global rate limit on all mutating API requests
+  if (pathname.startsWith("/api/") && MUTATING_METHODS.has(req.method)) {
+    const ip = getIp(req);
+    if (isGlobalRateLimited(ip)) {
+      console.warn(`[RATE-LIMIT] ${req.method} ${pathname} blocked for IP ${ip}`);
+      return NextResponse.json(
+        { error: "Too many requests, please try again later" },
+        { status: 429 }
+      );
+    }
   }
 
   const session = await getSessionFromRequest(req);
