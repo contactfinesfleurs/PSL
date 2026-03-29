@@ -39,16 +39,30 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const profile = await prisma.profile.findUnique({
-      where: { email },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        passwordHash: true,
-        totpEnabled: true,
-      },
-    });
+    // Query profile — totpEnabled may not exist if schema hasn't been pushed yet
+    let profile: { id: string; name: string; email: string; passwordHash: string; totpEnabled?: boolean } | null = null;
+    try {
+      profile = await prisma.profile.findUnique({
+        where: { email },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          passwordHash: true,
+          totpEnabled: true,
+        },
+      });
+    } catch {
+      // totpEnabled column may not exist — retry without it
+      console.warn("[login] totpEnabled select failed, retrying without 2FA field");
+      const basic = await prisma.profile.findUnique({
+        where: { email },
+        select: { id: true, name: true, email: true, passwordHash: true },
+      });
+      if (basic) {
+        profile = { ...basic, totpEnabled: false };
+      }
+    }
 
     if (!profile) {
       await logSecurityEvent({

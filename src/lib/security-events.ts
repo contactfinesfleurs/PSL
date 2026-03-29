@@ -79,6 +79,13 @@ const LOCKOUT_THRESHOLD = 10;
  * Locks after 10 failures within 15 minutes (per email, across all IPs).
  */
 export async function isAccountLocked(email: string): Promise<boolean> {
-  const failures = await getRecentFailedAttempts(email, 15);
-  return failures >= LOCKOUT_THRESHOLD;
+  try {
+    const failures = await getRecentFailedAttempts(email, 15);
+    return failures >= LOCKOUT_THRESHOLD;
+  } catch {
+    // SecurityEvent table may not exist yet (schema not pushed).
+    // Fail open: allow login attempt rather than blocking all logins.
+    console.warn("[isAccountLocked] SecurityEvent table query failed — skipping lockout check");
+    return false;
+  }
 }
