@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { hash } from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { signToken, setSessionCookie } from "@/lib/auth";
+import { signToken, setSessionCookieOnResponse } from "@/lib/auth";
 import { parseBodyJson } from "@/lib/api-helpers";
 import { getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
@@ -52,12 +52,12 @@ export async function POST(req: NextRequest) {
       name: profile.name,
     });
 
-    await setSessionCookie(token);
-
-    return NextResponse.json(
+    const res = NextResponse.json(
       { name: profile.name, email: profile.email },
       { status: 201 }
     );
+    setSessionCookieOnResponse(res, token);
+    return res;
   } catch (error) {
     console.error('[POST /api/auth/register]', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

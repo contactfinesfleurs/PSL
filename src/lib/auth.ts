@@ -1,6 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 function getJwtSecret(): Uint8Array {
   const secret = process.env.JWT_SECRET;
@@ -63,6 +63,28 @@ export async function setSessionCookie(token: string) {
 export async function clearSessionCookie() {
   const jar = await cookies();
   jar.delete(COOKIE_NAME);
+}
+
+/**
+ * Set the session cookie directly on a NextResponse object.
+ * Use this in Route Handlers where cookies().set() doesn't reliably
+ * attach Set-Cookie to a manually constructed NextResponse.
+ */
+export function setSessionCookieOnResponse(res: NextResponse, token: string) {
+  res.cookies.set(COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: COOKIE_MAX_AGE,
+    path: "/",
+  });
+}
+
+/**
+ * Clear the session cookie directly on a NextResponse object.
+ */
+export function clearSessionCookieOnResponse(res: NextResponse) {
+  res.cookies.delete(COOKIE_NAME);
 }
 
 // ─── Middleware helper (Edge runtime — reads from request) ────────────────────
